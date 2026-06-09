@@ -1,0 +1,31 @@
+# Nuxt
+.nuxt
+.output
+.data
+dist
+
+# Dependencies
+node_modules
+
+# Logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Environment
+.env
+.env.*
+!.env.example
+
+# Capacitor / native builds
+android/.gradle
+android/app/build
+ios/App/build
+DerivedData
+
+# OS / IDE
+.DS_Store
+.idea
+.vscode

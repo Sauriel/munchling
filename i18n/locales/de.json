@@ -1,0 +1,230 @@
+{
+  "app": {
+    "name": "Munchling",
+    "tagline": "Lokaler Kalorien- & Nährwerttracker"
+  },
+  "common": {
+    "back": "Zurück",
+    "cancel": "Abbrechen",
+    "delete": "Löschen",
+    "edit": "Bearbeiten",
+    "loading": "Lädt ..."
+  },
+  "nav": {
+    "dashboard": "Dashboard",
+    "foods": "Lebensmittel",
+    "profiles": "Profile",
+    "settings": "Einstellungen"
+  },
+  "home": {
+    "title": "Willkommen bei Munchling",
+    "description": "Tracke Kalorien und Nährwerte lokal auf deinem Gerät."
+  },
+  "profiles": {
+    "eyebrow": "Profilverwaltung",
+    "title": "Profile",
+    "description": "Erstelle, bearbeite und lösche Personenprofile mit individuellen Tageszielen.",
+    "current": "Aktiv",
+    "currentProfile": "Aktuelles Tracking-Profil",
+    "noProfile": "Kein Profil vorhanden",
+    "listTitle": "Alle Profile",
+    "empty": "Noch keine Profile vorhanden. Lege oben dein erstes Profil an.",
+    "confirmDelete": "Profil \"{name}\" wirklich löschen? Zugehörige Logbuch-Anteile werden ebenfalls entfernt.",
+    "form": {
+      "createTitle": "Neues Profil",
+      "editTitle": "Profil bearbeiten",
+      "hint": "Alle Zielwerte beziehen sich auf einen Tag. Makro- und Mikroziele sind optional."
+    },
+    "fields": {
+      "name": "Name",
+      "calories": "Kalorienziel",
+      "protein": "Eiweiß",
+      "carbs": "Kohlenhydrate",
+      "fat": "Fett",
+      "sugar": "Zucker",
+      "fiber": "Ballaststoffe",
+      "salt": "Salz"
+    },
+    "placeholders": {
+      "name": "z. B. Alex"
+    },
+    "actions": {
+      "create": "Profil erstellen",
+      "save": "Änderungen speichern",
+      "select": "Auswählen"
+    }
+  },
+  "foods": {
+    "eyebrow": "Lebensmittelverwaltung",
+    "title": "Lebensmittel",
+    "description": "Suche Lebensmittel und lege eigene Produkte mit Nährwerten pro 100g oder 100ml an.",
+    "listTitle": "Alle Lebensmittel",
+    "search": "Lebensmittel suchen",
+    "searchPlaceholder": "Name, Marke oder EAN suchen ...",
+    "empty": "Keine Lebensmittel gefunden. Lege oben dein erstes Lebensmittel an.",
+    "custom": "Eigen",
+    "confirmDelete": "Lebensmittel \"{name}\" wirklich löschen? Zugehörige Rezepte und Logbucheinträge können ebenfalls entfernt werden.",
+    "form": {
+      "createTitle": "Neues Lebensmittel",
+      "editTitle": "Lebensmittel bearbeiten",
+      "hint": "Nährwerte werden pro 100g oder 100ml gespeichert."
+    },
+    "fields": {
+      "nameDe": "Name DE",
+      "nameEn": "Name EN",
+      "brand": "Marke",
+      "ean": "EAN",
+      "calories": "Kalorien",
+      "protein": "Eiweiß",
+      "carbs": "Kohlenhydrate",
+      "fat": "Fett",
+      "sugar": "Zucker",
+      "fiber": "Ballaststoffe",
+      "salt": "Salz"
+    },
+    "placeholders": {
+      "nameDe": "z. B. Haferflocken",
+      "nameEn": "e.g. Oats",
+      "brand": "Optional",
+      "ean": "Optional"
+    },
+    "actions": {
+      "create": "Lebensmittel erstellen",
+      "save": "Änderungen speichern"
+    },
+    "scanner": {
+      "button": "EAN scannen",
+      "scanning": "Scanner wird geöffnet ...",
+      "found": "EAN {ean} gefunden: {name}. Das Lebensmittel wurde zum Bearbeiten geöffnet.",
+      "notFound": "EAN {ean} ist noch nicht vorhanden. Ergänze die restlichen Felder und speichere das Lebensmittel.",
+      "instructions": "Produkt-Barcode scannen"
+    }
+  },
+  "recipes": {
+    "eyebrow": "Gerichte-Builder",
+    "title": "Gerichte",
+    "description": "Erstelle Gerichte aus Lebensmitteln und verschachtelten Untergerichten mit automatischer Nährwertberechnung.",
+    "listTitle": "Alle Gerichte",
+    "empty": "Noch keine Gerichte vorhanden. Lege oben dein erstes Gericht an.",
+    "subRecipe": "Untergericht",
+    "confirmDelete": "Gericht \"{name}\" wirklich löschen? Verknüpfte Zutaten und Logbucheinträge können ebenfalls entfernt werden.",
+    "form": {
+      "createTitle": "Neues Gericht",
+      "editTitle": "Gericht bearbeiten",
+      "hint": "Füge Lebensmittel oder andere Gerichte mit Grammangaben hinzu."
+    },
+    "fields": {
+      "nameDe": "Name DE",
+      "nameEn": "Name EN",
+      "description": "Beschreibung",
+      "isSubRecipe": "Als Untergericht markieren"
+    },
+    "placeholders": {
+      "nameDe": "z. B. Nudeln mit Tomatensoße",
+      "nameEn": "e.g. Pasta with tomato sauce",
+      "description": "Optional"
+    },
+    "ingredients": {
+      "title": "Zutaten",
+      "add": "Zutat hinzufügen",
+      "empty": "Noch keine Zutaten. Füge Lebensmittel oder Untergerichte hinzu.",
+      "kind": "Typ",
+      "food": "Lebensmittel",
+      "recipe": "Gericht",
+      "amount": "Gramm",
+      "source": "Quelle",
+      "selectSource": "Bitte auswählen",
+      "remove": "Zutat entfernen"
+    },
+    "nutrition": {
+      "preview": "Nährwerte pro 100g",
+      "calories": "Kalorien",
+      "protein": "Eiweiß",
+      "carbs": "Kohlenhydrate",
+      "fat": "Fett",
+      "sugar": "Zucker",
+      "fiber": "Ballaststoffe",
+      "salt": "Salz"
+    },
+    "actions": {
+      "create": "Gericht erstellen",
+      "save": "Änderungen speichern"
+    }
+  },
+  "mealLog": {
+    "eyebrow": "Logbuch",
+    "title": "Mahlzeit eintragen",
+    "description": "Weise Lebensmittel oder Gerichte einem oder mehreren Profilen mit individuellen Portionsgrößen zu.",
+    "listTitle": "Eingetragene Mahlzeiten",
+    "empty": "Noch keine Mahlzeiten eingetragen.",
+    "confirmDelete": "Mahlzeit \"{name}\" wirklich löschen?",
+    "form": {
+      "createTitle": "Neue Mahlzeit",
+      "editTitle": "Mahlzeit bearbeiten",
+      "hint": "Die Gesamtmenge ergibt sich aus den Portionsgrößen der ausgewählten Profile."
+    },
+    "fields": {
+      "loggedAt": "Zeitpunkt",
+      "sourceType": "Typ",
+      "source": "Lebensmittel/Gericht"
+    },
+    "sourceTypes": {
+      "food": "Lebensmittel",
+      "recipe": "Gericht"
+    },
+    "placeholders": {
+      "source": "Bitte auswählen"
+    },
+    "portions": {
+      "title": "Portionen pro Profil",
+      "grams": "Gramm",
+      "noProfiles": "Lege zuerst ein Profil an, um Mahlzeiten zuzuweisen."
+    },
+    "nutrition": {
+      "preview": "Nährwerte dieser Eintragung",
+      "calories": "Kalorien",
+      "protein": "Eiweiß",
+      "carbs": "Kohlenhydrate",
+      "fat": "Fett",
+      "sugar": "Zucker",
+      "fiber": "Ballaststoffe",
+      "salt": "Salz"
+    },
+    "actions": {
+      "create": "Mahlzeit eintragen",
+      "save": "Änderungen speichern"
+    }
+  },
+  "dashboard": {
+    "title": "Dashboard",
+    "today": "Heute",
+    "noProfile": "Lege ein Profil an, um dein Tagesziel und deine Mahlzeiten zu sehen.",
+    "calorieHistory": "Kalorienverlauf",
+    "lastDays": "Letzte 7 Tage",
+    "todaysMeals": "Heutige Mahlzeiten",
+    "noMeals": "Heute wurden für dieses Profil noch keine Mahlzeiten eingetragen.",
+    "targets": {
+      "calories": "Kalorien",
+      "protein": "Eiweiß",
+      "carbs": "Kohlenhydrate",
+      "fat": "Fett",
+      "sugar": "Zucker",
+      "fiber": "Ballaststoffe",
+      "salt": "Salz"
+    }
+  },
+  "settings": {
+    "eyebrow": "Einstellungen",
+    "title": "Einstellungen",
+    "description": "Passe Sprache und App-Verhalten an.",
+    "language": {
+      "title": "Sprache",
+      "hint": "Die Auswahl wird gespeichert und überschreibt die Systemsprache."
+    },
+    "theme": {
+      "title": "Darstellung",
+      "hint": "Munchling folgt dem Light-/Dark-Mode deines Geräts.",
+      "system": "Aktuell wird automatisch das System-Theme verwendet."
+    }
+  }
+}

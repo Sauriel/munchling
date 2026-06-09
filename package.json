@@ -1,0 +1,41 @@
+{
+  "name": "munchling",
+  "type": "module",
+  "private": true,
+  "packageManager": "pnpm@10.33.0",
+  "scripts": {
+    "dev": "nuxt dev",
+    "build": "nuxt build",
+    "generate": "nuxt generate",
+    "preview": "nuxt preview",
+    "postinstall": "nuxt prepare",
+    "cap:sync": "pnpm generate && cap sync",
+    "cap:open:android": "cap open android",
+    "cap:open:ios": "cap open ios",
+    "cap:add:android": "cap add android",
+    "cap:add:ios": "cap add ios",
+    "android:update": "bash scripts/update-android.sh"
+  },
+  "dependencies": {
+    "@capacitor-community/sqlite": "^8.1.0",
+    "@capacitor/android": "^8.4.0",
+    "@capacitor/barcode-scanner": "^3.0.2",
+    "@capacitor/core": "^8.4.0",
+    "@capacitor/ios": "^8.4.0",
+    "@nuxt/icon": "^2.2.3",
+    "@nuxtjs/i18n": "^10.4.0",
+    "@nuxtjs/tailwindcss": "^6.14.0",
+    "jeep-sqlite": "^2.8.0",
+    "nuxt": "^4.4.8",
+    "sql.js": "^1.14.1",
+    "vue": "^3.5.24"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^8.4.0",
+    "consola": "^3.4.2",
+    "h3": "2.0.1-rc.22",
+    "tailwindcss": "^3.4.19",
+    "typescript": "^5.9.3",
+    "vue-tsc": "^3.3.4"
+  }
+}

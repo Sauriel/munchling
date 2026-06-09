@@ -1,0 +1,230 @@
+{
+  "app": {
+    "name": "Munchling",
+    "tagline": "Local calorie & nutrition tracker"
+  },
+  "common": {
+    "back": "Back",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "edit": "Edit",
+    "loading": "Loading ..."
+  },
+  "nav": {
+    "dashboard": "Dashboard",
+    "foods": "Foods",
+    "profiles": "Profiles",
+    "settings": "Settings"
+  },
+  "home": {
+    "title": "Welcome to Munchling",
+    "description": "Track calories and nutrients locally on your device."
+  },
+  "profiles": {
+    "eyebrow": "Profile management",
+    "title": "Profiles",
+    "description": "Create, edit and delete person profiles with individual daily targets.",
+    "current": "Active",
+    "currentProfile": "Current tracking profile",
+    "noProfile": "No profile available",
+    "listTitle": "All profiles",
+    "empty": "No profiles yet. Create your first profile above.",
+    "confirmDelete": "Really delete profile \"{name}\"? Related meal-log portions will also be removed.",
+    "form": {
+      "createTitle": "New profile",
+      "editTitle": "Edit profile",
+      "hint": "All targets are daily. Macro and micro targets are optional."
+    },
+    "fields": {
+      "name": "Name",
+      "calories": "Calorie target",
+      "protein": "Protein",
+      "carbs": "Carbs",
+      "fat": "Fat",
+      "sugar": "Sugar",
+      "fiber": "Fiber",
+      "salt": "Salt"
+    },
+    "placeholders": {
+      "name": "e.g. Alex"
+    },
+    "actions": {
+      "create": "Create profile",
+      "save": "Save changes",
+      "select": "Select"
+    }
+  },
+  "foods": {
+    "eyebrow": "Food management",
+    "title": "Foods",
+    "description": "Search foods and create custom products with nutrition values per 100g or 100ml.",
+    "listTitle": "All foods",
+    "search": "Search foods",
+    "searchPlaceholder": "Search name, brand or EAN ...",
+    "empty": "No foods found. Create your first food above.",
+    "custom": "Custom",
+    "confirmDelete": "Really delete food \"{name}\"? Related recipes and meal logs may also be removed.",
+    "form": {
+      "createTitle": "New food",
+      "editTitle": "Edit food",
+      "hint": "Nutrition values are stored per 100g or 100ml."
+    },
+    "fields": {
+      "nameDe": "Name DE",
+      "nameEn": "Name EN",
+      "brand": "Brand",
+      "ean": "EAN",
+      "calories": "Calories",
+      "protein": "Protein",
+      "carbs": "Carbs",
+      "fat": "Fat",
+      "sugar": "Sugar",
+      "fiber": "Fiber",
+      "salt": "Salt"
+    },
+    "placeholders": {
+      "nameDe": "z. B. Haferflocken",
+      "nameEn": "e.g. Oats",
+      "brand": "Optional",
+      "ean": "Optional"
+    },
+    "actions": {
+      "create": "Create food",
+      "save": "Save changes"
+    },
+    "scanner": {
+      "button": "Scan EAN",
+      "scanning": "Opening scanner ...",
+      "found": "EAN {ean} found: {name}. The food was opened for editing.",
+      "notFound": "EAN {ean} is not available yet. Fill the remaining fields and save the food.",
+      "instructions": "Scan the product barcode"
+    }
+  },
+  "recipes": {
+    "eyebrow": "Recipe builder",
+    "title": "Recipes",
+    "description": "Create dishes from foods and nested sub-recipes with automatic nutrition calculation.",
+    "listTitle": "All recipes",
+    "empty": "No recipes yet. Create your first recipe above.",
+    "subRecipe": "Sub-recipe",
+    "confirmDelete": "Really delete recipe \"{name}\"? Linked ingredients and meal logs may also be removed.",
+    "form": {
+      "createTitle": "New recipe",
+      "editTitle": "Edit recipe",
+      "hint": "Add foods or other recipes with gram amounts."
+    },
+    "fields": {
+      "nameDe": "Name DE",
+      "nameEn": "Name EN",
+      "description": "Description",
+      "isSubRecipe": "Mark as sub-recipe"
+    },
+    "placeholders": {
+      "nameDe": "z. B. Nudeln mit Tomatensoße",
+      "nameEn": "e.g. Pasta with tomato sauce",
+      "description": "Optional"
+    },
+    "ingredients": {
+      "title": "Ingredients",
+      "add": "Add ingredient",
+      "empty": "No ingredients yet. Add foods or sub-recipes.",
+      "kind": "Type",
+      "food": "Food",
+      "recipe": "Recipe",
+      "amount": "Grams",
+      "source": "Source",
+      "selectSource": "Please select",
+      "remove": "Remove ingredient"
+    },
+    "nutrition": {
+      "preview": "Nutrition per 100g",
+      "calories": "Calories",
+      "protein": "Protein",
+      "carbs": "Carbs",
+      "fat": "Fat",
+      "sugar": "Sugar",
+      "fiber": "Fiber",
+      "salt": "Salt"
+    },
+    "actions": {
+      "create": "Create recipe",
+      "save": "Save changes"
+    }
+  },
+  "mealLog": {
+    "eyebrow": "Meal log",
+    "title": "Log meal",
+    "description": "Assign foods or recipes to one or more profiles with individual portion sizes.",
+    "listTitle": "Logged meals",
+    "empty": "No meals logged yet.",
+    "confirmDelete": "Really delete meal \"{name}\"?",
+    "form": {
+      "createTitle": "New meal",
+      "editTitle": "Edit meal",
+      "hint": "Total weight is calculated from the selected profile portions."
+    },
+    "fields": {
+      "loggedAt": "Time",
+      "sourceType": "Type",
+      "source": "Food/recipe"
+    },
+    "sourceTypes": {
+      "food": "Food",
+      "recipe": "Recipe"
+    },
+    "placeholders": {
+      "source": "Please select"
+    },
+    "portions": {
+      "title": "Portions per profile",
+      "grams": "Grams",
+      "noProfiles": "Create a profile first to assign meals."
+    },
+    "nutrition": {
+      "preview": "Nutrition for this log",
+      "calories": "Calories",
+      "protein": "Protein",
+      "carbs": "Carbs",
+      "fat": "Fat",
+      "sugar": "Sugar",
+      "fiber": "Fiber",
+      "salt": "Salt"
+    },
+    "actions": {
+      "create": "Log meal",
+      "save": "Save changes"
+    }
+  },
+  "dashboard": {
+    "title": "Dashboard",
+    "today": "Today",
+    "noProfile": "Create a profile to see your daily target and meals.",
+    "calorieHistory": "Calorie history",
+    "lastDays": "Last 7 days",
+    "todaysMeals": "Today's meals",
+    "noMeals": "No meals logged for this profile today.",
+    "targets": {
+      "calories": "Calories",
+      "protein": "Protein",
+      "carbs": "Carbs",
+      "fat": "Fat",
+      "sugar": "Sugar",
+      "fiber": "Fiber",
+      "salt": "Salt"
+    }
+  },
+  "settings": {
+    "eyebrow": "Settings",
+    "title": "Settings",
+    "description": "Adjust language and app behavior.",
+    "language": {
+      "title": "Language",
+      "hint": "Your selection is saved and overrides the system language."
+    },
+    "theme": {
+      "title": "Appearance",
+      "hint": "Munchling follows your device light/dark mode.",
+      "system": "The system theme is currently used automatically."
+    }
+  }
+}
