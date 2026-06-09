@@ -9,6 +9,10 @@ export default defineNuxtConfig({
 	app: {
 		head: {
 			title: "Munchling",
+			link: [
+				{ rel: "icon", type: "image/png", href: "/munchling_768.png" },
+				{ rel: "apple-touch-icon", href: "/munchling_768.png" },
+			],
 			meta: [
 				{
 					name: "viewport",
@@ -20,11 +24,10 @@ export default defineNuxtConfig({
 	},
 	i18n: {
 		strategy: "no_prefix",
-		defaultLocale: "de",
+		defaultLocale: "en",
 		detectBrowserLanguage: {
-			useCookie: true,
-			cookieKey: "munchling_locale",
-			fallbackLocale: "de",
+			useCookie: false,
+			fallbackLocale: "en",
 		},
 		locales: [
 			{ code: "de", name: "Deutsch", file: "de.json" },

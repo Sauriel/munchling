@@ -40,26 +40,16 @@
       </div>
 
       <form class="space-y-4" @submit.prevent="submitForm">
-        <div class="grid grid-cols-2 gap-3">
-          <label class="block space-y-1.5">
-            <span class="text-sm font-medium">{{ $t('recipes.fields.nameDe') }}</span>
-            <input v-model="form.nameDe" required class="field-input" :placeholder="$t('recipes.placeholders.nameDe')">
-          </label>
-          <label class="block space-y-1.5">
-            <span class="text-sm font-medium">{{ $t('recipes.fields.nameEn') }}</span>
-            <input v-model="form.nameEn" required class="field-input" :placeholder="$t('recipes.placeholders.nameEn')">
-          </label>
-        </div>
+        <label class="block space-y-1.5">
+          <span class="text-sm font-medium">{{ $t('recipes.fields.name') }}</span>
+          <input v-model="form.name" required class="field-input" :placeholder="$t('recipes.placeholders.name')">
+        </label>
 
         <label class="block space-y-1.5">
           <span class="text-sm font-medium">{{ $t('recipes.fields.description') }}</span>
           <textarea v-model="form.description" class="field-input min-h-24 py-3" :placeholder="$t('recipes.placeholders.description')" />
         </label>
 
-        <label class="flex min-h-12 items-center gap-3 rounded-2xl bg-slate-50 px-4 dark:bg-slate-950">
-          <input v-model="form.isSubRecipe" type="checkbox" class="size-5 rounded border-slate-300 text-munchling-600 focus:ring-munchling-600">
-          <span class="text-sm font-medium">{{ $t('recipes.fields.isSubRecipe') }}</span>
-        </label>
 
         <section class="space-y-3">
           <div class="flex items-center justify-between gap-3">
@@ -74,33 +64,78 @@
           </div>
 
           <div v-for="(ingredient, index) in form.ingredients" :key="ingredient.clientId" class="space-y-3 rounded-2xl bg-slate-50 p-3 dark:bg-slate-950">
-            <div class="grid grid-cols-2 gap-3">
-              <label class="block space-y-1.5">
-                <span class="text-xs font-medium text-slate-500">{{ $t('recipes.ingredients.kind') }}</span>
-                <select v-model="ingredient.kind" class="field-input" @change="ingredient.sourceId = null">
-                  <option value="food">{{ $t('recipes.ingredients.food') }}</option>
-                  <option value="recipe">{{ $t('recipes.ingredients.recipe') }}</option>
-                </select>
-              </label>
+            <button type="button" class="flex min-h-11 w-full items-center justify-between gap-3 text-left" @click="ingredient.isExpanded = !ingredient.isExpanded">
+              <span class="min-w-0">
+                <span class="block truncate font-semibold">{{ ingredientHeader(ingredient, index) }}</span>
+                <span class="text-xs text-slate-500">{{ ingredient.amountGrams }}g</span>
+              </span>
+              <Icon :name="ingredient.isExpanded ? 'ph:caret-up' : 'ph:caret-down'" class="size-5 shrink-0 text-slate-400" />
+            </button>
+
+            <div v-if="ingredient.isExpanded" class="space-y-3">
               <label class="block space-y-1.5">
                 <span class="text-xs font-medium text-slate-500">{{ $t('recipes.ingredients.amount') }}</span>
                 <input v-model.number="ingredient.amountGrams" required min="0.01" step="0.01" type="number" inputmode="decimal" class="field-input">
               </label>
+
+              <section class="space-y-2">
+                <div class="flex items-end gap-2">
+                  <label class="block flex-1 space-y-1.5">
+                    <span class="text-xs font-medium text-slate-500">{{ $t('recipes.ingredients.source') }}</span>
+                    <input
+                      v-model="ingredient.searchTerm"
+                      class="field-input"
+                      :placeholder="$t('recipes.ingredients.searchPlaceholder')"
+                      @input="searchIngredientSources(ingredient)"
+                    >
+                  </label>
+                  <button
+                    type="button"
+                    class="flex min-h-12 items-center justify-center rounded-2xl bg-slate-100 px-4 text-sm font-semibold dark:bg-slate-800"
+                    :disabled="isScanning || isLookingUpProduct"
+                    @click="scanIngredientEan(ingredient)"
+                  >
+                    <Icon name="ph:barcode-duotone" class="size-5" />
+                  </button>
+                </div>
+
+                <button
+                  type="button"
+                  class="flex min-h-11 w-full items-center justify-center gap-2 rounded-2xl bg-slate-100 px-4 text-sm font-semibold text-slate-700 disabled:opacity-50 dark:bg-slate-800 dark:text-slate-200"
+                  :disabled="!ingredient.searchTerm.trim()"
+                  @click="createMissingIngredient(ingredient)"
+                >
+                  <Icon name="ph:plus-circle-duotone" class="size-5" />
+                  {{ $t('recipes.ingredients.createMissing') }}
+                </button>
+
+                <p v-if="selectedIngredientLabel(ingredient)" class="rounded-2xl bg-munchling-50 p-3 text-xs font-medium text-munchling-700 dark:bg-munchling-600/10 dark:text-munchling-500">
+                  {{ $t('recipes.ingredients.selected') }}: {{ selectedIngredientLabel(ingredient) }}
+                </p>
+
+                <div v-if="ingredient.showResults && ingredientSearchResults(ingredient).length > 0" class="space-y-2">
+                  <button
+                    v-for="result in ingredientSearchResults(ingredient)"
+                    :key="`${result.type}-${result.id}`"
+                    type="button"
+                    class="w-full rounded-2xl bg-white p-3 text-left text-sm shadow-sm dark:bg-slate-900"
+                    @click="selectIngredientResult(ingredient, result)"
+                  >
+                    <div class="flex items-start justify-between gap-3">
+                      <div>
+                        <p class="font-semibold">{{ result.name }}</p>
+                        <p class="text-xs text-slate-500">{{ result.subtitle }}</p>
+                      </div>
+                      <span class="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-semibold dark:bg-slate-800">{{ $t(result.labelKey) }}</span>
+                    </div>
+                  </button>
+                </div>
+              </section>
+
+              <button type="button" class="min-h-10 w-full rounded-2xl bg-red-50 px-4 text-sm font-semibold text-red-700 dark:bg-red-950/40 dark:text-red-300" @click="removeIngredientRow(index)">
+                {{ $t('recipes.ingredients.remove') }}
+              </button>
             </div>
-
-            <label class="block space-y-1.5">
-              <span class="text-xs font-medium text-slate-500">{{ $t('recipes.ingredients.source') }}</span>
-              <select v-model.number="ingredient.sourceId" required class="field-input">
-                <option :value="null" disabled>{{ $t('recipes.ingredients.selectSource') }}</option>
-                <option v-for="option in sourceOptions(ingredient.kind)" :key="option.id" :value="option.id">
-                  {{ option.name }}
-                </option>
-              </select>
-            </label>
-
-            <button type="button" class="min-h-10 w-full rounded-2xl bg-red-50 px-4 text-sm font-semibold text-red-700 dark:bg-red-950/40 dark:text-red-300" @click="removeIngredientRow(index)">
-              {{ $t('recipes.ingredients.remove') }}
-            </button>
           </div>
         </section>
 
@@ -138,35 +173,37 @@
       </div>
 
       <article v-for="recipe in recipes" v-else :key="recipe.id" class="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-        <div class="flex items-start justify-between gap-3">
-          <div>
-            <div class="flex flex-wrap items-center gap-2">
-              <h3 class="text-lg font-semibold">{{ recipe.nameDe }}</h3>
-              <span v-if="recipe.isSubRecipe" class="rounded-full bg-munchling-50 px-2 py-0.5 text-xs font-semibold text-munchling-700 dark:bg-munchling-600/15 dark:text-munchling-500">{{ $t('recipes.subRecipe') }}</span>
+        <button type="button" class="flex min-h-11 w-full items-center justify-between gap-3 text-left" @click="toggleRecipe(recipe.id)">
+          <span class="min-w-0 truncate text-lg font-semibold">{{ recipe.nameDe }}</span>
+          <Icon :name="expandedRecipeId === recipe.id ? 'ph:caret-up' : 'ph:caret-down'" class="size-5 shrink-0 text-slate-400" />
+        </button>
+
+        <div v-if="expandedRecipeId === recipe.id" class="mt-4 space-y-4">
+          <div class="flex items-start justify-between gap-3">
+            <div>
+              <p v-if="recipe.description" class="text-xs text-slate-400">{{ recipe.description }}</p>
             </div>
-            <p class="text-sm text-slate-500 dark:text-slate-400">{{ recipe.nameEn }}</p>
-            <p v-if="recipe.description" class="mt-1 text-xs text-slate-400">{{ recipe.description }}</p>
+            <div class="rounded-2xl bg-slate-50 px-3 py-2 text-right dark:bg-slate-950">
+              <p class="text-lg font-bold">{{ recipeNutritionMap[recipe.id]?.per100g.calories ?? 0 }}</p>
+              <p class="text-xs text-slate-500">kcal/100g</p>
+            </div>
           </div>
-          <div class="rounded-2xl bg-slate-50 px-3 py-2 text-right dark:bg-slate-950">
-            <p class="text-lg font-bold">{{ recipeNutritionMap[recipe.id]?.per100g.calories ?? 0 }}</p>
-            <p class="text-xs text-slate-500">kcal/100g</p>
-          </div>
-        </div>
 
-        <dl class="mt-4 grid grid-cols-3 gap-2 text-center text-xs">
-          <div v-for="item in nutritionSummary(recipeNutritionMap[recipe.id]?.per100g)" :key="item.label" class="rounded-2xl bg-slate-50 p-3 dark:bg-slate-950">
-            <dt class="text-slate-500 dark:text-slate-400">{{ $t(item.label) }}</dt>
-            <dd class="mt-1 font-semibold">{{ item.value }}</dd>
-          </div>
-        </dl>
+          <dl class="grid grid-cols-3 gap-2 text-center text-xs">
+            <div v-for="item in nutritionSummary(recipeNutritionMap[recipe.id]?.per100g)" :key="item.label" class="rounded-2xl bg-slate-50 p-3 dark:bg-slate-950">
+              <dt class="text-slate-500 dark:text-slate-400">{{ $t(item.label) }}</dt>
+              <dd class="mt-1 font-semibold">{{ item.value }}</dd>
+            </div>
+          </dl>
 
-        <div class="mt-4 grid grid-cols-2 gap-2">
-          <button type="button" class="min-h-11 rounded-2xl bg-slate-100 px-4 text-sm font-semibold text-slate-700 dark:bg-slate-800 dark:text-slate-200" @click="editRecipe(recipe)">
-            {{ $t('common.edit') }}
-          </button>
-          <button type="button" class="min-h-11 rounded-2xl bg-red-50 px-4 text-sm font-semibold text-red-700 dark:bg-red-950/40 dark:text-red-300" @click="removeRecipe(recipe)">
-            {{ $t('common.delete') }}
-          </button>
+          <div class="grid grid-cols-2 gap-2">
+            <button type="button" class="min-h-11 rounded-2xl bg-slate-100 px-4 text-sm font-semibold text-slate-700 dark:bg-slate-800 dark:text-slate-200" @click="editRecipe(recipe)">
+              {{ $t('common.edit') }}
+            </button>
+            <button type="button" class="min-h-11 rounded-2xl bg-red-50 px-4 text-sm font-semibold text-red-700 dark:bg-red-950/40 dark:text-red-300" @click="removeRecipe(recipe)">
+              {{ $t('common.delete') }}
+            </button>
+          </div>
         </div>
       </article>
     </section>
@@ -175,7 +212,10 @@
 </template>
 
 <script setup lang="ts">
+import { useBarcodeScanner } from '~/composables/useBarcodeScanner'
+import { useBundledFoodSearch, type BundledFoodSearchResult } from '~/composables/useBundledFoodSearch'
 import { useFoods } from '~/composables/useFoods'
+import { useOpenFoodFacts } from '~/composables/useOpenFoodFacts'
 import { useRecipes } from '~/composables/useRecipes'
 import type { Food, NutritionValues, Recipe, RecipeIngredientInput, RecipeNutrition } from '~/utils/database/repositories'
 
@@ -184,29 +224,45 @@ type IngredientRow = {
   kind: 'food' | 'recipe'
   sourceId: number | null
   amountGrams: number
+  searchTerm: string
+  showResults: boolean
+  isExpanded: boolean
+}
+
+type IngredientSearchResult = {
+  type: 'food' | 'recipe' | 'bundled'
+  id: number | string
+  name: string
+  subtitle: string
+  labelKey: string
+  food?: Food
+  recipe?: Recipe
+  bundledFood?: BundledFoodSearchResult
 }
 
 type RecipeForm = {
-  nameDe: string
-  nameEn: string
+  name: string
   description: string
-  isSubRecipe: boolean
   ingredients: IngredientRow[]
 }
 
 const { t } = useI18n()
-const { foods, refreshFoods } = useFoods()
+const { isScanning, scanEan } = useBarcodeScanner()
+const { bundledFoodResults, searchBundledFoods } = useBundledFoodSearch()
+const { isLookingUpProduct, lookupProductByEan } = useOpenFoodFacts()
+const { foods, refreshFoods, createFood, getFoodByEan, getFoodByNameDe } = useFoods()
 const { recipes, isLoading, refreshRecipes, loadRecipe, createRecipe, updateRecipe, deleteRecipe, calculateRecipeNutrition } = useRecipes()
 
 const isSaving = ref(false)
 const editingRecipeId = ref<number | null>(null)
 const isEditing = computed(() => editingRecipeId.value !== null)
 const recipeNutritionMap = reactive<Record<number, RecipeNutrition>>({})
+const expandedRecipeId = ref<number | null>(null)
 
 const emptyNutrition = (): NutritionValues => ({ calories: 0, fat: 0, carbs: 0, sugar: 0, fiber: 0, protein: 0, salt: 0 })
 const emptyRecipeNutrition = (): RecipeNutrition => ({ totalWeightGrams: 0, total: emptyNutrition(), per100g: emptyNutrition() })
 
-const emptyForm = (): RecipeForm => ({ nameDe: '', nameEn: '', description: '', isSubRecipe: false, ingredients: [] })
+const emptyForm = (): RecipeForm => ({ name: '', description: '', ingredients: [] })
 const form = reactive<RecipeForm>(emptyForm())
 
 function nextClientId() {
@@ -218,18 +274,182 @@ function optionalText(value: string) {
   return trimmed ? trimmed : null
 }
 
-function sourceOptions(kind: IngredientRow['kind']) {
-  if (kind === 'food') {
-    return foods.value.map((food) => ({ id: food.id, name: `${food.nameDe}${food.brand ? ` · ${food.brand}` : ''}` }))
+function normalizedIncludes(value: string, search: string) {
+  return value.toLowerCase().includes(search.toLowerCase())
+}
+
+async function searchIngredientSources(ingredient: IngredientRow) {
+  ingredient.sourceId = null
+  ingredient.showResults = ingredient.searchTerm.trim().length >= 2
+  if (ingredient.showResults) {
+    await searchBundledFoods(ingredient.searchTerm)
+  }
+}
+
+function ingredientSearchResults(ingredient: IngredientRow): IngredientSearchResult[] {
+  const search = ingredient.searchTerm.trim()
+  if (search.length < 2) return []
+
+  const foodResults: IngredientSearchResult[] = foods.value
+    .filter((food) => normalizedIncludes(`${food.nameDe} ${food.nameEn} ${food.brand ?? ''} ${food.ean ?? ''}`, search))
+    .slice(0, 8)
+    .map((food) => ({
+      type: 'food',
+      id: food.id,
+      name: food.nameDe,
+      subtitle: `${food.nameEn}${food.brand ? ` · ${food.brand}` : ''} · ${food.caloriesPer100g} kcal/100g`,
+      labelKey: 'recipes.ingredients.food',
+      food
+    }))
+
+  const recipeResults: IngredientSearchResult[] = recipes.value
+    .filter((recipe) => recipe.id !== editingRecipeId.value)
+    .filter((recipe) => normalizedIncludes(`${recipe.nameDe} ${recipe.nameEn} ${recipe.description ?? ''}`, search))
+    .slice(0, 8)
+    .map((recipe) => ({
+      type: 'recipe',
+      id: recipe.id,
+      name: recipe.nameDe,
+      subtitle: recipe.nameEn,
+      labelKey: 'recipes.ingredients.recipe',
+      recipe
+    }))
+
+  const bundledResults: IngredientSearchResult[] = bundledFoodResults.value
+    .slice(0, 8)
+    .map((food) => ({
+      type: 'bundled',
+      id: food.blsCode,
+      name: food.nameDe,
+      subtitle: `${food.nameEn} · ${food.caloriesPer100g} kcal/100g`,
+      labelKey: 'recipes.ingredients.bundled',
+      bundledFood: food
+    }))
+
+  return [...foodResults, ...recipeResults, ...bundledResults].slice(0, 20)
+}
+
+function selectedIngredientLabel(ingredient: IngredientRow) {
+  if (!ingredient.sourceId) return ''
+
+  if (ingredient.kind === 'food') {
+    return foods.value.find((food) => food.id === ingredient.sourceId)?.nameDe ?? ''
   }
 
-  return recipes.value
-    .filter((recipe) => recipe.id !== editingRecipeId.value)
-    .map((recipe) => ({ id: recipe.id, name: recipe.nameDe }))
+  return recipes.value.find((recipe) => recipe.id === ingredient.sourceId)?.nameDe ?? ''
+}
+
+function ingredientHeader(ingredient: IngredientRow, index: number) {
+  return selectedIngredientLabel(ingredient) || ingredient.searchTerm.trim() || `${t('recipes.ingredients.source')} ${index + 1}`
+}
+
+function toggleRecipe(recipeId: number) {
+  expandedRecipeId.value = expandedRecipeId.value === recipeId ? null : recipeId
+}
+
+async function createFoodFromBundled(food: BundledFoodSearchResult) {
+  const existingFood = await getFoodByNameDe(food.nameDe)
+  if (existingFood) return existingFood
+
+  return await createFood({
+    nameDe: food.nameDe,
+    nameEn: food.nameEn,
+    brand: 'BLS',
+    ean: null,
+    caloriesPer100g: food.caloriesPer100g,
+    fatPer100g: food.fatPer100g,
+    carbsPer100g: food.carbsPer100g,
+    sugarPer100g: food.sugarPer100g,
+    fiberPer100g: food.fiberPer100g,
+    proteinPer100g: food.proteinPer100g,
+    saltPer100g: food.saltPer100g,
+    isCustom: false
+  })
+}
+
+async function selectIngredientResult(ingredient: IngredientRow, result: IngredientSearchResult) {
+  if (result.type === 'recipe' && result.recipe) {
+    ingredient.kind = 'recipe'
+    ingredient.sourceId = result.recipe.id
+    ingredient.searchTerm = result.recipe.nameDe
+    ingredient.showResults = false
+    return
+  }
+
+  if (result.type === 'bundled' && result.bundledFood) {
+    const food = await createFoodFromBundled(result.bundledFood)
+    if (!food) return
+    ingredient.kind = 'food'
+    ingredient.sourceId = food.id
+    ingredient.searchTerm = food.nameDe
+    ingredient.showResults = false
+    return
+  }
+
+  if (result.food) {
+    ingredient.kind = 'food'
+    ingredient.sourceId = result.food.id
+    ingredient.searchTerm = result.food.nameDe
+    ingredient.showResults = false
+  }
+}
+
+async function createMissingIngredient(ingredient: IngredientRow) {
+  const name = ingredient.searchTerm.trim()
+  if (!name) return
+
+  const existingFood = await getFoodByNameDe(name)
+  const food = existingFood ?? await createFood({
+    nameDe: name,
+    nameEn: name,
+    brand: null,
+    ean: null,
+    caloriesPer100g: 0,
+    fatPer100g: 0,
+    carbsPer100g: 0,
+    sugarPer100g: 0,
+    fiberPer100g: 0,
+    proteinPer100g: 0,
+    saltPer100g: 0,
+    isCustom: true
+  })
+
+  if (!food) return
+
+  ingredient.kind = 'food'
+  ingredient.sourceId = food.id
+  ingredient.searchTerm = food.nameDe
+  ingredient.showResults = false
+}
+
+async function scanIngredientEan(ingredient: IngredientRow) {
+  const ean = await scanEan(t('foods.scan.instructions'))
+  if (!ean) return
+
+  const existingFood = await getFoodByEan(ean)
+  if (existingFood) {
+    ingredient.kind = 'food'
+    ingredient.sourceId = existingFood.id
+    ingredient.searchTerm = existingFood.nameDe
+    ingredient.showResults = false
+    return
+  }
+
+  const product = await lookupProductByEan(ean)
+  if (!product) return
+
+  const existingNamedFood = await getFoodByNameDe(product.nameDe)
+  const food = existingNamedFood ?? await createFood({ ...product, isCustom: false })
+  if (!food) return
+
+  ingredient.kind = 'food'
+  ingredient.sourceId = food.id
+  ingredient.searchTerm = food.nameDe
+  ingredient.showResults = false
 }
 
 function addIngredientRow() {
-  form.ingredients.push({ clientId: nextClientId(), kind: 'food', sourceId: null, amountGrams: 100 })
+  form.ingredients.push({ clientId: nextClientId(), kind: 'food', sourceId: null, amountGrams: 100, searchTerm: '', showResults: false, isExpanded: true })
 }
 
 function removeIngredientRow(index: number) {
@@ -248,15 +468,16 @@ async function editRecipe(recipe: Recipe) {
 
   editingRecipeId.value = recipe.id
   Object.assign(form, {
-    nameDe: recipeWithIngredients.nameDe,
-    nameEn: recipeWithIngredients.nameEn,
+    name: recipeWithIngredients.nameDe,
     description: recipeWithIngredients.description ?? '',
-    isSubRecipe: recipeWithIngredients.isSubRecipe,
     ingredients: recipeWithIngredients.ingredients.map((ingredient) => ({
       clientId: nextClientId(),
       kind: ingredient.foodId ? 'food' : 'recipe',
       sourceId: ingredient.foodId ?? ingredient.subRecipeId,
-      amountGrams: ingredient.amountGrams
+      amountGrams: ingredient.amountGrams,
+      searchTerm: '',
+      showResults: false,
+      isExpanded: false
     }))
   })
   window.scrollTo({ top: 0, behavior: 'smooth' })
@@ -279,10 +500,10 @@ async function submitForm() {
 
   try {
     const input = {
-      nameDe: form.nameDe,
-      nameEn: form.nameEn,
+      nameDe: form.name,
+      nameEn: form.name,
       description: optionalText(form.description),
-      isSubRecipe: form.isSubRecipe,
+      isSubRecipe: false,
       ingredients: toIngredientInputs()
     }
 

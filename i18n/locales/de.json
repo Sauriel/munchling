@@ -8,13 +8,15 @@
     "cancel": "Abbrechen",
     "delete": "Löschen",
     "edit": "Bearbeiten",
-    "loading": "Lädt ..."
+    "loading": "Lädt ...",
+    "close": "Schließen"
   },
   "nav": {
     "dashboard": "Dashboard",
     "foods": "Lebensmittel",
     "profiles": "Profile",
-    "settings": "Einstellungen"
+    "settings": "Einstellungen",
+    "recipes": "Gerichte"
   },
   "home": {
     "title": "Willkommen bei Munchling",
@@ -80,13 +82,15 @@
       "fat": "Fett",
       "sugar": "Zucker",
       "fiber": "Ballaststoffe",
-      "salt": "Salz"
+      "salt": "Salz",
+      "name": "Name"
     },
     "placeholders": {
       "nameDe": "z. B. Haferflocken",
       "nameEn": "e.g. Oats",
       "brand": "Optional",
-      "ean": "Optional"
+      "ean": "Optional",
+      "name": "z. B. Banane"
     },
     "actions": {
       "create": "Lebensmittel erstellen",
@@ -97,7 +101,18 @@
       "scanning": "Scanner wird geöffnet ...",
       "found": "EAN {ean} gefunden: {name}. Das Lebensmittel wurde zum Bearbeiten geöffnet.",
       "notFound": "EAN {ean} ist noch nicht vorhanden. Ergänze die restlichen Felder und speichere das Lebensmittel.",
-      "instructions": "Produkt-Barcode scannen"
+      "instructions": "Produkt-Barcode scannen",
+      "lookingUp": "Produkt wird online gesucht ...",
+      "onlineFound": "EAN {ean} wurde bei OpenFoodFacts gefunden: {name}. Die Felder wurden vorbefüllt.",
+      "lookupFailed": "EAN {ean} wurde lokal nicht gefunden. Die Online-Suche ist fehlgeschlagen; bitte Felder manuell ergänzen."
+    },
+    "bundled": {
+      "title": "BLS-Lebensmitteldatenbank",
+      "selected": "„{name}“ wurde aus der BLS-Datenbank übernommen. Prüfe die Werte und speichere es als Lebensmittel.",
+      "error": "Die gebündelte Lebensmitteldatenbank konnte nicht durchsucht werden."
+    },
+    "errors": {
+      "duplicateName": "Ein Lebensmittel mit diesem Namen existiert bereits."
     }
   },
   "recipes": {
@@ -117,12 +132,14 @@
       "nameDe": "Name DE",
       "nameEn": "Name EN",
       "description": "Beschreibung",
-      "isSubRecipe": "Als Untergericht markieren"
+      "isSubRecipe": "Als Untergericht markieren",
+      "name": "Name"
     },
     "placeholders": {
       "nameDe": "z. B. Nudeln mit Tomatensoße",
       "nameEn": "e.g. Pasta with tomato sauce",
-      "description": "Optional"
+      "description": "Optional",
+      "name": "z. B. Porridge"
     },
     "ingredients": {
       "title": "Zutaten",
@@ -134,7 +151,11 @@
       "amount": "Gramm",
       "source": "Quelle",
       "selectSource": "Bitte auswählen",
-      "remove": "Zutat entfernen"
+      "remove": "Zutat entfernen",
+      "searchPlaceholder": "Lebensmittel, Gericht oder BLS suchen",
+      "selected": "Ausgewählt",
+      "bundled": "BLS",
+      "createMissing": "Neu erstellen"
     },
     "nutrition": {
       "preview": "Nährwerte pro 100g",
@@ -216,15 +237,19 @@
   "settings": {
     "eyebrow": "Einstellungen",
     "title": "Einstellungen",
-    "description": "Passe Sprache und App-Verhalten an.",
+    "description": "Passe Profile und App-Verhalten an.",
     "language": {
       "title": "Sprache",
       "hint": "Die Auswahl wird gespeichert und überschreibt die Systemsprache."
     },
     "theme": {
       "title": "Darstellung",
-      "hint": "Munchling folgt dem Light-/Dark-Mode deines Geräts.",
+      "hint": "Munchling folgt dem Light-/Dark-Mode und der Sprache deines Geräts.",
       "system": "Aktuell wird automatisch das System-Theme verwendet."
+    },
+    "profiles": {
+      "title": "Profile",
+      "hint": "Körperdaten, Ziele und aktive Profile verwalten."
     }
   }
 }

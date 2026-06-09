@@ -126,6 +126,20 @@ export async function getFoodByEan(ean: string) {
 	return rows[0] ? mapFood(rows[0]) : null;
 }
 
+export async function getFoodByNameDe(nameDe: string) {
+	const normalizedName = nameDe.trim().toLocaleLowerCase();
+
+	if (!normalizedName) {
+		return null;
+	}
+
+	const rows = await querySql<FoodRow>(
+		"SELECT * FROM foods WHERE lower(trim(name_de)) = ? LIMIT 1;",
+		[normalizedName],
+	);
+	return rows[0] ? mapFood(rows[0]) : null;
+}
+
 export async function createFood(input: CreateFoodInput) {
 	const result = await runSql(
 		`

@@ -8,13 +8,15 @@
     "cancel": "Cancel",
     "delete": "Delete",
     "edit": "Edit",
-    "loading": "Loading ..."
+    "loading": "Loading ...",
+    "close": "Close"
   },
   "nav": {
     "dashboard": "Dashboard",
     "foods": "Foods",
     "profiles": "Profiles",
-    "settings": "Settings"
+    "settings": "Settings",
+    "recipes": "Recipes"
   },
   "home": {
     "title": "Welcome to Munchling",
@@ -80,13 +82,15 @@
       "fat": "Fat",
       "sugar": "Sugar",
       "fiber": "Fiber",
-      "salt": "Salt"
+      "salt": "Salt",
+      "name": "Name"
     },
     "placeholders": {
       "nameDe": "z. B. Haferflocken",
       "nameEn": "e.g. Oats",
       "brand": "Optional",
-      "ean": "Optional"
+      "ean": "Optional",
+      "name": "e.g. Banana"
     },
     "actions": {
       "create": "Create food",
@@ -97,7 +101,18 @@
       "scanning": "Opening scanner ...",
       "found": "EAN {ean} found: {name}. The food was opened for editing.",
       "notFound": "EAN {ean} is not available yet. Fill the remaining fields and save the food.",
-      "instructions": "Scan the product barcode"
+      "instructions": "Scan the product barcode",
+      "lookingUp": "Looking up product online ...",
+      "onlineFound": "EAN {ean} was found on OpenFoodFacts: {name}. The form was prefilled.",
+      "lookupFailed": "EAN {ean} was not found locally. Online lookup failed; please fill the fields manually."
+    },
+    "bundled": {
+      "title": "BLS food database",
+      "selected": "“{name}” was copied from the BLS database. Check the values and save it as a food.",
+      "error": "The bundled food database could not be searched."
+    },
+    "errors": {
+      "duplicateName": "A food with this name already exists."
     }
   },
   "recipes": {
@@ -117,12 +132,14 @@
       "nameDe": "Name DE",
       "nameEn": "Name EN",
       "description": "Description",
-      "isSubRecipe": "Mark as sub-recipe"
+      "isSubRecipe": "Mark as sub-recipe",
+      "name": "Name"
     },
     "placeholders": {
       "nameDe": "z. B. Nudeln mit Tomatensoße",
       "nameEn": "e.g. Pasta with tomato sauce",
-      "description": "Optional"
+      "description": "Optional",
+      "name": "e.g. Porridge"
     },
     "ingredients": {
       "title": "Ingredients",
@@ -134,7 +151,11 @@
       "amount": "Grams",
       "source": "Source",
       "selectSource": "Please select",
-      "remove": "Remove ingredient"
+      "remove": "Remove ingredient",
+      "searchPlaceholder": "Search food, recipe, or BLS",
+      "selected": "Selected",
+      "bundled": "BLS",
+      "createMissing": "Create new"
     },
     "nutrition": {
       "preview": "Nutrition per 100g",
@@ -216,15 +237,19 @@
   "settings": {
     "eyebrow": "Settings",
     "title": "Settings",
-    "description": "Adjust language and app behavior.",
+    "description": "Adjust profiles and app behavior.",
     "language": {
       "title": "Language",
       "hint": "Your selection is saved and overrides the system language."
     },
     "theme": {
       "title": "Appearance",
-      "hint": "Munchling follows your device light/dark mode.",
+      "hint": "Munchling follows your device light/dark mode and language.",
       "system": "The system theme is currently used automatically."
+    },
+    "profiles": {
+      "title": "Profiles",
+      "hint": "Manage body data, goals, and active profiles."
     }
   }
 }

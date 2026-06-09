@@ -21,17 +21,13 @@ const route = useRoute()
 const items = [
   { label: 'nav.dashboard', icon: 'ph:gauge-duotone', to: '/' },
   { label: 'nav.foods', icon: 'ph:fork-knife-duotone', to: '/foods' },
-  { label: 'nav.profiles', icon: 'ph:users-duotone', to: '/profiles' },
+  { label: 'nav.recipes', icon: 'ph:cooking-pot-duotone', to: '/recipes' },
   { label: 'nav.settings', icon: 'ph:gear-six-duotone', to: '/settings' }
 ]
 
 function isActive(to: string) {
   if (to === '/') {
-    return route.path === '/' || route.path === '/log'
-  }
-
-  if (to === '/foods') {
-    return route.path === '/foods' || route.path === '/recipes'
+    return route.path === '/' || route.path === '/log' || route.path.startsWith('/dashboard')
   }
 
   return route.path === to || route.path.startsWith(`${to}/`)

@@ -20,35 +20,20 @@
     </header>
 
     <section class="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-      <div class="mb-4 flex items-center gap-3">
-        <div class="grid size-11 place-items-center rounded-2xl bg-munchling-50 text-munchling-700 dark:bg-munchling-600/15 dark:text-munchling-500">
-          <Icon name="ph:translate-duotone" class="size-6" />
-        </div>
-        <div>
-          <h2 class="font-semibold">{{ $t('settings.language.title') }}</h2>
-          <p class="text-xs text-slate-500 dark:text-slate-400">{{ $t('settings.language.hint') }}</p>
-        </div>
-      </div>
-
-      <div class="grid gap-3">
-        <button
-          v-for="localeOption in localeOptions"
-          :key="localeOption.code"
-          type="button"
-          class="flex min-h-14 items-center justify-between rounded-2xl border px-4 text-left transition active:scale-[0.99]"
-          :class="locale === localeOption.code
-            ? 'border-munchling-600 bg-munchling-50 text-munchling-800 dark:bg-munchling-600/15 dark:text-munchling-500'
-            : 'border-slate-200 bg-slate-50 text-slate-700 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-200'"
-          @click="changeLocale(localeOption.code)"
-        >
-          <span>
-            <span class="block font-semibold">{{ localeOption.name }}</span>
-            <span class="text-xs opacity-70">{{ localeOption.nativeName }}</span>
+      <NuxtLink to="/profiles" class="flex min-h-14 items-center justify-between rounded-2xl bg-slate-50 px-4 transition active:scale-[0.99] dark:bg-slate-950">
+        <span class="flex items-center gap-3">
+          <span class="grid size-10 place-items-center rounded-2xl bg-munchling-50 text-munchling-700 dark:bg-munchling-600/15 dark:text-munchling-500">
+            <Icon name="ph:users-duotone" class="size-6" />
           </span>
-          <Icon v-if="locale === localeOption.code" name="ph:check-circle-duotone" class="size-6" />
-        </button>
-      </div>
+          <span>
+            <span class="block font-semibold">{{ $t('settings.profiles.title') }}</span>
+            <span class="text-xs text-slate-500 dark:text-slate-400">{{ $t('settings.profiles.hint') }}</span>
+          </span>
+        </span>
+        <Icon name="ph:caret-right" class="size-5 text-slate-400" />
+      </NuxtLink>
     </section>
+
 
     <section class="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
       <div class="mb-4 flex items-center gap-3">
@@ -67,18 +52,3 @@
     <AppBottomNav />
   </main>
 </template>
-
-<script setup lang="ts">
-type LocaleCode = 'de' | 'en'
-
-const { locale, setLocale } = useI18n()
-
-const localeOptions: Array<{ code: LocaleCode; name: string; nativeName: string }> = [
-  { code: 'de', name: 'Deutsch', nativeName: 'Deutsch' },
-  { code: 'en', name: 'English', nativeName: 'English' }
-]
-
-async function changeLocale(code: LocaleCode) {
-  await setLocale(code)
-}
-</script>

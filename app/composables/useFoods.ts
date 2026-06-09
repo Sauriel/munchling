@@ -7,6 +7,7 @@ import {
 	createFood as createFoodRecord,
 	deleteFood as deleteFoodRecord,
 	getFoodByEan,
+	getFoodByNameDe,
 	listFoods,
 	updateFood as updateFoodRecord,
 } from "~/utils/database/repositories";
@@ -53,5 +54,6 @@ export function useFoods() {
 		updateFood,
 		deleteFood,
 		getFoodByEan,
+		getFoodByNameDe,
 	};
 }

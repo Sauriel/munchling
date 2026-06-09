@@ -44,6 +44,9 @@ fi
 
 cd "$ROOT_DIR"
 
+echo "→ Baue gebündelte Lebensmittel-Datenbank"
+pnpm food-db:build
+
 echo "→ Generiere Nuxt Static Build"
 pnpm generate
 

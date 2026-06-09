@@ -7,6 +7,7 @@
     "dev": "nuxt dev",
     "build": "nuxt build",
     "generate": "nuxt generate",
+    "food-db:build": "python3 scripts/build-food-search-db.py",
     "preview": "nuxt preview",
     "postinstall": "nuxt prepare",
     "cap:sync": "pnpm generate && cap sync",

@@ -18,11 +18,82 @@
         </p>
       </div>
 
-      <NuxtLink to="/recipes" class="inline-flex min-h-11 items-center gap-2 rounded-full bg-slate-100 px-4 text-sm font-semibold text-slate-700 dark:bg-slate-800 dark:text-slate-200">
-        <Icon name="ph:cooking-pot-duotone" class="size-5" />
-        {{ $t('recipes.title') }}
-      </NuxtLink>
+      <label class="block space-y-1.5">
+        <span class="sr-only">{{ $t('foods.search') }}</span>
+        <div class="relative">
+          <Icon name="ph:magnifying-glass" class="pointer-events-none absolute left-4 top-1/2 size-5 -translate-y-1/2 text-slate-400" />
+          <input
+            v-model="searchModel"
+            class="min-h-12 w-full rounded-2xl border border-slate-200 bg-white py-3 pl-11 pr-12 text-base outline-none transition focus:border-munchling-600 focus:ring-4 focus:ring-munchling-600/10 dark:border-slate-700 dark:bg-slate-900"
+            :placeholder="$t('foods.searchPlaceholder')"
+            @input="handleFoodSearch"
+          >
+          <button
+            v-if="searchModel || showSearchResults"
+            type="button"
+            class="absolute right-2 top-1/2 grid size-9 -translate-y-1/2 place-items-center rounded-full text-slate-400 transition hover:bg-slate-100 dark:hover:bg-slate-800"
+            :aria-label="$t('common.close')"
+            @click="closeSearchResults"
+          >
+            <Icon name="ph:x" class="size-5" />
+          </button>
+        </div>
+      </label>
+
+      <section v-if="showSearchResults && (bundledFoodResults.length > 0 || bundledFoodSearchError || isSearchingBundledFoods)" class="space-y-3 rounded-3xl border border-munchling-600/20 bg-munchling-50 p-4 dark:bg-munchling-600/10">
+        <div class="flex items-center justify-between gap-3">
+          <h3 class="font-semibold text-munchling-800 dark:text-munchling-500">{{ $t('foods.bundled.title') }}</h3>
+          <button type="button" class="rounded-full bg-white/70 p-2 text-munchling-700 dark:bg-slate-950/60 dark:text-munchling-500" :aria-label="$t('common.close')" @click="closeSearchResults">
+            <Icon name="ph:x" class="size-4" />
+          </button>
+        </div>
+
+        <div v-if="isSearchingBundledFoods" class="rounded-2xl bg-white/70 p-3 text-center text-sm text-slate-500 dark:bg-slate-950/60">
+          {{ $t('common.loading') }}
+        </div>
+
+        <p v-else-if="bundledFoodSearchError" class="rounded-2xl bg-red-50 p-3 text-sm text-red-700 dark:bg-red-950/40 dark:text-red-300">
+          {{ $t('foods.bundled.error') }}
+        </p>
+
+        <button
+          v-for="result in bundledFoodResults"
+          v-else
+          :key="result.blsCode"
+          type="button"
+          class="w-full rounded-2xl bg-white/80 p-3 text-left shadow-sm transition active:scale-[0.99] dark:bg-slate-950/70"
+          @click="useBundledFood(result)"
+        >
+          <div class="flex items-start justify-between gap-3">
+            <div>
+              <p class="font-semibold">{{ result.nameDe }}</p>
+              <p class="text-xs text-slate-500 dark:text-slate-400">{{ result.nameEn }} · {{ result.blsCode }}</p>
+            </div>
+            <div class="text-right text-sm font-bold text-munchling-700 dark:text-munchling-500">
+              {{ result.caloriesPer100g }} kcal
+            </div>
+          </div>
+        </button>
+      </section>
     </header>
+
+    <section class="space-y-3">
+      <button
+        type="button"
+        class="flex min-h-12 w-full items-center justify-center gap-2 rounded-2xl border border-munchling-600/30 bg-munchling-50 px-4 font-semibold text-munchling-700 transition active:scale-[0.98] disabled:opacity-60 dark:bg-munchling-600/15 dark:text-munchling-500"
+        :disabled="isScannerBusy"
+        @click="scanBarcode"
+      >
+        <Icon name="ph:barcode-duotone" class="size-5" />
+        {{ scannerButtonLabel }}
+      </button>
+      <p v-if="scanNotice" class="rounded-2xl bg-slate-50 p-3 text-sm text-slate-600 dark:bg-slate-950 dark:text-slate-300">
+        {{ scanNotice }}
+      </p>
+      <p v-if="scanError" class="rounded-2xl bg-red-50 p-3 text-sm text-red-700 dark:bg-red-950/40 dark:text-red-300">
+        {{ scanError }}
+      </p>
+    </section>
 
     <section class="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
       <div class="mb-4 flex items-center justify-between gap-3">
@@ -44,35 +115,11 @@
         </button>
       </div>
 
-      <div class="mb-4 space-y-3">
-        <button
-          type="button"
-          class="flex min-h-12 w-full items-center justify-center gap-2 rounded-2xl border border-munchling-600/30 bg-munchling-50 px-4 font-semibold text-munchling-700 transition active:scale-[0.98] disabled:opacity-60 dark:bg-munchling-600/15 dark:text-munchling-500"
-          :disabled="isScanning"
-          @click="scanBarcode"
-        >
-          <Icon name="ph:barcode-duotone" class="size-5" />
-          {{ isScanning ? $t('foods.scanner.scanning') : $t('foods.scanner.button') }}
-        </button>
-        <p v-if="scanNotice" class="rounded-2xl bg-slate-50 p-3 text-sm text-slate-600 dark:bg-slate-950 dark:text-slate-300">
-          {{ scanNotice }}
-        </p>
-        <p v-if="scanError" class="rounded-2xl bg-red-50 p-3 text-sm text-red-700 dark:bg-red-950/40 dark:text-red-300">
-          {{ scanError }}
-        </p>
-      </div>
-
       <form class="space-y-4" @submit.prevent="submitForm">
-        <div class="grid grid-cols-2 gap-3">
-          <label class="block space-y-1.5">
-            <span class="text-sm font-medium">{{ $t('foods.fields.nameDe') }}</span>
-            <input v-model="form.nameDe" required class="field-input" :placeholder="$t('foods.placeholders.nameDe')">
-          </label>
-          <label class="block space-y-1.5">
-            <span class="text-sm font-medium">{{ $t('foods.fields.nameEn') }}</span>
-            <input v-model="form.nameEn" required class="field-input" :placeholder="$t('foods.placeholders.nameEn')">
-          </label>
-        </div>
+        <label class="block space-y-1.5">
+          <span class="text-sm font-medium">{{ $t('foods.fields.name') }}</span>
+          <input v-model="form.name" required class="field-input" :placeholder="$t('foods.placeholders.name')">
+        </label>
 
         <div class="grid grid-cols-2 gap-3">
           <label class="block space-y-1.5">
@@ -100,6 +147,10 @@
           </label>
         </div>
 
+        <p v-if="formError" class="rounded-2xl bg-red-50 p-3 text-sm text-red-700 dark:bg-red-950/40 dark:text-red-300">
+          {{ formError }}
+        </p>
+
         <button
           type="submit"
           class="flex min-h-12 w-full items-center justify-center gap-2 rounded-2xl bg-munchling-600 px-4 font-semibold text-white shadow-lg shadow-munchling-600/20 transition active:scale-[0.98] disabled:opacity-60"
@@ -112,28 +163,13 @@
     </section>
 
     <section class="space-y-3">
-      <div class="space-y-3">
-        <div class="flex items-center justify-between">
-          <h2 class="text-lg font-semibold">
-            {{ $t('foods.listTitle') }}
-          </h2>
-          <span class="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600 dark:bg-slate-800 dark:text-slate-300">
-            {{ foods.length }}
-          </span>
-        </div>
-
-        <label class="block space-y-1.5">
-          <span class="sr-only">{{ $t('foods.search') }}</span>
-          <div class="relative">
-            <Icon name="ph:magnifying-glass" class="pointer-events-none absolute left-4 top-1/2 size-5 -translate-y-1/2 text-slate-400" />
-            <input
-              v-model="searchModel"
-              class="min-h-12 w-full rounded-2xl border border-slate-200 bg-white py-3 pl-11 pr-4 text-base outline-none transition focus:border-munchling-600 focus:ring-4 focus:ring-munchling-600/10 dark:border-slate-700 dark:bg-slate-900"
-              :placeholder="$t('foods.searchPlaceholder')"
-              @input="refreshFoods(searchModel)"
-            >
-          </div>
-        </label>
+      <div class="flex items-center justify-between">
+        <h2 class="text-lg font-semibold">
+          {{ $t('foods.listTitle') }}
+        </h2>
+        <span class="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+          {{ foods.length }}
+        </span>
       </div>
 
       <div v-if="isLoading" class="rounded-3xl border border-slate-200 bg-white p-6 text-center text-sm text-slate-500 dark:border-slate-800 dark:bg-slate-900">
@@ -150,49 +186,55 @@
         :key="food.id"
         class="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900"
       >
-        <div class="flex items-start justify-between gap-3">
-          <div>
-            <div class="flex flex-wrap items-center gap-2">
-              <h3 class="text-lg font-semibold">{{ food.nameDe }}</h3>
-              <span v-if="food.isCustom" class="rounded-full bg-munchling-50 px-2 py-0.5 text-xs font-semibold text-munchling-700 dark:bg-munchling-600/15 dark:text-munchling-500">
-                {{ $t('foods.custom') }}
-              </span>
+        <button type="button" class="flex min-h-11 w-full items-center justify-between gap-3 text-left" @click="toggleFood(food.id)">
+          <span class="min-w-0 truncate text-lg font-semibold">{{ food.nameDe }}</span>
+          <Icon :name="expandedFoodId === food.id ? 'ph:caret-up' : 'ph:caret-down'" class="size-5 shrink-0 text-slate-400" />
+        </button>
+
+        <div v-if="expandedFoodId === food.id" class="mt-4 space-y-4">
+          <div class="flex items-start justify-between gap-3">
+            <div>
+              <div class="flex flex-wrap items-center gap-2">
+                <span v-if="food.isCustom" class="rounded-full bg-munchling-50 px-2 py-0.5 text-xs font-semibold text-munchling-700 dark:bg-munchling-600/15 dark:text-munchling-500">
+                  {{ $t('foods.custom') }}
+                </span>
+              </div>
+              <p class="text-sm text-slate-500 dark:text-slate-400">
+                {{ food.nameEn }}<template v-if="food.brand"> · {{ food.brand }}</template>
+              </p>
+              <p v-if="food.ean" class="mt-1 text-xs text-slate-400">
+                EAN {{ food.ean }}
+              </p>
             </div>
-            <p class="text-sm text-slate-500 dark:text-slate-400">
-              {{ food.nameEn }}<template v-if="food.brand"> · {{ food.brand }}</template>
-            </p>
-            <p v-if="food.ean" class="mt-1 text-xs text-slate-400">
-              EAN {{ food.ean }}
-            </p>
+            <div class="rounded-2xl bg-slate-50 px-3 py-2 text-right dark:bg-slate-950">
+              <p class="text-lg font-bold">{{ food.caloriesPer100g }}</p>
+              <p class="text-xs text-slate-500">kcal/100g</p>
+            </div>
           </div>
-          <div class="rounded-2xl bg-slate-50 px-3 py-2 text-right dark:bg-slate-950">
-            <p class="text-lg font-bold">{{ food.caloriesPer100g }}</p>
-            <p class="text-xs text-slate-500">kcal/100g</p>
-          </div>
-        </div>
 
-        <dl class="mt-4 grid grid-cols-3 gap-2 text-center text-xs">
-          <div v-for="nutrient in nutrientSummary(food)" :key="nutrient.label" class="rounded-2xl bg-slate-50 p-3 dark:bg-slate-950">
-            <dt class="text-slate-500 dark:text-slate-400">{{ $t(nutrient.label) }}</dt>
-            <dd class="mt-1 font-semibold">{{ nutrient.value }}</dd>
-          </div>
-        </dl>
+          <dl class="grid grid-cols-3 gap-2 text-center text-xs">
+            <div v-for="nutrient in nutrientSummary(food)" :key="nutrient.label" class="rounded-2xl bg-slate-50 p-3 dark:bg-slate-950">
+              <dt class="text-slate-500 dark:text-slate-400">{{ $t(nutrient.label) }}</dt>
+              <dd class="mt-1 font-semibold">{{ nutrient.value }}</dd>
+            </div>
+          </dl>
 
-        <div class="mt-4 grid grid-cols-2 gap-2">
-          <button
-            type="button"
-            class="min-h-11 rounded-2xl bg-slate-100 px-4 text-sm font-semibold text-slate-700 dark:bg-slate-800 dark:text-slate-200"
-            @click="editFood(food)"
-          >
-            {{ $t('common.edit') }}
-          </button>
-          <button
-            type="button"
-            class="min-h-11 rounded-2xl bg-red-50 px-4 text-sm font-semibold text-red-700 dark:bg-red-950/40 dark:text-red-300"
-            @click="removeFood(food)"
-          >
-            {{ $t('common.delete') }}
-          </button>
+          <div class="grid grid-cols-2 gap-2">
+            <button
+              type="button"
+              class="min-h-11 rounded-2xl bg-slate-100 px-4 text-sm font-semibold text-slate-700 dark:bg-slate-800 dark:text-slate-200"
+              @click="editFood(food)"
+            >
+              {{ $t('common.edit') }}
+            </button>
+            <button
+              type="button"
+              class="min-h-11 rounded-2xl bg-red-50 px-4 text-sm font-semibold text-red-700 dark:bg-red-950/40 dark:text-red-300"
+              @click="removeFood(food)"
+            >
+              {{ $t('common.delete') }}
+            </button>
+          </div>
         </div>
       </article>
     </section>
@@ -202,12 +244,13 @@
 
 <script setup lang="ts">
 import { useBarcodeScanner } from '~/composables/useBarcodeScanner'
+import { useBundledFoodSearch, type BundledFoodSearchResult } from '~/composables/useBundledFoodSearch'
 import { useFoods } from '~/composables/useFoods'
+import { useOpenFoodFacts } from '~/composables/useOpenFoodFacts'
 import type { Food } from '~/utils/database/repositories'
 
 type FoodForm = {
-  nameDe: string
-  nameEn: string
+  name: string
   brand: string
   ean: string
   caloriesPer100g: number
@@ -219,21 +262,31 @@ type FoodForm = {
   saltPer100g: number
 }
 
-type NutrientKey = Exclude<keyof FoodForm, 'nameDe' | 'nameEn' | 'brand' | 'ean'>
+type NutrientKey = Exclude<keyof FoodForm, 'name' | 'brand' | 'ean'>
 
 const { t } = useI18n()
-const { foods, searchTerm, isLoading, refreshFoods, createFood, updateFood, deleteFood, getFoodByEan } = useFoods()
+const { foods, searchTerm, isLoading, refreshFoods, createFood, updateFood, deleteFood, getFoodByEan, getFoodByNameDe } = useFoods()
 const { isScanning, scanError, scanEan } = useBarcodeScanner()
+const { bundledFoodResults, isSearchingBundledFoods, bundledFoodSearchError, searchBundledFoods } = useBundledFoodSearch()
+const { isLookingUpProduct, productLookupError, lookupProductByEan } = useOpenFoodFacts()
 
 const isSaving = ref(false)
 const editingFoodId = ref<number | null>(null)
 const isEditing = computed(() => editingFoodId.value !== null)
 const searchModel = ref(searchTerm.value)
+const showSearchResults = ref(false)
 const scanNotice = ref<string | null>(null)
+const formError = ref<string | null>(null)
+const expandedFoodId = ref<number | null>(null)
+const isScannerBusy = computed(() => isScanning.value || isLookingUpProduct.value)
+const scannerButtonLabel = computed(() => {
+  if (isScanning.value) return t('foods.scanner.scanning')
+  if (isLookingUpProduct.value) return t('foods.scanner.lookingUp')
+  return t('foods.scanner.button')
+})
 
 const emptyForm = (): FoodForm => ({
-  nameDe: '',
-  nameEn: '',
+  name: '',
   brand: '',
   ean: '',
   caloriesPer100g: 0,
@@ -265,13 +318,22 @@ function optionalText(value: string) {
 function resetForm() {
   Object.assign(form, emptyForm())
   editingFoodId.value = null
+  formError.value = null
+}
+
+function toggleFood(foodId: number) {
+  expandedFoodId.value = expandedFoodId.value === foodId ? null : foodId
+}
+
+async function isDuplicateFoodName(name: string) {
+  const existingFood = await getFoodByNameDe(name)
+  return Boolean(existingFood && existingFood.id !== editingFoodId.value)
 }
 
 function editFood(food: Food) {
   editingFoodId.value = food.id
   Object.assign(form, {
-    nameDe: food.nameDe,
-    nameEn: food.nameEn,
+    name: food.nameDe,
     brand: food.brand ?? '',
     ean: food.ean ?? '',
     caloriesPer100g: food.caloriesPer100g,
@@ -285,13 +347,55 @@ function editFood(food: Food) {
   window.scrollTo({ top: 0, behavior: 'smooth' })
 }
 
+async function handleFoodSearch() {
+  showSearchResults.value = searchModel.value.trim().length > 0
+  await Promise.all([
+    refreshFoods(searchModel.value),
+    searchBundledFoods(searchModel.value)
+  ])
+}
+
+async function closeSearchResults() {
+  searchModel.value = ''
+  showSearchResults.value = false
+  await Promise.all([
+    refreshFoods(''),
+    searchBundledFoods('')
+  ])
+}
+
+function useBundledFood(food: BundledFoodSearchResult) {
+  resetForm()
+  Object.assign(form, {
+    name: food.nameDe,
+    brand: 'BLS',
+    ean: '',
+    caloriesPer100g: food.caloriesPer100g,
+    fatPer100g: food.fatPer100g,
+    carbsPer100g: food.carbsPer100g,
+    sugarPer100g: food.sugarPer100g,
+    fiberPer100g: food.fiberPer100g,
+    proteinPer100g: food.proteinPer100g,
+    saltPer100g: food.saltPer100g
+  })
+  scanNotice.value = t('foods.bundled.selected', { name: food.nameDe })
+  window.scrollTo({ top: 0, behavior: 'smooth' })
+}
+
 async function submitForm() {
+  formError.value = null
+
+  if (await isDuplicateFoodName(form.name)) {
+    formError.value = t('foods.errors.duplicateName')
+    return
+  }
+
   isSaving.value = true
 
   try {
     const input = {
-      nameDe: form.nameDe,
-      nameEn: form.nameEn,
+      nameDe: form.name,
+      nameEn: form.name,
       brand: optionalText(form.brand),
       ean: optionalText(form.ean),
       caloriesPer100g: form.caloriesPer100g,
@@ -311,6 +415,7 @@ async function submitForm() {
     }
 
     resetForm()
+    await handleFoodSearch()
   } finally {
     isSaving.value = false
   }
@@ -340,9 +445,32 @@ async function scanBarcode() {
     return
   }
 
+  const onlineFood = await lookupProductByEan(scannedEan)
+
   resetForm()
   form.ean = scannedEan
-  scanNotice.value = t('foods.scanner.notFound', { ean: scannedEan })
+
+  if (onlineFood) {
+    Object.assign(form, {
+      name: onlineFood.nameDe || onlineFood.nameEn,
+      brand: onlineFood.brand,
+      ean: onlineFood.ean,
+      caloriesPer100g: onlineFood.caloriesPer100g,
+      fatPer100g: onlineFood.fatPer100g,
+      carbsPer100g: onlineFood.carbsPer100g,
+      sugarPer100g: onlineFood.sugarPer100g,
+      fiberPer100g: onlineFood.fiberPer100g,
+      proteinPer100g: onlineFood.proteinPer100g,
+      saltPer100g: onlineFood.saltPer100g
+    })
+    scanNotice.value = t('foods.scanner.onlineFound', { ean: scannedEan, name: onlineFood.nameDe })
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+    return
+  }
+
+  scanNotice.value = productLookupError.value
+    ? t('foods.scanner.lookupFailed', { ean: scannedEan })
+    : t('foods.scanner.notFound', { ean: scannedEan })
   window.scrollTo({ top: 0, behavior: 'smooth' })
 }
 
@@ -362,7 +490,7 @@ function nutrientSummary(food: Food) {
 }
 
 onMounted(async () => {
-  await refreshFoods(searchModel.value)
+  await handleFoodSearch()
 })
 </script>
 
