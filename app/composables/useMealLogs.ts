@@ -2,15 +2,11 @@ import type {
 	CreateMealLogInput,
 	MealLog,
 	UpdateMealLogInput,
-} from "~/utils/database/repositories";
-import {
-	createMealLog as createMealLogRecord,
-	deleteMealLog as deleteMealLogRecord,
-	listMealLogs,
-	updateMealLog as updateMealLogRecord,
-} from "~/utils/database/repositories";
+} from "../../shared/domain/types";
+import { useMunchlingData } from "./useMunchlingData";
 
 export function useMealLogs() {
+	const { listMealLogs, createMealLog: createMealLogRecord, updateMealLog: updateMealLogRecord, deleteMealLog: deleteMealLogRecord } = useMunchlingData().mealLogs;
 	const mealLogs = useState<MealLog[]>("meal-logs", () => []);
 	const isLoading = useState("meal-logs-loading", () => false);
 

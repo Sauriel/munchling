@@ -2,17 +2,11 @@ import type {
 	CreateFoodInput,
 	Food,
 	UpdateFoodInput,
-} from "~/utils/database/repositories";
-import {
-	createFood as createFoodRecord,
-	deleteFood as deleteFoodRecord,
-	getFoodByEan,
-	getFoodByNameDe,
-	listFoods,
-	updateFood as updateFoodRecord,
-} from "~/utils/database/repositories";
+} from "../../shared/domain/types";
+import { useMunchlingData } from "./useMunchlingData";
 
 export function useFoods() {
+	const { listFoods, getFoodByEan, getFoodByNameDe, createFood: createFoodRecord, updateFood: updateFoodRecord, deleteFood: deleteFoodRecord } = useMunchlingData().foods;
 	const foods = useState<Food[]>("foods", () => []);
 	const searchTerm = useState("foods-search-term", () => "");
 	const isLoading = useState("foods-loading", () => false);

@@ -160,7 +160,7 @@ import { useFoods } from '~/composables/useFoods'
 import { useMealLogs } from '~/composables/useMealLogs'
 import { useProfiles } from '~/composables/useProfiles'
 import { useRecipes } from '~/composables/useRecipes'
-import type { MealLog, NutritionValues, RecipeNutrition } from '~/utils/database/repositories'
+import type { MealLog, NutritionValues, RecipeNutrition } from '../../shared/domain/types'
 
 const route = useRoute()
 const { t } = useI18n()

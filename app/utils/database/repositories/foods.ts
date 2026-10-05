@@ -1,29 +1,7 @@
-import {
-	fromSqlBoolean,
-	lastInsertId,
-	normalizeOptionalText,
-	querySql,
-	runSql,
-	toSqlBoolean,
-} from "../sql";
-
-export type Food = {
-	id: number;
-	nameDe: string;
-	nameEn: string;
-	brand: string | null;
-	ean: string | null;
-	caloriesPer100g: number;
-	fatPer100g: number;
-	carbsPer100g: number;
-	sugarPer100g: number;
-	fiberPer100g: number;
-	proteinPer100g: number;
-	saltPer100g: number;
-	isCustom: boolean;
-	createdAt: string;
-	updatedAt: string | null;
-};
+import { databaseSql } from "../sql";
+import { fromSqlBoolean, lastInsertId, normalizeOptionalText, toSqlBoolean, type SqlDatabase, type SqlExecutor } from "../executor";
+import type { Food, CreateFoodInput, UpdateFoodInput } from "../../../../shared/domain/types";
+export type { Food, CreateFoodInput, UpdateFoodInput } from "../../../../shared/domain/types";
 
 type FoodRow = {
 	id: number;
@@ -42,23 +20,6 @@ type FoodRow = {
 	created_at: string;
 	updated_at: string | null;
 };
-
-export type CreateFoodInput = {
-	nameDe: string;
-	nameEn: string;
-	brand?: string | null;
-	ean?: string | null;
-	caloriesPer100g: number;
-	fatPer100g: number;
-	carbsPer100g: number;
-	sugarPer100g: number;
-	fiberPer100g: number;
-	proteinPer100g: number;
-	saltPer100g: number;
-	isCustom?: boolean;
-};
-
-export type UpdateFoodInput = Partial<CreateFoodInput>;
 
 function mapFood(row: FoodRow): Food {
 	return {
@@ -80,9 +41,10 @@ function mapFood(row: FoodRow): Food {
 	};
 }
 
-export async function listFoods(searchTerm?: string) {
+export function createFoodsRepository(database: SqlDatabase) {
+async function listFoods(searchTerm?: string) {
 	if (!searchTerm?.trim()) {
-		const rows = await querySql<FoodRow>(`
+		const rows = await database.query<FoodRow>(`
       SELECT *
       FROM foods
       ORDER BY name_de COLLATE NOCASE ASC, id ASC;
@@ -91,7 +53,7 @@ export async function listFoods(searchTerm?: string) {
 	}
 
 	const search = `%${searchTerm.trim()}%`;
-	const rows = await querySql<FoodRow>(
+	const rows = await database.query<FoodRow>(
 		`
       SELECT *
       FROM foods
@@ -104,44 +66,44 @@ export async function listFoods(searchTerm?: string) {
 	return rows.map(mapFood);
 }
 
-export async function getFoodById(id: number) {
-	const rows = await querySql<FoodRow>(
+async function getFoodById(id: number, sql: SqlExecutor = database) {
+	const rows = await sql.query<FoodRow>(
 		"SELECT * FROM foods WHERE id = ? LIMIT 1;",
 		[id],
 	);
 	return rows[0] ? mapFood(rows[0]) : null;
 }
 
-export async function getFoodByEan(ean: string) {
+async function getFoodByEan(ean: string) {
 	const normalizedEan = normalizeOptionalText(ean);
 
 	if (!normalizedEan) {
 		return null;
 	}
 
-	const rows = await querySql<FoodRow>(
+	const rows = await database.query<FoodRow>(
 		"SELECT * FROM foods WHERE ean = ? LIMIT 1;",
 		[normalizedEan],
 	);
 	return rows[0] ? mapFood(rows[0]) : null;
 }
 
-export async function getFoodByNameDe(nameDe: string) {
+async function getFoodByNameDe(nameDe: string) {
 	const normalizedName = nameDe.trim().toLocaleLowerCase();
 
 	if (!normalizedName) {
 		return null;
 	}
 
-	const rows = await querySql<FoodRow>(
+	const rows = await database.query<FoodRow>(
 		"SELECT * FROM foods WHERE lower(trim(name_de)) = ? LIMIT 1;",
 		[normalizedName],
 	);
 	return rows[0] ? mapFood(rows[0]) : null;
 }
 
-export async function createFood(input: CreateFoodInput) {
-	const result = await runSql(
+async function createFood(input: CreateFoodInput) {
+	const result = await database.run(
 		`
       INSERT INTO foods (
         name_de,
@@ -178,50 +140,46 @@ export async function createFood(input: CreateFoodInput) {
 	return getFoodById(lastInsertId(result));
 }
 
-export async function updateFood(id: number, input: UpdateFoodInput) {
-	const assignments: string[] = [];
-	const values: Array<string | number | null> = [];
-
-	const add = (column: string, value: string | number | null) => {
-		assignments.push(`${column} = ?`);
-		values.push(value);
-	};
-
-	if (input.nameDe !== undefined) add("name_de", input.nameDe.trim());
-	if (input.nameEn !== undefined) add("name_en", input.nameEn.trim());
-	if (input.brand !== undefined)
-		add("brand", normalizeOptionalText(input.brand));
-	if (input.ean !== undefined) add("ean", normalizeOptionalText(input.ean));
-	if (input.caloriesPer100g !== undefined)
-		add("calories_per_100g", input.caloriesPer100g);
-	if (input.fatPer100g !== undefined) add("fat_per_100g", input.fatPer100g);
-	if (input.carbsPer100g !== undefined)
-		add("carbs_per_100g", input.carbsPer100g);
-	if (input.sugarPer100g !== undefined)
-		add("sugar_per_100g", input.sugarPer100g);
-	if (input.fiberPer100g !== undefined)
-		add("fiber_per_100g", input.fiberPer100g);
-	if (input.proteinPer100g !== undefined)
-		add("protein_per_100g", input.proteinPer100g);
-	if (input.saltPer100g !== undefined) add("salt_per_100g", input.saltPer100g);
-	if (input.isCustom !== undefined)
-		add("is_custom", toSqlBoolean(input.isCustom));
-
-	if (assignments.length === 0) {
-		return getFoodById(id);
-	}
-
-	assignments.push("updated_at = CURRENT_TIMESTAMP");
-	values.push(id);
-
-	await runSql(
-		`UPDATE foods SET ${assignments.join(", ")} WHERE id = ?;`,
-		values,
+async function updateFood(id: number, input: UpdateFoodInput) {
+	if (!Object.values(input).some((value) => value !== undefined)) return getFoodById(id);
+	await database.run(
+		`UPDATE foods SET
+		 name_de = CASE WHEN ? THEN ? ELSE name_de END,
+		 name_en = CASE WHEN ? THEN ? ELSE name_en END,
+		 brand = CASE WHEN ? THEN ? ELSE brand END,
+		 ean = CASE WHEN ? THEN ? ELSE ean END,
+		 calories_per_100g = CASE WHEN ? THEN ? ELSE calories_per_100g END,
+		 fat_per_100g = CASE WHEN ? THEN ? ELSE fat_per_100g END,
+		 carbs_per_100g = CASE WHEN ? THEN ? ELSE carbs_per_100g END,
+		 sugar_per_100g = CASE WHEN ? THEN ? ELSE sugar_per_100g END,
+		 fiber_per_100g = CASE WHEN ? THEN ? ELSE fiber_per_100g END,
+		 protein_per_100g = CASE WHEN ? THEN ? ELSE protein_per_100g END,
+		 salt_per_100g = CASE WHEN ? THEN ? ELSE salt_per_100g END,
+		 is_custom = CASE WHEN ? THEN ? ELSE is_custom END,
+		 updated_at = CURRENT_TIMESTAMP WHERE id = ?;`,
+		[
+			input.nameDe !== undefined, input.nameDe?.trim() ?? null,
+			input.nameEn !== undefined, input.nameEn?.trim() ?? null,
+			input.brand !== undefined, normalizeOptionalText(input.brand),
+			input.ean !== undefined, normalizeOptionalText(input.ean),
+			input.caloriesPer100g !== undefined, input.caloriesPer100g ?? null,
+			input.fatPer100g !== undefined, input.fatPer100g ?? null,
+			input.carbsPer100g !== undefined, input.carbsPer100g ?? null,
+			input.sugarPer100g !== undefined, input.sugarPer100g ?? null,
+			input.fiberPer100g !== undefined, input.fiberPer100g ?? null,
+			input.proteinPer100g !== undefined, input.proteinPer100g ?? null,
+			input.saltPer100g !== undefined, input.saltPer100g ?? null,
+			input.isCustom !== undefined, toSqlBoolean(input.isCustom ?? false), id,
+		],
 	);
 	return getFoodById(id);
 }
 
-export async function deleteFood(id: number) {
-	const result = await runSql("DELETE FROM foods WHERE id = ?;", [id]);
+async function deleteFood(id: number) {
+	const result = await database.run("DELETE FROM foods WHERE id = ?;", [id]);
 	return result.changes?.changes ?? 0;
 }
+return { listFoods, getFoodById, getFoodByEan, getFoodByNameDe, createFood, updateFood, deleteFood };
+}
+
+export const { listFoods, getFoodById, getFoodByEan, getFoodByNameDe, createFood, updateFood, deleteFood } = createFoodsRepository(databaseSql);

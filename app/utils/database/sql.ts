@@ -1,67 +1,30 @@
 import { CapacitorSQLite } from "@capacitor-community/sqlite";
 import { DATABASE_NAME } from "./schema";
-import {
-	initializeMunchlingDatabase,
-	persistMunchlingDatabase,
-} from "./client";
+import { initializeMunchlingDatabase, persistMunchlingDatabase } from "./client";
+import { createSqlDatabase } from "./executor";
 
-type SqlValue = string | number | boolean | null;
+export { lastInsertId, toSqlBoolean, fromSqlBoolean, normalizeOptionalText } from "./executor";
+export type { SqlDatabase, SqlExecutor, SqlValue } from "./executor";
 
-export async function executeSql(statements: string, transaction = true) {
-	await initializeMunchlingDatabase();
-	const result = await CapacitorSQLite.execute({
-		database: DATABASE_NAME,
-		statements,
-		transaction,
-	});
-	await persistMunchlingDatabase();
-	return result;
-}
+const options = { database: DATABASE_NAME, readonly: false };
 
-export async function runSql(statement: string, values: SqlValue[] = []) {
-	await initializeMunchlingDatabase();
-	const result = await CapacitorSQLite.run({
-		database: DATABASE_NAME,
-		statement,
-		values,
-	});
-	await persistMunchlingDatabase();
-	return result;
-}
+export const databaseSql = createSqlDatabase({
+	initialize: () => initializeMunchlingDatabase(),
+	execute: (statements, transaction = true) => CapacitorSQLite.execute({ ...options, statements, transaction }),
+	// The outer executor owns transactions. Capacitor must not implicitly start
+	// a nested transaction for each statement in an aggregate.
+	run: (statement, values = []) => CapacitorSQLite.run({ ...options, statement, values, transaction: false }),
+	query: async <Row extends Record<string, unknown>>(statement: string, values = []): Promise<Row[]> => {
+		const result = await CapacitorSQLite.query({ ...options, statement, values });
+		return (result.values ?? []) as Row[];
+	},
+	begin: async () => { await CapacitorSQLite.beginTransaction(options); },
+	commit: async () => { await CapacitorSQLite.commitTransaction(options); },
+	rollback: async () => { await CapacitorSQLite.rollbackTransaction(options); },
+	persist: persistMunchlingDatabase,
+});
 
-export async function querySql<Row extends Record<string, unknown>>(
-	statement: string,
-	values: SqlValue[] = [],
-) {
-	await initializeMunchlingDatabase();
-	const result = await CapacitorSQLite.query({
-		database: DATABASE_NAME,
-		statement,
-		values,
-	});
-
-	return (result.values ?? []) as Row[];
-}
-
-export function lastInsertId(result: Awaited<ReturnType<typeof runSql>>) {
-	const id = result.changes?.lastId;
-
-	if (typeof id !== "number") {
-		throw new Error("SQLite did not return a last inserted id.");
-	}
-
-	return id;
-}
-
-export function toSqlBoolean(value: boolean) {
-	return value ? 1 : 0;
-}
-
-export function fromSqlBoolean(value: unknown) {
-	return Number(value) === 1;
-}
-
-export function normalizeOptionalText(value: string | null | undefined) {
-	const trimmed = value?.trim();
-	return trimmed ? trimmed : null;
-}
+// Compatibility for existing low-level callers. All access shares the queue.
+export const executeSql = databaseSql.execute;
+export const runSql = databaseSql.run;
+export const querySql = databaseSql.query;

@@ -1,4 +1,4 @@
-import type { Profile } from "~/utils/database/repositories";
+import type { Profile } from "../../shared/domain/types";
 import { useProfiles } from "./useProfiles";
 
 const STORAGE_KEY = "munchling_current_profile_id";

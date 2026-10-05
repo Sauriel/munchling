@@ -247,7 +247,7 @@ import { useBarcodeScanner } from '~/composables/useBarcodeScanner'
 import { useBundledFoodSearch, type BundledFoodSearchResult } from '~/composables/useBundledFoodSearch'
 import { useFoods } from '~/composables/useFoods'
 import { useOpenFoodFacts } from '~/composables/useOpenFoodFacts'
-import type { Food } from '~/utils/database/repositories'
+import type { Food } from '../../shared/domain/types'
 
 type FoodForm = {
   name: string

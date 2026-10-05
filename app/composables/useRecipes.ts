@@ -4,19 +4,15 @@ import type {
 	RecipeIngredientInput,
 	RecipeWithIngredients,
 	UpdateRecipeInput,
-} from "~/utils/database/repositories";
-import {
-	addRecipeIngredient,
-	calculateRecipeNutrition,
-	createRecipe as createRecipeRecord,
-	deleteRecipe as deleteRecipeRecord,
-	getRecipeWithIngredients,
-	listRecipes,
-	replaceRecipeIngredients,
-	updateRecipe as updateRecipeRecord,
-} from "~/utils/database/repositories";
+} from "../../shared/domain/types";
+import { useMunchlingData } from "./useMunchlingData";
 
 export function useRecipes() {
+	const {
+		addRecipeIngredient, calculateRecipeNutrition, getRecipeWithIngredients,
+		listRecipes, replaceRecipeIngredients, createRecipe: createRecipeRecord,
+		updateRecipe: updateRecipeRecord, deleteRecipe: deleteRecipeRecord,
+	} = useMunchlingData().recipes;
 	const recipes = useState<Recipe[]>("recipes", () => []);
 	const selectedRecipe = useState<RecipeWithIngredients | null>(
 		"selected-recipe",

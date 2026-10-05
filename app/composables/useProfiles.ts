@@ -2,15 +2,11 @@ import type {
 	CreateProfileInput,
 	Profile,
 	UpdateProfileInput,
-} from "~/utils/database/repositories";
-import {
-	createProfile as createProfileRecord,
-	deleteProfile as deleteProfileRecord,
-	listProfiles,
-	updateProfile as updateProfileRecord,
-} from "~/utils/database/repositories";
+} from "../../shared/domain/types";
+import { useMunchlingData } from "./useMunchlingData";
 
 export function useProfiles() {
+	const { listProfiles, createProfile: createProfileRecord, updateProfile: updateProfileRecord, deleteProfile: deleteProfileRecord } = useMunchlingData().profiles;
 	const profiles = useState<Profile[]>("profiles", () => []);
 	const isLoading = useState("profiles-loading", () => false);
 

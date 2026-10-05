@@ -164,7 +164,7 @@
 <script setup lang="ts">
 import { useCurrentProfile } from '~/composables/useCurrentProfile'
 import { useProfiles } from '~/composables/useProfiles'
-import type { Profile } from '~/utils/database/repositories'
+import type { Profile } from '../../shared/domain/types'
 
 type ProfileForm = {
   name: string

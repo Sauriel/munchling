@@ -68,8 +68,11 @@
 
 <script setup lang="ts">
 import { useProfiles } from '~/composables/useProfiles'
-import { calculateMealLogProfileNutrition, listMealLogs, type Profile } from '~/utils/database/repositories'
+import { useMunchlingData } from '~/composables/useMunchlingData'
+import { calculateMealLogProfileNutrition } from '../../shared/domain/nutrition'
+import type { Profile } from '../../shared/domain/types'
 
+const { listMealLogs } = useMunchlingData().mealLogs
 const { profiles, refreshProfiles } = useProfiles()
 const todayCaloriesByProfile = reactive<Record<number, number>>({})
 

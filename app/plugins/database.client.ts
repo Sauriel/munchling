@@ -1,6 +1,8 @@
 import { Capacitor } from "@capacitor/core";
 import { defineCustomElements as defineJeepSqliteCustomElements } from "jeep-sqlite/loader";
 import { initializeMunchlingDatabase } from "~/utils/database/client";
+import { databaseSql } from "~/utils/database/sql";
+import { createLocalDataService } from "~/utils/data/local";
 
 export default defineNuxtPlugin(async () => {
 	if (Capacitor.getPlatform() === "web") {
@@ -12,4 +14,5 @@ export default defineNuxtPlugin(async () => {
 	}
 
 	await initializeMunchlingDatabase({ seedTestData: import.meta.dev });
+	return { provide: { munchlingData: createLocalDataService(databaseSql) } };
 });

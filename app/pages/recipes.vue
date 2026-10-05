@@ -217,7 +217,7 @@ import { useBundledFoodSearch, type BundledFoodSearchResult } from '~/composable
 import { useFoods } from '~/composables/useFoods'
 import { useOpenFoodFacts } from '~/composables/useOpenFoodFacts'
 import { useRecipes } from '~/composables/useRecipes'
-import type { Food, NutritionValues, Recipe, RecipeIngredientInput, RecipeNutrition } from '~/utils/database/repositories'
+import type { Food, NutritionValues, Recipe, RecipeIngredientInput, RecipeNutrition } from '../../shared/domain/types'
 
 type IngredientRow = {
   clientId: string

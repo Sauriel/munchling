@@ -144,8 +144,11 @@
 <script setup lang="ts">
 import { useMealLogs } from '~/composables/useMealLogs'
 import { useProfiles } from '~/composables/useProfiles'
-import { calculateMealLogProfileNutrition, listMealLogs, type MealLog, type NutritionValues } from '~/utils/database/repositories'
+import { useMunchlingData } from '~/composables/useMunchlingData'
+import { calculateMealLogProfileNutrition } from '../../../shared/domain/nutrition'
+import type { MealLog, NutritionValues } from '../../../shared/domain/types'
 
+const { listMealLogs } = useMunchlingData().mealLogs
 const route = useRoute()
 const profileId = computed(() => Number(route.params.id))
 const { profiles, refreshProfiles } = useProfiles()
