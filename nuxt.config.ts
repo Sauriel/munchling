@@ -1,5 +1,7 @@
 import { defineNuxtConfig } from "nuxt/config";
 
+const serverBuild = process.env.MUNCHLING_BUILD_MODE === "server";
+
 export default defineNuxtConfig({
 	compatibilityDate: "2026-06-09",
 	devtools: { enabled: true },
@@ -35,8 +37,13 @@ export default defineNuxtConfig({
 		],
 		langDir: "locales",
 	},
+	runtimeConfig: {
+		serverEnabled: serverBuild,
+		mariaDb: { host: "", port: 3306, user: "", password: "", database: "munchling", connectionLimit: 5 },
+	},
 	nitro: {
-		preset: "static",
+		preset: serverBuild ? "node-server" : "static",
+		ignore: serverBuild ? [] : ["**/server/**"],
 	},
 	typescript: {
 		typeCheck: true,

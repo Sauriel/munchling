@@ -130,9 +130,9 @@ export async function validateMealReferences(input: CreateMealLogInput, lookup: 
 }
 
 // Iterative topological sort avoids recursive stack overflow for imported graphs.
-export function validateRecipeGraph(edges: ReadonlyArray<{ recipeId: number; subRecipeId: number | null }>) {
-	const children = new Map<number, number[]>();
-	const incoming = new Map<number, number>();
+export function validateRecipeGraph<Id extends number | string>(edges: ReadonlyArray<{ recipeId: Id; subRecipeId: Id | null }>) {
+	const children = new Map<Id, Id[]>();
+	const incoming = new Map<Id, number>();
 	for (const edge of edges) {
 		if (edge.subRecipeId === null) continue;
 		const targets = children.get(edge.recipeId) ?? [];

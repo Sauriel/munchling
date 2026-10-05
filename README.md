@@ -26,11 +26,15 @@ Die Capacitor-Ausgabe nutzt `.output/public` als Web-Verzeichnis.
 pnpm test
 pnpm test:watch
 pnpm typecheck
+pnpm typecheck:server
+pnpm test:server
 pnpm generate
 pnpm test:browser
 ```
 
 `test:browser` benötigt Node >= 22 und Chromium (`CHROMIUM_BIN` überschreibt `/usr/bin/chromium`). Der Test nutzt ein frisches temporäres Browserprofil und prüft Export, Profilpersistenz, bestätigte Wiederherstellung und die gespeicherte Sicherheitssicherung.
+
+`test:server` baut den Nitro-Backend-Modus und prüft ihn samt Schreibdienst gegen eine isolierte MariaDB 11.4 in Docker. Zufällige Test-Credentials und Loopback-Port, keine Produktionsdatenbank. Anschließend für Browser/Capacitor erneut `generate`/`cap:sync` ausführen.
 
 Die Repository-Integrationstests verwenden eine echte SQLite-Engine über `sql.js` mit dem App-Schema. Sie prüfen unter anderem atomare Gerichte/Zutaten und Mahlzeiten/Portionen, Rollbacks, parallele Datenbankzugriffe und Nährwertberechnungen. Native Geräte- und Browser-Smoke-Tests werden dadurch nicht ersetzt.
 
@@ -41,7 +45,9 @@ Die Repository-Integrationstests verwenden eine echte SQLite-Engine über `sql.j
 - `app/utils/data/local.ts`: lokaler Adapter mit injizierbarer SQLite-Verbindung.
 - `app/utils/database/executor.ts`: serialisierte Zugriffe und explizite Transaktionen. Innerhalb eines Transaktionscallbacks ausschließlich den übergebenen SQL-Executor verwenden, nicht die globale Verbindung.
 
-Aktuell ist weiterhin nur der lokale Betriebsmodus implementiert; auch `pnpm dev` nutzt lokale Browser-SQLite. Es gibt noch keine MariaDB-API und keinen Netzwerk-Sync. SQLite-Schema v2 ergänzt stabile UUIDs, Löschmarker und eine atomare, persistente Änderungswarteschlange; Sync bleibt ausgeschaltet. Details: [docs/local-sync-foundation.md](docs/local-sync-foundation.md).
+Die Oberflächen verwenden weiterhin den lokalen Adapter; auch `pnpm dev` nutzt lokale Browser-SQLite. SQLite-Schema v2 ergänzt stabile UUIDs, Löschmarker und eine atomare Änderungswarteschlange; Netzwerk-Sync bleibt ausgeschaltet. Details: [docs/local-sync-foundation.md](docs/local-sync-foundation.md).
+
+Die MariaDB-Grundlage ist vorhanden: private Pool-Anbindung, geschützte versionierte Migrationen, transaktionaler Schreibdienst mit Versions-/Löschprüfungen, idempotente Receipts, Commit-geordnetes Change-Log und Health-Endpunkte. `pnpm build:server` erzeugt dafür einen Nitro-Node-Server. **Noch keine Fach-HTTP-API oder angebundene gemeinsame Weboberfläche**; auch im Backend-Build bleibt die UI vorerst lokal. Konfiguration und Grenzen: [docs/server-foundation.md](docs/server-foundation.md).
 
 `dev`, `build` und `generate` bereiten die WASM-Assets automatisch vor. Die BLS-Suche nutzt `public/sql-wasm.wasm`; Browser-SQLite verwendet separat `public/assets/sql-wasm.wasm`. `jeep-sqlite` 2.8.0 bündelt einen älteren sql.js-Runtime-Code und benötigt die dazu passende, über `sql.js-jeep` bereitgestellte WASM-Version. Bei Updates müssen Runtime und WASM zusammen überprüft werden.
 

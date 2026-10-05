@@ -134,7 +134,7 @@ Weitere künftig persistierte fachliche Daten müssen ausdrücklich in den Sync-
 - [x] Regeln für fachliche Validierung dokumentieren: positive Mengen, nichtnegative Ziele/Nährwerte, EAN-Eindeutigkeit, genau eine Quelle, gültige Referenzen, keine Rezeptzyklen.
 - [x] Bestehendes Verhalten historischer Mahlzeiten ausdrücklich erhalten: Nährwerte werden aktuell dynamisch aus Lebensmitteln/Gerichten berechnet. Historische Nährwert-Snapshots wären eine separate Funktionsänderung.
 - [x] Bestandsdaten-Backup/Export vor der ersten SQLite-Migration ermöglichen und eine Rücksicherung testen.
-- [ ] Minimalen Testaufbau mit getrennten lokalen Datenbanken und echter MariaDB-Testinstanz festlegen.
+- [x] Minimalen Testaufbau mit getrennten lokalen Datenbanken und echter MariaDB-Testinstanz festlegen.
 
 Abnahme: fachlicher Sync-Umfang und verlustfreie Migrationsstrategie sind dokumentiert.
 
@@ -173,16 +173,18 @@ Abnahme: vorhandene Daten bleiben erhalten; jede neue Fachänderung ist dauerhaf
 
 ### Phase 3 — MariaDB und Server-Grundlage
 
-- [ ] `server/`-Struktur mit serverseitiger MariaDB-Anbindung, Pooling und sauberem Shutdown erstellen.
-- [ ] Versionierte MariaDB-Migrationen für Fachdaten, Referenzen, Versionen, Tombstones, Change-Log, Geräte-/Sync-Metadaten und Idempotenz erstellen.
-- [ ] Geeignete Typen für UUIDs, Texte, UTC-Zeitpunkte, Zahlen und Flags wählen; SQLite-Syntax nicht unverändert übernehmen.
-- [ ] Kollation, EAN-Normalisierung/-Eindeutigkeit und Genauigkeit von Mengen/Nährwerten festlegen; Verhalten mit SQLite abgleichen.
-- [ ] Fachliche Konsistenz serverseitig prüfen und zusätzlich soweit sinnvoll durch DB-Constraints absichern.
-- [ ] Rezeptzyklen und ungültige Referenzen auch bei mehreren Änderungen in einer Transaktion verhindern.
-- [ ] Gemeinsamen transaktionalen Schreibdienst bauen: Fachdaten + Version + Change-Log + Operationsbestätigung in einem Commit.
+- [x] `server/`-Struktur mit serverseitiger MariaDB-Anbindung, Pooling und sauberem Shutdown erstellen.
+- [x] Versionierte MariaDB-Migrationen für Fachdaten, Referenzen, Versionen, Tombstones, Change-Log, Geräte-/Sync-Metadaten und Idempotenz erstellen.
+- [x] Geeignete Typen für UUIDs, Texte, UTC-Zeitpunkte, Zahlen und Flags wählen; SQLite-Syntax nicht unverändert übernehmen.
+- [x] Kollation, EAN-Normalisierung/-Eindeutigkeit und Genauigkeit von Mengen/Nährwerten festlegen; Verhalten mit SQLite abgleichen.
+- [x] Fachliche Konsistenz serverseitig prüfen und zusätzlich soweit sinnvoll durch DB-Constraints absichern.
+- [x] Rezeptzyklen und ungültige Referenzen auch bei mehreren Änderungen in einer Transaktion verhindern.
+- [x] Gemeinsamen transaktionalen Schreibdienst bauen: Fachdaten + Version + Change-Log + Operationsbestätigung in einem Commit.
 - [ ] Versionsprüfung auch für gewöhnliche Web-CRUD-Schreibzugriffe nutzen, damit zwei Browser-Tabs keine stillen Überschreibungen verursachen.
-- [ ] Sicheres Migrationsverfahren beim Deployment festlegen; keine konkurrierenden Migrationen mehrerer Instanzen.
-- [ ] Liveness-/Readiness-Endpunkte und strukturierte, datensparsame Fehlerlogs ergänzen.
+- [x] Sicheres Migrationsverfahren beim Deployment festlegen; keine konkurrierenden Migrationen mehrerer Instanzen.
+- [x] Liveness-/Readiness-Endpunkte und strukturierte, datensparsame Fehlerlogs ergänzen.
+
+Implementiert und gegen echte MariaDB einschließlich Nitro-HTTP-Health geprüft: [server-foundation.md](server-foundation.md). Der gemeinsame Schreibdienst erzwingt Basisrevisionen, idempotente Batches, vollständige Löschabhängigkeits-Guards und Commit-geordnete Cursor. Historische Mahlzeiten-Uhrzeiten ohne Zeitzone bleiben unverändert. Die Web-CRUD-Versionsprüfung ist im Dienst bereit; die tatsächliche HTTP-/Web-Anbindung bleibt offen. Native/static und Backend-Build sind getrennt; eine fertige gemeinsame Weboberfläche ist noch nicht verfügbar.
 
 Abnahme: MariaDB-Schema und Schreibdienst sind reproduzierbar aufsetzbar, validiert und transaktional konsistent.
 
