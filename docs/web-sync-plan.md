@@ -8,10 +8,15 @@ Status: Implementierung begonnen; erstes Fundament umgesetzt und automatisiert g
 - Persistenzunabhängige Nährwertberechnung; dynamische historische Nährwerte bleiben erhalten.
 - Lokaler Datenadapter mit injizierbarer Verbindung; sämtliche Pages und Composables greifen für Fachdaten über den Datenservice zu.
 - Serialisierte SQL-Zugriffe und atomare Gerichte/Zutaten sowie Mahlzeiten/Portionen mit Rollback; Browser-Persistenz erst nach Commit.
-- Vitest-Testaufbau mit echter SQLite-Engine (`sql.js`): 29 Tests bestanden.
-- `pnpm typecheck` und `pnpm generate` erfolgreich. Der Generate-Build meldet eine Sourcemap-Warnung des Nuxt-Preload-Plugins.
-- Keine Schemaänderung, keine Bestandsdatenmigration und noch keine neuen Netzwerkzugriffe. Native Geräte-/Browser-Smoke-Tests stehen aus.
-- Nächste Arbeiten: gemeinsame Eingabevalidierung und Backup/Restore vor der UUID-/Outbox-Migration; danach Server-/Web-Anbindung.
+- Gemeinsame Eingabe-/Referenzvalidierung inklusive transaktionaler EAN-Eindeutigkeit und Verhinderung von Rezeptzyklen; lokalisierte Formularfehler.
+- JSON-Backup/Restore aller sechs Fachtabellen in den Einstellungen, mit expliziter Ersetzungsbestätigung und separat gespeicherter Sicherheitssicherung vor jedem Restore.
+- Format v1 bewahrt IDs, Zeitstempel und exakte Portionsfaktoren; Details in `docs/data-integrity-and-backups.md`.
+- Vitest-Testaufbau mit echter SQLite-Engine (`sql.js`): 102 Tests bestanden.
+- Echter Chromium-Smoke-Test (`pnpm test:browser`) prüft Export, Profilpersistenz, Restore und persistente Sicherheitssicherung; alle Prüfungen erfolgreich.
+- Browserstartfehler behoben: jeep-sqlite bekommt eine separate, zur eingebetteten Runtime passende WASM-Datei; beide WASM-Assets werden vor dev/build/generate vorbereitet.
+- `pnpm typecheck`, `pnpm generate`, Capacitor-Sync für Android/iOS und Android `assembleDebug` erfolgreich. Der Generate-Build meldet weiterhin eine Sourcemap-Warnung des Nuxt-Preload-Plugins.
+- Keine Schemaänderung, keine Bestandsdatenmigration und keine Sync-Netzwerkzugriffe. Native Geräte-Laufzeittests und iOS-Kompilierung stehen aus.
+- Nächste Arbeiten: Backup-Format für UUIDs erweitern und sichere UUID-/Outbox-Migration umsetzen; danach Server-/Web-Anbindung.
 
 ## 1. Bestätigte Anforderungen
 
@@ -126,9 +131,9 @@ Weitere künftig persistierte fachliche Daten müssen ausdrücklich in den Sync-
 - [x] Entscheidungen aus diesem Dokument als Architekturvertrag übernehmen.
 - [ ] Dockerfile als primären Deploymentweg bestätigen; Nixpacks nur bei Bedarf zusätzlich umsetzen.
 - [ ] Daten- und API-Typen für die sechs Tabellen bzw. vier Aggregate definieren: Profile, Lebensmittel, Gerichte mit Zutaten, Mahlzeiten mit Portionen.
-- [ ] Regeln für fachliche Validierung dokumentieren: positive Mengen, nichtnegative Ziele/Nährwerte, EAN-Eindeutigkeit, genau eine Quelle, gültige Referenzen, keine Rezeptzyklen.
+- [x] Regeln für fachliche Validierung dokumentieren: positive Mengen, nichtnegative Ziele/Nährwerte, EAN-Eindeutigkeit, genau eine Quelle, gültige Referenzen, keine Rezeptzyklen.
 - [x] Bestehendes Verhalten historischer Mahlzeiten ausdrücklich erhalten: Nährwerte werden aktuell dynamisch aus Lebensmitteln/Gerichten berechnet. Historische Nährwert-Snapshots wären eine separate Funktionsänderung.
-- [ ] Bestandsdaten-Backup/Export vor der ersten SQLite-Migration ermöglichen und eine Rücksicherung testen.
+- [x] Bestandsdaten-Backup/Export vor der ersten SQLite-Migration ermöglichen und eine Rücksicherung testen.
 - [ ] Minimalen Testaufbau mit getrennten lokalen Datenbanken und echter MariaDB-Testinstanz festlegen.
 
 Abnahme: fachlicher Sync-Umfang und verlustfreie Migrationsstrategie sind dokumentiert.
@@ -136,7 +141,7 @@ Abnahme: fachlicher Sync-Umfang und verlustfreie Migrationsstrategie sind dokume
 ### Phase 1 — Gemeinsame Fachlogik und Datenadapter
 
 - [x] Persistenzunabhängige DTOs und Nährwertberechnung aus SQLite-Implementierungen lösen.
-- [ ] Gemeinsame Eingabevalidierung aus SQLite-Constraints und UI-Prüfungen lösen.
+- [x] Gemeinsame Eingabevalidierung aus SQLite-Constraints und UI-Prüfungen lösen.
 - [x] Gemeinsame Repository-/Service-Verträge für die bestehenden CRUD-Funktionen schaffen.
 - [ ] Lokalen SQLite-Adapter und HTTP-Adapter vorsehen; Pages sollen nicht wissen, wo Daten gespeichert werden.
 - [x] Composables auf den injizierten Datenservice umstellen, bestehende Rückgabewerte und Ladezustände möglichst erhalten.

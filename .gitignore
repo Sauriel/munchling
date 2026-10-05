@@ -4,6 +4,9 @@
 .data
 dist
 
+# Generated jeep-sqlite WASM (prepared before dev/build/generate)
+public/assets/sql-wasm.wasm
+
 # Dependencies
 node_modules
 

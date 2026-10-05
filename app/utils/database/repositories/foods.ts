@@ -1,4 +1,5 @@
 import { databaseSql } from "../sql";
+import { assertId, validateFoodInput, validateEanUniqueness } from "../../../../shared/domain/validation";
 import { fromSqlBoolean, lastInsertId, normalizeOptionalText, toSqlBoolean, type SqlDatabase, type SqlExecutor } from "../executor";
 import type { Food, CreateFoodInput, UpdateFoodInput } from "../../../../shared/domain/types";
 export type { Food, CreateFoodInput, UpdateFoodInput } from "../../../../shared/domain/types";
@@ -74,14 +75,14 @@ async function getFoodById(id: number, sql: SqlExecutor = database) {
 	return rows[0] ? mapFood(rows[0]) : null;
 }
 
-async function getFoodByEan(ean: string) {
+async function getFoodByEan(ean: string, sql: SqlExecutor = database) {
 	const normalizedEan = normalizeOptionalText(ean);
 
 	if (!normalizedEan) {
 		return null;
 	}
 
-	const rows = await database.query<FoodRow>(
+	const rows = await sql.query<FoodRow>(
 		"SELECT * FROM foods WHERE ean = ? LIMIT 1;",
 		[normalizedEan],
 	);
@@ -103,7 +104,10 @@ async function getFoodByNameDe(nameDe: string) {
 }
 
 async function createFood(input: CreateFoodInput) {
-	const result = await database.run(
+	validateFoodInput(input);
+	return database.transaction(async (sql) => {
+	await validateEanUniqueness(input.ean, null, (ean) => getFoodByEan(ean, sql));
+	const result = await sql.run(
 		`
       INSERT INTO foods (
         name_de,
@@ -137,12 +141,18 @@ async function createFood(input: CreateFoodInput) {
 		],
 	);
 
-	return getFoodById(lastInsertId(result));
+	return getFoodById(lastInsertId(result), sql);
+	});
 }
 
 async function updateFood(id: number, input: UpdateFoodInput) {
+	assertId(id);
+	validateFoodInput(input, true);
 	if (!Object.values(input).some((value) => value !== undefined)) return getFoodById(id);
-	await database.run(
+	return database.transaction(async (sql) => {
+	if (!await getFoodById(id, sql)) return null;
+	await validateEanUniqueness(input.ean, id, (ean) => getFoodByEan(ean, sql));
+	await sql.run(
 		`UPDATE foods SET
 		 name_de = CASE WHEN ? THEN ? ELSE name_de END,
 		 name_en = CASE WHEN ? THEN ? ELSE name_en END,
@@ -172,10 +182,12 @@ async function updateFood(id: number, input: UpdateFoodInput) {
 			input.isCustom !== undefined, toSqlBoolean(input.isCustom ?? false), id,
 		],
 	);
-	return getFoodById(id);
+	return getFoodById(id, sql);
+	});
 }
 
 async function deleteFood(id: number) {
+	assertId(id);
 	const result = await database.run("DELETE FROM foods WHERE id = ?;", [id]);
 	return result.changes?.changes ?? 0;
 }

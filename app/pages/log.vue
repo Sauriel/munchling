@@ -103,6 +103,7 @@
           <Icon :name="isEditing ? 'ph:check-circle-duotone' : 'ph:plus-circle-duotone'" class="size-5" />
           {{ isEditing ? $t('mealLog.actions.save') : $t('mealLog.actions.create') }}
         </button>
+        <p v-if="formError" role="alert" class="text-sm text-red-700 dark:text-red-300">{{ formError }}</p>
       </form>
     </section>
 
@@ -156,6 +157,7 @@
 </template>
 
 <script setup lang="ts">
+import { validationMessage } from '../../shared/domain/validation'
 import { useFoods } from '~/composables/useFoods'
 import { useMealLogs } from '~/composables/useMealLogs'
 import { useProfiles } from '~/composables/useProfiles'
@@ -170,6 +172,7 @@ const { profiles, refreshProfiles } = useProfiles()
 const { mealLogs, isLoading, refreshMealLogs, createMealLog, updateMealLog, deleteMealLog } = useMealLogs()
 
 const isSaving = ref(false)
+const formError = ref('')
 const editingMealLogId = ref<number | null>(null)
 const isEditing = computed(() => editingMealLogId.value !== null)
 const profilePortions = reactive<Record<number, number>>({})
@@ -283,6 +286,7 @@ function mealLogInput() {
 }
 
 async function submitForm() {
+  formError.value = ''
   if (!canSubmit.value) return
   isSaving.value = true
 
@@ -294,6 +298,8 @@ async function submitForm() {
     }
 
     resetForm()
+  } catch (error) {
+    formError.value = validationMessage(error, t)
   } finally {
     isSaving.value = false
   }

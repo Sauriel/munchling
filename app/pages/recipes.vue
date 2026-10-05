@@ -156,6 +156,7 @@
           <Icon :name="isEditing ? 'ph:check-circle-duotone' : 'ph:plus-circle-duotone'" class="size-5" />
           {{ isEditing ? $t('recipes.actions.save') : $t('recipes.actions.create') }}
         </button>
+        <p v-if="formError" role="alert" class="text-sm text-red-700 dark:text-red-300">{{ formError }}</p>
       </form>
     </section>
 
@@ -212,6 +213,7 @@
 </template>
 
 <script setup lang="ts">
+import { validationMessage } from '../../shared/domain/validation'
 import { useBarcodeScanner } from '~/composables/useBarcodeScanner'
 import { useBundledFoodSearch, type BundledFoodSearchResult } from '~/composables/useBundledFoodSearch'
 import { useFoods } from '~/composables/useFoods'
@@ -254,6 +256,7 @@ const { foods, refreshFoods, createFood, getFoodByEan, getFoodByNameDe } = useFo
 const { recipes, isLoading, refreshRecipes, loadRecipe, createRecipe, updateRecipe, deleteRecipe, calculateRecipeNutrition } = useRecipes()
 
 const isSaving = ref(false)
+const formError = ref('')
 const editingRecipeId = ref<number | null>(null)
 const isEditing = computed(() => editingRecipeId.value !== null)
 const recipeNutritionMap = reactive<Record<number, RecipeNutrition>>({})
@@ -496,6 +499,7 @@ function toIngredientInputs(): RecipeIngredientInput[] {
 }
 
 async function submitForm() {
+  formError.value = ''
   isSaving.value = true
 
   try {
@@ -516,6 +520,8 @@ async function submitForm() {
     resetForm()
     await refreshRecipes()
     await refreshRecipeNutrition()
+  } catch (error) {
+    formError.value = validationMessage(error, t)
   } finally {
     isSaving.value = false
   }

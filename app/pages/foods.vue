@@ -147,7 +147,7 @@
           </label>
         </div>
 
-        <p v-if="formError" class="rounded-2xl bg-red-50 p-3 text-sm text-red-700 dark:bg-red-950/40 dark:text-red-300">
+        <p v-if="formError" role="alert" class="rounded-2xl bg-red-50 p-3 text-sm text-red-700 dark:bg-red-950/40 dark:text-red-300">
           {{ formError }}
         </p>
 
@@ -243,6 +243,7 @@
 </template>
 
 <script setup lang="ts">
+import { validationMessage } from '../../shared/domain/validation'
 import { useBarcodeScanner } from '~/composables/useBarcodeScanner'
 import { useBundledFoodSearch, type BundledFoodSearchResult } from '~/composables/useBundledFoodSearch'
 import { useFoods } from '~/composables/useFoods'
@@ -416,6 +417,8 @@ async function submitForm() {
 
     resetForm()
     await handleFoodSearch()
+  } catch (error) {
+    formError.value = validationMessage(error, t)
   } finally {
     isSaving.value = false
   }

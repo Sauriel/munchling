@@ -4,6 +4,8 @@ import type {
 } from "../../../../shared/domain/types";
 import { calculateRecipeNutrition as calculateNutrition } from "../../../../shared/domain/nutrition";
 import { createFoodsRepository } from "./foods";
+import { assertId, fail, validateRecipeInput, validateIngredientInput, validateIngredients, validateIngredientReferences } from "../../../../shared/domain/validation";
+import { createReferenceLookup, validateStoredRecipeGraph } from "../validation";
 import { databaseSql } from "../sql";
 import {
 	fromSqlBoolean, lastInsertId, normalizeOptionalText, toSqlBoolean,
@@ -68,6 +70,9 @@ export function createRecipesRepository(database: SqlDatabase) {
 		return rows[0] ? mapIngredient(rows[0]) : null;
 	}
 	async function insertIngredient(sql: SqlExecutor, recipeId: number, input: RecipeIngredientInput) {
+		validateIngredientInput(input);
+		await validateIngredientReferences(input, createReferenceLookup(sql));
+		if (input.subRecipeId === recipeId) fail("cycle", "recipes");
 		const result = await sql.run(
 			"INSERT INTO recipe_ingredients (recipe_id, food_id, sub_recipe_id, amount_grams) VALUES (?, ?, ?, ?);",
 			[recipeId, input.foodId ?? null, input.subRecipeId ?? null, input.amountGrams],
@@ -80,6 +85,7 @@ export function createRecipesRepository(database: SqlDatabase) {
 	}
 
 	async function createRecipe(input: CreateRecipeInput) {
+		validateRecipeInput(input);
 		return database.transaction(async (sql) => {
 			const result = await sql.run(
 				"INSERT INTO recipes (name_de, name_en, description, is_sub_recipe) VALUES (?, ?, ?, ?);",
@@ -87,11 +93,15 @@ export function createRecipesRepository(database: SqlDatabase) {
 			);
 			const recipeId = lastInsertId(result);
 			for (const ingredient of input.ingredients ?? []) await insertIngredient(sql, recipeId, ingredient);
+			await validateStoredRecipeGraph(sql);
 			return getRecipeWithIngredients(recipeId, sql);
 		});
 	}
 	async function updateRecipe(id: number, input: UpdateRecipeInput) {
+		assertId(id);
+		validateRecipeInput(input, true);
 		return database.transaction(async (sql) => {
+			if (!await getRecipeById(id, sql)) return null;
 			if (input.nameDe !== undefined || input.nameEn !== undefined || input.description !== undefined || input.isSubRecipe !== undefined || input.ingredients !== undefined) {
 				await sql.run(
 					`UPDATE recipes SET
@@ -109,32 +119,46 @@ export function createRecipesRepository(database: SqlDatabase) {
 				);
 			}
 			if (input.ingredients !== undefined) await replaceIngredients(sql, id, input.ingredients);
+			await validateStoredRecipeGraph(sql);
 			return getRecipeWithIngredients(id, sql);
 		});
 	}
 	async function deleteRecipe(id: number) {
+		assertId(id);
 		const result = await database.run("DELETE FROM recipes WHERE id = ?;", [id]);
 		return result.changes?.changes ?? 0;
 	}
 	async function addRecipeIngredient(recipeId: number, input: RecipeIngredientInput) {
+		assertId(recipeId, "recipeId");
+		validateIngredientInput(input);
 		return database.transaction(async (sql) => {
+			if (!await getRecipeById(recipeId, sql)) fail("reference", "recipeId");
 			const ingredient = await insertIngredient(sql, recipeId, input);
+			await validateStoredRecipeGraph(sql);
 			await sql.run("UPDATE recipes SET updated_at = CURRENT_TIMESTAMP WHERE id = ?;", [recipeId]);
 			return ingredient;
 		});
 	}
 	async function updateRecipeIngredient(id: number, input: RecipeIngredientInput) {
+		assertId(id);
+		validateIngredientInput(input);
 		return database.transaction(async (sql) => {
+			const existing = await getRecipeIngredientById(id, sql);
+			if (!existing) return null;
+			await validateIngredientReferences(input, createReferenceLookup(sql));
+			if (input.subRecipeId === existing.recipeId) fail("cycle", "recipes");
 			await sql.run(
 				"UPDATE recipe_ingredients SET food_id = ?, sub_recipe_id = ?, amount_grams = ? WHERE id = ?;",
 				[input.foodId ?? null, input.subRecipeId ?? null, input.amountGrams, id],
 			);
+			await validateStoredRecipeGraph(sql);
 			const ingredient = await getRecipeIngredientById(id, sql);
 			if (ingredient) await sql.run("UPDATE recipes SET updated_at = CURRENT_TIMESTAMP WHERE id = ?;", [ingredient.recipeId]);
 			return ingredient;
 		});
 	}
 	async function deleteRecipeIngredient(id: number) {
+		assertId(id);
 		return database.transaction(async (sql) => {
 			const ingredient = await getRecipeIngredientById(id, sql);
 			const result = await sql.run("DELETE FROM recipe_ingredients WHERE id = ?;", [id]);
@@ -143,8 +167,12 @@ export function createRecipesRepository(database: SqlDatabase) {
 		});
 	}
 	async function replaceRecipeIngredients(recipeId: number, ingredients: RecipeIngredientInput[]) {
+		assertId(recipeId, "recipeId");
+		validateIngredients(ingredients);
 		return database.transaction(async (sql) => {
+			if (!await getRecipeById(recipeId, sql)) fail("reference", "recipeId");
 			await replaceIngredients(sql, recipeId, ingredients);
+			await validateStoredRecipeGraph(sql);
 			await sql.run("UPDATE recipes SET updated_at = CURRENT_TIMESTAMP WHERE id = ?;", [recipeId]);
 			return listRecipeIngredients(recipeId, sql);
 		});

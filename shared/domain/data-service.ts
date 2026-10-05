@@ -1,3 +1,4 @@
+import type { LocalBackupService } from "./backup";
 import type {
 	CreateFoodInput, CreateMealLogInput, CreateProfileInput, CreateRecipeInput,
 	Food, MealLog, MealLogFilter, Profile, Recipe, RecipeIngredient,
@@ -8,6 +9,9 @@ import type {
 // UI-facing contract shared by the local SQLite and future HTTP adapters.
 // Keep transport, SQL and Capacitor out of this module.
 export interface MunchlingDataService {
+	// Optional local capability; an online server adapter must not expose a
+	// browser-side destructive restore against the shared server database.
+	backups?: LocalBackupService;
 	profiles: {
 		listProfiles(): Promise<Profile[]>;
 		getProfileById(id: number): Promise<Profile | null>;

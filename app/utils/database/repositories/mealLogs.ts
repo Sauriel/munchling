@@ -4,6 +4,8 @@ import type {
 } from "../../../../shared/domain/types";
 import { emptyNutrition, foodNutrition } from "../../../../shared/domain/nutrition";
 import { createFoodsRepository } from "./foods";
+import { assertId, validateMealInput, validateMealReferences } from "../../../../shared/domain/validation";
+import { createReferenceLookup } from "../validation";
 import { createRecipesRepository } from "./recipes";
 import { databaseSql } from "../sql";
 import { lastInsertId, type SqlDatabase, type SqlExecutor, type SqlValue } from "../executor";
@@ -89,11 +91,13 @@ export function createMealLogsRepository(database: SqlDatabase) {
 		return [input.loggedAt ?? null, input.foodId ?? null, input.recipeId ?? null, totalWeightGrams];
 	}
 	async function createMealLog(input: CreateMealLogInput) {
+		validateMealInput(input);
 		const totalWeightGrams = totalWeight(input.profiles);
 		if (!Number.isFinite(totalWeightGrams) || totalWeightGrams <= 0) {
 			throw new Error("Meal log needs at least one positive profile portion.");
 		}
 		return database.transaction(async (sql) => {
+			await validateMealReferences(input, createReferenceLookup(sql));
 			const result = await sql.run(
 				"INSERT INTO meal_logs (logged_at, food_id, recipe_id, total_weight_grams) VALUES (COALESCE(?, CURRENT_TIMESTAMP), ?, ?, ?);",
 				mealValues(input, totalWeightGrams),
@@ -104,11 +108,15 @@ export function createMealLogsRepository(database: SqlDatabase) {
 		});
 	}
 	async function updateMealLog(id: number, input: UpdateMealLogInput) {
+		assertId(id);
+		validateMealInput(input);
 		const totalWeightGrams = totalWeight(input.profiles);
 		if (!Number.isFinite(totalWeightGrams) || totalWeightGrams <= 0) {
 			throw new Error("Meal log needs at least one positive profile portion.");
 		}
 		return database.transaction(async (sql) => {
+			if (!await getMealLogById(id, sql)) return null;
+			await validateMealReferences(input, createReferenceLookup(sql));
 			await sql.run(
 				`UPDATE meal_logs SET logged_at = COALESCE(?, logged_at), food_id = ?, recipe_id = ?,
 				 total_weight_grams = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?;`,
@@ -120,6 +128,7 @@ export function createMealLogsRepository(database: SqlDatabase) {
 		});
 	}
 	async function deleteMealLog(id: number) {
+		assertId(id);
 		const result = await database.run("DELETE FROM meal_logs WHERE id = ?;", [id]);
 		return result.changes?.changes ?? 0;
 	}

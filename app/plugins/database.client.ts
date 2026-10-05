@@ -9,8 +9,13 @@ export default defineNuxtPlugin(async () => {
 		defineJeepSqliteCustomElements(window);
 
 		if (!document.querySelector("jeep-sqlite")) {
-			document.body.appendChild(document.createElement("jeep-sqlite"));
+			const element = document.createElement("jeep-sqlite");
+			// Use the matching jeep-sqlite WASM, separate from the newer BLS runtime.
+			// Stencil exposes this attribute as 'wasmpath', not 'wasm-path'.
+			element.setAttribute("wasmpath", `${useRuntimeConfig().app.baseURL.replace(/\/$/, "")}/assets`);
+			document.body.appendChild(element);
 		}
+		await customElements.whenDefined("jeep-sqlite");
 	}
 
 	await initializeMunchlingDatabase({ seedTestData: import.meta.dev });

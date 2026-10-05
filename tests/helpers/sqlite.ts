@@ -49,5 +49,5 @@ export async function createTestDatabase() {
 		persist,
 	};
 	const database = createSqlDatabase(driver);
-	return { database, service: createLocalDataService(database), persist, close: () => sqlite.close() };
+	return { database, driver, service: createLocalDataService(database), persist, close: () => sqlite.close() };
 }

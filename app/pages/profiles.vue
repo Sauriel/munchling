@@ -84,6 +84,7 @@
           <Icon :name="isEditing ? 'ph:check-circle-duotone' : 'ph:plus-circle-duotone'" class="size-5" />
           {{ isEditing ? $t('profiles.actions.save') : $t('profiles.actions.create') }}
         </button>
+        <p v-if="formError" role="alert" class="text-sm text-red-700 dark:text-red-300">{{ formError }}</p>
       </form>
     </section>
 
@@ -162,6 +163,7 @@
 </template>
 
 <script setup lang="ts">
+import { validationMessage } from '../../shared/domain/validation'
 import { useCurrentProfile } from '~/composables/useCurrentProfile'
 import { useProfiles } from '~/composables/useProfiles'
 import type { Profile } from '../../shared/domain/types'
@@ -184,6 +186,7 @@ const { profiles, isLoading, refreshProfiles, createProfile, updateProfile, dele
 const { currentProfileId, selectProfile, initializeCurrentProfile } = useCurrentProfile()
 
 const isSaving = ref(false)
+const formError = ref('')
 const editingProfileId = ref<number | null>(null)
 const isEditing = computed(() => editingProfileId.value !== null)
 
@@ -234,6 +237,7 @@ function editProfile(profile: Profile) {
 }
 
 async function submitForm() {
+  formError.value = ''
   isSaving.value = true
 
   try {
@@ -259,6 +263,8 @@ async function submitForm() {
     }
 
     resetForm()
+  } catch (error) {
+    formError.value = validationMessage(error, t)
   } finally {
     isSaving.value = false
   }

@@ -234,6 +234,19 @@
       "salt": "Salz"
     }
   },
+  "validation": {
+    "failed": "Die Daten konnten nicht gespeichert werden. Bitte versuche es erneut.",
+    "required": "Bitte fülle alle Pflichtfelder aus und gib mindestens eine positive Portion an.",
+    "invalidType": "Die Daten enthalten einen ungültigen Feldtyp.",
+    "invalidNumber": "Zahlen müssen endlich und nicht negativ sein; Mengen und IDs müssen positiv sein.",
+    "invalidDate": "Ein Datum oder Zeitpunkt ist ungültig.",
+    "invalidSource": "Bitte genau ein Lebensmittel oder Gericht als Quelle angeben.",
+    "duplicate": "Die Daten enthalten doppelte IDs, EANs oder Profilzuordnungen.",
+    "reference": "Ein verknüpftes Profil, Lebensmittel oder Gericht ist nicht vorhanden.",
+    "cycle": "Gerichte dürfen sich nicht direkt oder indirekt selbst als Zutat enthalten.",
+    "backupFormat": "Die Datei ist keine unterstützte Munchling-Sicherung oder hat eine andere Schemaversion.",
+    "backupLimit": "Die Sicherung ist zu groß. Unterstützt werden höchstens 25 MiB und 100.000 Datensätze."
+  },
   "settings": {
     "eyebrow": "Einstellungen",
     "title": "Einstellungen",
@@ -250,6 +263,20 @@
     "profiles": {
       "title": "Profile",
       "hint": "Körperdaten, Ziele und aktive Profile verwalten."
+    },
+    "backup": {
+      "title": "Lokale Datensicherung",
+      "hint": "Sichere alle Profile, Lebensmittel, Gerichte, Zutaten, Mahlzeiten und Portionen als JSON. Geräteinstellungen und der BLS-Katalog sind nicht enthalten.",
+      "privacy": "Die Datei ist unverschlüsselt und enthält persönliche Ernährungsdaten. Bewahre sie an einem sicheren Ort auf.",
+      "export": "Sicherung exportieren",
+      "import": "Sicherungsdatei auswählen",
+      "summary": "Enthält {profiles} Profile, {foods} Lebensmittel, {recipes} Gerichte und {meals} Mahlzeiten.",
+      "replaceWarning": "Die Wiederherstellung ersetzt den gesamten lokalen Datenbestand; sie führt keine Bestände zusammen. Vorher wird automatisch eine Sicherheitssicherung auf diesem Gerät gespeichert.",
+      "confirm": "Ich möchte den lokalen Datenbestand durch diese Sicherung ersetzen.",
+      "restore": "Wiederherstellen",
+      "exportRecovery": "Letzte Sicherheitssicherung exportieren",
+      "restored": "Die Sicherung wurde wiederhergestellt. Der vorherige Bestand ist in der Sicherheitssicherung verfügbar.",
+      "actionError": "Die Aktion konnte nicht abgeschlossen werden. Prüfe Speicherplatz und Dateizugriff. Falls eine Wiederherstellung bereits übernommen wurde, nutze die Sicherheitssicherung."
     }
   }
 }

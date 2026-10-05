@@ -1,4 +1,5 @@
 import { databaseSql } from "../sql";
+import { assertId, validateProfileInput } from "../../../../shared/domain/validation";
 import { lastInsertId, type SqlDatabase } from "../executor";
 import type { Profile, CreateProfileInput, UpdateProfileInput } from "../../../../shared/domain/types";
 export type { Profile, CreateProfileInput, UpdateProfileInput } from "../../../../shared/domain/types";
@@ -53,6 +54,7 @@ async function getProfileById(id: number) {
 }
 
 async function createProfile(input: CreateProfileInput) {
+	validateProfileInput(input);
 	const result = await database.run(
 		`
       INSERT INTO profiles (
@@ -83,6 +85,8 @@ async function createProfile(input: CreateProfileInput) {
 }
 
 async function updateProfile(id: number, input: UpdateProfileInput) {
+	assertId(id);
+	validateProfileInput(input, true);
 	if (!Object.values(input).some((value) => value !== undefined)) return getProfileById(id);
 	await database.run(
 		`UPDATE profiles SET
@@ -110,6 +114,7 @@ async function updateProfile(id: number, input: UpdateProfileInput) {
 }
 
 async function deleteProfile(id: number) {
+	assertId(id);
 	const result = await database.run("DELETE FROM profiles WHERE id = ?;", [id]);
 	return result.changes?.changes ?? 0;
 }
