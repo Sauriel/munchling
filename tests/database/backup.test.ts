@@ -1,6 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createTestDatabase } from "../helpers/sqlite";
 import { parseBackupJson, type MunchlingBackup } from "../../shared/domain/backup";
+import { createSyncQueue } from "../../app/utils/database/outbox";
+import { createUuid } from "../../shared/domain/sync";
 
 const foodInput = { nameDe: "Nudeln", nameEn: "Pasta", ean: "123", caloriesPer100g: 200, fatPer100g: 2, carbsPer100g: 30, sugarPer100g: 3, fiberPer100g: 4, proteinPer100g: 10, saltPer100g: 0.5 };
 
@@ -113,15 +115,92 @@ describe("local JSON backups", () => {
 	});
 
 	it("does not restore schema migration metadata or reset identity sequences", async () => {
-		await target.database.run("INSERT INTO schema_migrations (version, name) VALUES (1, 'initial_schema');");
+		const versions = await target.database.query("SELECT version FROM schema_migrations ORDER BY version;");
 		await target.service.backups!.restoreBackup(backup, async () => {});
-		expect(await target.database.query("SELECT version FROM schema_migrations;")).toEqual([{ version: 1 }]);
+		expect(await target.database.query("SELECT version FROM schema_migrations ORDER BY version;")).toEqual(versions);
 		const profile = await target.service.profiles.createProfile({ name: "Next", dailyCaloriesTarget: 1 });
 		expect(profile!.id).toBeGreaterThan(backup.data.profiles[0]!.id);
 	});
 
+	it("preserves v2 UUIDs and all relationship tombstones", async () => {
+		await source.service.foods.deleteFood(1);
+		const deleted = await source.service.backups!.exportBackup();
+		expect(deleted.version).toBe(2);
+		await target.service.backups!.restoreBackup(deleted, async () => {});
+		const restored = await target.service.backups!.exportBackup();
+		if (deleted.version !== 2 || restored.version !== 2) throw new Error("expected v2");
+		expect(restored.identities).toEqual(deleted.identities);
+		expect(restored.tombstones).toEqual(deleted.tombstones);
+		expect(restored.data).toEqual(deleted.data);
+	});
+
+	it("imports v1 data with new UUIDs on each restore, retaining numeric IDs and exact portions", async () => {
+		const legacy = { format: "munchling-backup", version: 1, schemaVersion: 1, exportedAt: backup.exportedAt, data: backup.data };
+		await target.service.backups!.restoreBackup(legacy, async () => {});
+		const first = await target.service.backups!.exportBackup();
+		await target.service.backups!.restoreBackup(legacy, async () => {});
+		const second = await target.service.backups!.exportBackup();
+		if (first.version !== 2 || second.version !== 2) throw new Error("expected v2");
+		expect(second.data).toEqual(legacy.data);
+		expect(second.identities.map((row) => row.uuid)).not.toEqual(first.identities.map((row) => row.uuid));
+		expect(second.tombstones).toEqual([]);
+	});
+
+	it("detaches server binding, resets synchronization and queues one new snapshot batch after restore", async () => {
+		await populate(target);
+		const old = (await target.database.query<{ device_id: string; local_epoch: string }>("SELECT device_id,local_epoch FROM sync_state;"))[0]!;
+		const queue = createSyncQueue(target.database);
+		const previous = await queue.claimNextBatch();
+		await target.database.run("UPDATE sync_state SET enabled=1,server_url='https://old.example',server_instance_id='old-instance',pull_cursor='42';");
+		await target.database.run("INSERT INTO sync_conflicts (uuid,local_payload,remote_payload,server_revision) VALUES (?,?,?,?);", [previous[0]!.entityUuid, "{}", "{}", 4]);
+		await target.service.backups!.restoreBackup(backup, async () => {});
+		const state = (await target.database.query<Record<string, unknown>>("SELECT * FROM sync_state;"))[0]!;
+		expect(state).toMatchObject({ device_id: old.device_id, enabled: 0, development_seeded: 0, server_url: null, server_instance_id: null, pull_cursor: null, tracking_enabled: 1 });
+		expect(state.local_epoch).not.toBe(old.local_epoch);
+		expect(await target.database.query("SELECT * FROM sync_conflicts;")).toEqual([]);
+		expect(await target.database.query("SELECT * FROM sync_baselines;")).toEqual([]);
+		const restarted = await queue.list();
+		expect(new Set(restarted.map((row) => row.batchId)).size).toBe(1);
+		expect(restarted.every((row) => row.status === "pending" && row.baseRevision === 0)).toBe(true);
+		expect(restarted.some((row) => previous.some((oldRow) => oldRow.operationId === row.operationId))).toBe(false);
+		expect(await queue.acknowledgeBatch(previous[0]!.batchId, previous.map((row) => ({ operationId: row.operationId, serverRevision: 1 })))).toBe(false);
+	});
+
+	it("rolls back identities, server state and in-flight operations together with the fach data", async () => {
+		await populate(target);
+		const queue = createSyncQueue(target.database); await queue.claimNextBatch();
+		const previous = await target.service.backups!.exportBackup();
+		const operations = await queue.list(); const state = await target.database.query("SELECT * FROM sync_state;");
+		const run = target.driver.run;
+		const spy = vi.spyOn(target.driver, "run").mockImplementation(async (statement, values) => {
+			if (statement.startsWith("INSERT INTO recipes")) throw new Error("write failed");
+			return run(statement, values);
+		});
+		await expect(target.service.backups!.restoreBackup(backup, async () => {})).rejects.toThrow("write failed"); spy.mockRestore();
+		const restored = await target.service.backups!.exportBackup();
+		expect({ ...restored, exportedAt: previous.exportedAt }).toEqual(previous);
+		expect(await queue.list()).toEqual(operations);
+		expect(await target.database.query("SELECT * FROM sync_state;")).toEqual(state);
+	});
+
+	it.each(["missing identity", "wrong local ID", "duplicate UUID", "invalid UUID", "overlapping tombstone", "unresolved aggregate"])("rejects %s before the safety writer or any SQL mutation", async (failure) => {
+		const bad = structuredClone(backup);
+		if (bad.version !== 2) throw new Error("expected v2");
+		if (failure === "missing identity") bad.identities.pop();
+		if (failure === "wrong local ID") bad.identities[0]!.localId = 9999;
+		if (failure === "duplicate UUID") bad.identities[1]!.uuid = bad.identities[0]!.uuid;
+		if (failure === "invalid UUID") bad.identities[0]!.uuid = "not-a-uuid";
+		if (failure === "overlapping tombstone") bad.tombstones.push({ entity: "profiles", uuid: bad.identities[0]!.uuid, aggregateEntity: "profiles", aggregateUuid: bad.identities[0]!.uuid, deletedAt: bad.exportedAt });
+		if (failure === "unresolved aggregate") bad.tombstones.push({ entity: "recipe_ingredients", uuid: createUuid(), aggregateEntity: "recipes", aggregateUuid: createUuid(), deletedAt: bad.exportedAt });
+		const writer = vi.fn(async () => {});
+		await expect(target.service.backups!.restoreBackup(bad, writer)).rejects.toBeDefined();
+		expect(writer).not.toHaveBeenCalled();
+		expect(await target.service.profiles.listProfiles()).toEqual([]);
+		expect(await createSyncQueue(target.database).list()).toEqual([]);
+	});
+
 	it("refuses export/restore if unknown newer schema metadata is present", async () => {
-		await target.database.run("INSERT INTO schema_migrations (version, name) VALUES (2, 'future');");
+		await target.database.run("INSERT INTO schema_migrations (version, name) VALUES (3, 'future');");
 		await expect(target.service.backups!.exportBackup()).rejects.toMatchObject({ code: "backupFormat" });
 		await expect(target.service.backups!.restoreBackup(backup, async () => {})).rejects.toMatchObject({ code: "backupFormat" });
 	});

@@ -4,6 +4,7 @@ import { Share } from "@capacitor/share";
 import type { MunchlingBackup } from "../../../shared/domain/backup";
 
 const RECOVERY_PATH = "backups/before-restore.json";
+const MIGRATION_PATH = "backups/before-schema-v2.json";
 
 // Directory.Data is app-private on native platforms. The web implementation
 // uses IndexedDB, independently of the main SQLite database.
@@ -14,15 +15,28 @@ export async function saveRecoveryBackup(backup: MunchlingBackup) {
 	});
 }
 
-export async function hasRecoveryBackup() {
+// Never overwrite the restore-recovery file with a schema-upgrade snapshot.
+export async function saveMigrationBackup(backup: MunchlingBackup) {
+	await Filesystem.writeFile({
+		path: MIGRATION_PATH, directory: Directory.Data,
+		data: JSON.stringify(backup), encoding: Encoding.UTF8, recursive: true,
+	});
+}
+
+async function hasBackup(path: string) {
 	try {
-		await Filesystem.stat({ path: RECOVERY_PATH, directory: Directory.Data });
+		await Filesystem.stat({ path, directory: Directory.Data });
 		return true;
 	} catch { return false; }
 }
 
-export async function readRecoveryBackup(): Promise<string> {
-	const result = await Filesystem.readFile({ path: RECOVERY_PATH, directory: Directory.Data, encoding: Encoding.UTF8 });
+export const hasRecoveryBackup = () => hasBackup(RECOVERY_PATH);
+export const hasMigrationBackup = () => hasBackup(MIGRATION_PATH);
+export const readRecoveryBackup = () => readBackup(RECOVERY_PATH);
+export const readMigrationBackup = () => readBackup(MIGRATION_PATH);
+
+async function readBackup(path: string): Promise<string> {
+	const result = await Filesystem.readFile({ path, directory: Directory.Data, encoding: Encoding.UTF8 });
 	return typeof result.data === "string" ? result.data : result.data.text();
 }
 

@@ -1,4 +1,5 @@
 import type { Food, Profile, Recipe, RecipeIngredient } from "./types";
+import { isUuid, syncEntities, type SyncIdentity, type SyncTombstone } from "./sync";
 import { assertDateTime, assertId, assertNumber, assertRecord, assertText, fail, validateFoodInput, validateIngredientInput, validateProfileInput, validateRecipeGraph, validateRecipeInput } from "./validation";
 
 export const MAX_BACKUP_BYTES = 25 * 1024 * 1024;
@@ -11,17 +12,14 @@ export type StoredMealLog = {
 export type StoredMealLogProfile = {
 	id: number; mealLogId: number; profileId: number; portionFactor: number; createdAt: string;
 };
-export type MunchlingBackup = {
-	format: "munchling-backup";
-	version: 1;
-	schemaVersion: 1;
-	exportedAt: string;
-	data: {
-		profiles: Profile[]; foods: Food[]; recipes: Recipe[];
-		recipeIngredients: RecipeIngredient[];
-		mealLogs: StoredMealLog[]; mealLogProfiles: StoredMealLogProfile[];
-	};
+export type BackupData = {
+	profiles: Profile[]; foods: Food[]; recipes: Recipe[];
+	recipeIngredients: RecipeIngredient[]; mealLogs: StoredMealLog[]; mealLogProfiles: StoredMealLogProfile[];
 };
+type BackupBase = { format: "munchling-backup"; exportedAt: string; data: BackupData };
+export type LegacyBackup = BackupBase & { version: 1; schemaVersion: 1 };
+export type IdentityBackup = BackupBase & { version: 2; schemaVersion: 2; identities: SyncIdentity[]; tombstones: SyncTombstone[] };
+export type MunchlingBackup = LegacyBackup | IdentityBackup;
 
 function nullableText(value: unknown, field: string) { if (value !== null) assertText(value, field); }
 function nullableDate(value: unknown, field: string) { if (value !== null) assertDateTime(value, field); }
@@ -45,7 +43,7 @@ function reference(value: unknown, allowed: Set<number>, field: string) {
 
 export function validateBackup(value: unknown): asserts value is MunchlingBackup {
 	assertRecord(value, "backup");
-	if (value.format !== "munchling-backup" || value.version !== 1 || value.schemaVersion !== 1) fail("backupFormat", "backup");
+	if (value.format !== "munchling-backup" || !((value.version === 1 && value.schemaVersion === 1) || (value.version === 2 && value.schemaVersion === 2))) fail("backupFormat", "backup");
 	assertDateTime(value.exportedAt, "exportedAt");
 	assertRecord(value.data, "data");
 	const tables = ["profiles", "foods", "recipes", "recipeIngredients", "mealLogs", "mealLogProfiles"] as const;
@@ -116,8 +114,40 @@ export function validateBackup(value: unknown): asserts value is MunchlingBackup
 		pairs.add(pair);
 		timestamps(row, false);
 	}
+	if (value.version === 2) validateIdentities(value, rows, count);
 	// Existing profile deletion can leave a meal with zero/fewer profile links.
 	// Backups preserve that stored state; they do not recalculate portions.
+}
+
+function validateIdentities(value: Record<string, unknown>, rows: Record<string, Record<string, unknown>[]>, count: number) {
+	if (!Array.isArray(value.identities) || !Array.isArray(value.tombstones)) fail("backupFormat", "identities");
+	if (value.identities.length !== count) fail("backupFormat", "identities");
+	if (count + value.tombstones.length > MAX_BACKUP_ROWS) fail("backupLimit", "tombstones");
+	const tableNames = { profiles: "profiles", foods: "foods", recipes: "recipes", recipe_ingredients: "recipeIngredients", meal_logs: "mealLogs", meal_log_profiles: "mealLogProfiles" };
+	const expected = new Set<string>();
+	for (const entity of syncEntities) for (const row of rows[tableNames[entity]]!) expected.add(`${entity}:${row.id}`);
+	const seen = new Map<string, string>();
+	for (const identity of value.identities) {
+		assertRecord(identity, "identity");
+		assertId(identity.localId, "localId");
+		if (!isUuid(identity.uuid) || !syncEntities.includes(identity.entity as typeof syncEntities[number])) fail("backupFormat", "identity");
+		const key = `${identity.entity}:${identity.localId}`;
+		if (!expected.delete(key) || seen.has(identity.uuid)) fail("duplicate", "identity");
+		seen.set(identity.uuid, String(identity.entity));
+	}
+	if (expected.size) fail("reference", "identities");
+	for (const tombstone of value.tombstones) {
+		assertRecord(tombstone, "tombstone");
+		if (!isUuid(tombstone.uuid) || !isUuid(tombstone.aggregateUuid) || !syncEntities.includes(tombstone.entity as typeof syncEntities[number])) fail("backupFormat", "tombstone");
+		if (seen.has(tombstone.uuid)) fail("duplicate", "tombstone");
+		assertDateTime(tombstone.deletedAt, "deletedAt");
+		seen.set(tombstone.uuid, String(tombstone.entity));
+	}
+	for (const tombstone of value.tombstones) {
+		const root = tombstone.entity === "recipe_ingredients" ? "recipes" : tombstone.entity === "meal_log_profiles" ? "meal_logs" : tombstone.entity;
+		if (tombstone.aggregateEntity !== root || seen.get(tombstone.aggregateUuid) !== root) fail("reference", "aggregateUuid");
+		if (tombstone.entity === root && tombstone.aggregateUuid !== tombstone.uuid) fail("reference", "aggregateUuid");
+	}
 }
 
 export function parseBackupJson(text: string): MunchlingBackup {

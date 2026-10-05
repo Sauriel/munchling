@@ -1,7 +1,11 @@
 import { Capacitor } from "@capacitor/core";
 import { CapacitorSQLite } from "@capacitor-community/sqlite";
-import { DATABASE_NAME, schemaMigrations } from "./schema";
+import { DATABASE_NAME } from "./schema";
 import { testDataSeedStatements } from "./seed";
+import { createSqlDatabase, type SqlDriver } from "./executor";
+import { runLocalMigrations } from "./migrations";
+import { flushOutbox } from "./outbox";
+import { saveMigrationBackup } from "../backup/files";
 
 export type DatabaseInitOptions = {
 	seedTestData?: boolean;
@@ -58,50 +62,33 @@ export async function closeMunchlingDatabase() {
 	}
 }
 
+export function createCapacitorSqlDriver(initialize: () => Promise<void> = async () => {}): SqlDriver {
+	return {
+		initialize,
+		execute: (statements, transaction = true) => CapacitorSQLite.execute({ ...databaseOptions, statements, transaction }),
+		run: (statement, values = []) => CapacitorSQLite.run({ ...databaseOptions, statement, values, transaction: false }),
+		query: async <Row extends Record<string, unknown>>(statement: string, values = []): Promise<Row[]> => {
+			const result = await CapacitorSQLite.query({ ...databaseOptions, statement, values });
+			return (result.values ?? []) as Row[];
+		},
+		begin: async () => { await CapacitorSQLite.beginTransaction(databaseOptions); },
+		commit: async () => { await CapacitorSQLite.commitTransaction(databaseOptions); },
+		rollback: async () => { await CapacitorSQLite.rollbackTransaction(databaseOptions); },
+		persist: persistMunchlingDatabase,
+	};
+}
+
 export async function runDatabaseMigrations() {
-	await CapacitorSQLite.execute({
-		database: DATABASE_NAME,
-		statements: `
-      CREATE TABLE IF NOT EXISTS schema_migrations (
-        version INTEGER PRIMARY KEY,
-        name TEXT NOT NULL,
-        applied_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
-      );
-    `,
-	});
-
-	const appliedResult = await CapacitorSQLite.query({
-		database: DATABASE_NAME,
-		statement: "SELECT version FROM schema_migrations ORDER BY version ASC;",
-		values: [],
-	});
-	const appliedVersions = new Set(
-		(appliedResult.values ?? []).map((row) => Number(row.version)),
-	);
-
-	for (const migration of schemaMigrations) {
-		if (appliedVersions.has(migration.version)) {
-			continue;
-		}
-
-		await CapacitorSQLite.execute({
-			database: DATABASE_NAME,
-			statements: migration.statements,
-			transaction: true,
-		});
-		await CapacitorSQLite.run({
-			database: DATABASE_NAME,
-			statement: "INSERT INTO schema_migrations (version, name) VALUES (?, ?);",
-			values: [migration.version, migration.name],
-		});
-	}
+	// Startup uses an uninitialized driver: re-entering the main facade here
+	// would await its own initialization promise (deadlock).
+	await runLocalMigrations(createSqlDatabase(createCapacitorSqlDriver()), saveMigrationBackup);
 }
 
 export async function seedDatabaseWithTestData() {
-	await CapacitorSQLite.execute({
-		database: DATABASE_NAME,
-		statements: testDataSeedStatements,
-		transaction: true,
+	await createSqlDatabase(createCapacitorSqlDriver(), flushOutbox).transaction(async (sql) => {
+		await sql.execute(testDataSeedStatements, false);
+		// Never let an automatically seeded development installation upload.
+		await sql.run("UPDATE sync_state SET enabled=0,development_seeded=1 WHERE id=1;");
 	});
 }
 
@@ -123,7 +110,11 @@ export async function initializeMunchlingDatabase(
 		}
 
 		await persistMunchlingDatabase();
-	})();
+	})().catch((error) => {
+		// A failed migration/safety write is retryable; its transaction rolled back.
+		initializationPromise = null;
+		throw error;
+	});
 
 	return initializationPromise;
 }

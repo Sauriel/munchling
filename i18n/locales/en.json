@@ -271,10 +271,12 @@
       "export": "Export backup",
       "import": "Choose a backup file",
       "summary": "Contains {profiles} profiles, {foods} foods, {recipes} recipes and {meals} meals.",
-      "replaceWarning": "Restoring replaces the entire local data set; it does not merge data. A safety backup is automatically saved on this device first.",
+      "replaceWarning": "Restoring replaces the entire local data set; it does not merge data. A safety backup is automatically saved on this device first. Any sync connection is detached; reconnecting requires a fresh reconciliation.",
+      "legacyWarning": "This older backup has no global identities. New UUIDs will be generated; local IDs and stored values are preserved.",
       "confirm": "I want to replace the local data set with this backup.",
       "restore": "Restore",
       "exportRecovery": "Export latest safety backup",
+      "exportMigration": "Export backup from before database upgrade",
       "restored": "The backup was restored. The previous data set is available in the safety backup.",
       "actionError": "The action could not be completed. Check storage space and file access. If a restore was already committed, use the safety backup."
     }

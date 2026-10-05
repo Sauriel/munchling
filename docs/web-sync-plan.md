@@ -155,16 +155,19 @@ Abnahme: die App funktioniert unverändert lokal; die Fachlogik hängt nicht meh
 
 ### Phase 2 — SQLite-Sync-Migration
 
-- [ ] Neue Migration hinzufügen; bestehende Initialmigration nicht nachträglich umschreiben.
-- [ ] Globale UUIDs für vorhandene Datensätze erzeugen und dauerhaft speichern, ohne ihre lokalen IDs oder Beziehungen zu verlieren.
-- [ ] UUID-Indizes und UUID-zu-lokaler-ID-Auflösung für alle Referenzen ergänzen.
-- [ ] Versions-/Sync-Metadaten und Löschmarker einführen, auch für bisher nur mit `created_at` ausgestattete Beziehungen.
-- [ ] Transaktionale Outbox, lokale Basis-/Serverstände für Konfliktvergleich und Konfliktspeicher erstellen.
-- [ ] Geräte-ID, Serverbindung, Serverinstanz-/Epoch-ID und Pull-Cursor lokal speichern.
-- [ ] Aggregate vollständig und atomar in die Outbox schreiben; mehrere lokale Änderungen kontrolliert bündeln oder sequenziell mit korrekter Version abarbeiten.
-- [ ] Lokale Create-/Update-/Delete-Vorgänge vollständig erfassen, unabhängig davon, ob Sync gerade aktiviert ist.
-- [ ] Wiederanlauf nach Abbruch der Migration sowie nach App-Neustart prüfen.
-- [ ] Entwicklungs-Seeding von produktiven Beständen und echtem Sync trennen; keine versehentliche Verteilung von Testdaten.
+- [x] Neue Migration hinzufügen; bestehende Initialmigration nicht nachträglich umschreiben.
+- [x] Globale UUIDs für vorhandene Datensätze erzeugen und dauerhaft speichern, ohne ihre lokalen IDs oder Beziehungen zu verlieren.
+- [x] UUID-Indizes und UUID-zu-lokaler-ID-Auflösung für alle Referenzen ergänzen.
+- [x] Versions-/Sync-Metadaten und Löschmarker einführen, auch für bisher nur mit `created_at` ausgestattete Beziehungen.
+- [x] Transaktionale Outbox, lokale Basis-/Serverstände für Konfliktvergleich und Konfliktspeicher erstellen.
+- [x] Geräte-ID, Serverbindung, Serverinstanz-/Epoch-ID und Pull-Cursor lokal speichern.
+- [x] Aggregate vollständig und atomar in die Outbox schreiben; mehrere lokale Änderungen kontrolliert bündeln oder sequenziell mit korrekter Version abarbeiten.
+- [x] Lokale Create-/Update-/Delete-Vorgänge vollständig erfassen, unabhängig davon, ob Sync gerade aktiviert ist.
+- [x] Wiederanlauf nach Abbruch der Migration sowie nach App-Neustart prüfen.
+- [x] Entwicklungs-Seeding von produktiven Beständen und echtem Sync trennen; keine versehentliche Verteilung von Testdaten.
+- [x] Backup v2 mit UUIDs/Löschmarkern, v1-Import und kontrolliertem lokalen Sync-Neustart ergänzen; Sicherheitssicherung vor produktiver Migration erzwingen.
+
+Implementiert und lokal/mit Chromium geprüft: [local-sync-foundation.md](local-sync-foundation.md). Die Queue wird sequenziell in unveränderlichen Batches quittiert; Basisrevisionen werden bei Fachänderungen festgehalten und nur nach bestätigten eigenen Vorgängern fortgeschrieben, niemals still auf neue Remote-Versionen umgestellt. Noch kein Netzwerktransport oder Konfliktprozessor. Native Gerätelaufzeit und echte MariaDB-Integration folgen in den späteren Abnahmen.
 
 Abnahme: vorhandene Daten bleiben erhalten; jede neue Fachänderung ist dauerhaft synchronisierbar.
 

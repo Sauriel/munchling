@@ -12,7 +12,7 @@ vi.mock("@capacitor/filesystem", () => ({
 }));
 vi.mock("@capacitor/share", () => ({ Share: { share: mocks.share } }));
 
-import { exportBackupFile, hasRecoveryBackup, readRecoveryBackup, saveRecoveryBackup } from "../../app/utils/backup/files";
+import { exportBackupFile, hasRecoveryBackup, readRecoveryBackup, saveRecoveryBackup, saveMigrationBackup, hasMigrationBackup, readMigrationBackup } from "../../app/utils/backup/files";
 
 const backup: MunchlingBackup = {
 	format: "munchling-backup", version: 1, schemaVersion: 1, exportedAt: "2026-10-05T12:00:00Z",
@@ -36,10 +36,28 @@ describe("native backup file boundary", () => {
 		mocks.writeFile.mockRejectedValueOnce(new Error("disk full"));
 		await expect(saveRecoveryBackup(backup)).rejects.toThrow("disk full");
 	});
+	it("keeps the pre-migration snapshot separate from the restore recovery file", async () => {
+		await saveMigrationBackup(backup);
+		expect(mocks.writeFile).toHaveBeenCalledWith({ path: "backups/before-schema-v2.json", directory: "DATA", data: JSON.stringify(backup), encoding: "utf8", recursive: true });
+		expect(mocks.share).not.toHaveBeenCalled();
+	});
+	it("propagates failed pre-migration writes", async () => {
+		mocks.writeFile.mockRejectedValueOnce(new Error("disk full"));
+		await expect(saveMigrationBackup(backup)).rejects.toThrow("disk full");
+	});
 	it("reads UTF-8 recovery backups", async () => {
 		mocks.readFile.mockResolvedValue({ data: JSON.stringify(backup) });
 		expect(await readRecoveryBackup()).toBe(JSON.stringify(backup));
 		expect(mocks.readFile).toHaveBeenCalledWith({ path: "backups/before-restore.json", directory: "DATA", encoding: "utf8" });
+	});
+	it("detects and reads the separate schema-upgrade backup", async () => {
+		mocks.stat.mockRejectedValueOnce(new Error("missing"));
+		expect(await hasMigrationBackup()).toBe(false);
+		mocks.stat.mockResolvedValueOnce({ size: 100 });
+		expect(await hasMigrationBackup()).toBe(true);
+		mocks.readFile.mockResolvedValueOnce({ data: JSON.stringify(backup) });
+		expect(await readMigrationBackup()).toBe(JSON.stringify(backup));
+		expect(mocks.readFile).toHaveBeenCalledWith({ path: "backups/before-schema-v2.json", directory: "DATA", encoding: "utf8" });
 	});
 	it("detects missing recovery files", async () => {
 		mocks.stat.mockResolvedValueOnce({ size: 100 });

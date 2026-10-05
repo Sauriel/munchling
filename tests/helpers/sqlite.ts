@@ -3,13 +3,19 @@ import { vi } from "vitest";
 import { createSqlDatabase, type SqlDriver, type SqlValue } from "../../app/utils/database/executor";
 import { schemaMigrations } from "../../app/utils/database/schema";
 import { createLocalDataService } from "../../app/utils/data/local";
+import { flushOutbox } from "../../app/utils/database/outbox";
 
 // Real SQLite (WASM), not mocked SQL: constraints, cascades and rollback are
 // exercised against the same schema used by the native app.
-export async function createTestDatabase() {
+export async function createTestDatabase(options: { version?: number; bytes?: Uint8Array } = {}) {
 	const SQL = await initSqlJs();
-	const sqlite = new SQL.Database();
-	for (const migration of schemaMigrations) sqlite.run(migration.statements);
+	const sqlite = new SQL.Database(options.bytes);
+	if (!options.bytes) for (const migration of schemaMigrations) {
+		if (migration.version > (options.version ?? 2)) continue;
+		sqlite.run(migration.statements);
+		sqlite.run("INSERT INTO schema_migrations (version,name) VALUES (?,?);", [migration.version, migration.name]);
+	}
+	sqlite.run("PRAGMA foreign_keys=ON;");
 	const persist = vi.fn(async () => {});
 	const bind = (values: SqlValue[]) => values.map((value) => typeof value === "boolean" ? Number(value) : value);
 	const driver: SqlDriver = {
@@ -48,6 +54,11 @@ export async function createTestDatabase() {
 		rollback: async () => { sqlite.run("ROLLBACK;"); },
 		persist,
 	};
-	const database = createSqlDatabase(driver);
-	return { database, driver, service: createLocalDataService(database), persist, close: () => sqlite.close() };
+	const database = createSqlDatabase(driver, flushOutbox);
+	return { database, driver, service: createLocalDataService(database), persist, exportBytes: () => {
+		// sql.js export reopens the connection; mirror jeep-sqlite's FK reset.
+		const bytes = sqlite.export();
+		sqlite.run("PRAGMA foreign_keys=ON;");
+		return bytes;
+	}, close: () => sqlite.close() };
 }

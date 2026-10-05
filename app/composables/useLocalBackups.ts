@@ -1,6 +1,6 @@
 import { MAX_BACKUP_BYTES, parseBackupJson, type MunchlingBackup } from "../../shared/domain/backup";
 import { DomainValidationError } from "../../shared/domain/validation";
-import { exportBackupFile, hasRecoveryBackup, readRecoveryBackup, saveRecoveryBackup } from "~/utils/backup/files";
+import { exportBackupFile, hasRecoveryBackup, readRecoveryBackup, saveRecoveryBackup, hasMigrationBackup, readMigrationBackup } from "~/utils/backup/files";
 import { useMunchlingData } from "./useMunchlingData";
 import { useProfiles } from "./useProfiles";
 import { useFoods } from "./useFoods";
@@ -16,6 +16,7 @@ export function useLocalBackups() {
 	const success = ref("");
 	const pendingBackup = shallowRef<MunchlingBackup | null>(null);
 	const recoveryAvailable = ref(false);
+	const migrationAvailable = ref(false);
 	const { refreshProfiles } = useProfiles();
 	const { refreshFoods } = useFoods();
 	const { refreshRecipes, selectedRecipe } = useRecipes();
@@ -67,7 +68,12 @@ export function useLocalBackups() {
 	async function exportRecovery() {
 		await run(async () => exportBackupFile(await readRecoveryBackup(), "munchling-before-restore"));
 	}
-	onMounted(async () => { recoveryAvailable.value = await hasRecoveryBackup(); });
+	async function exportMigration() {
+		await run(async () => exportBackupFile(await readMigrationBackup(), "munchling-before-schema-v2"));
+	}
+	onMounted(async () => {
+		[recoveryAvailable.value, migrationAvailable.value] = await Promise.all([hasRecoveryBackup(), hasMigrationBackup()]);
+	});
 
-	return { supported: Boolean(backups), isBusy, error, success, pendingBackup, recoveryAvailable, exportCurrent, selectFile, restore, exportRecovery };
+	return { supported: Boolean(backups), isBusy, error, success, pendingBackup, recoveryAvailable, migrationAvailable, exportCurrent, selectFile, restore, exportRecovery, exportMigration };
 }

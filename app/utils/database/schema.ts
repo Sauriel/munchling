@@ -1,3 +1,5 @@
+import { syncSchemaStatements } from "./sync-schema";
+
 export const DATABASE_NAME = "munchling";
 
 export type DatabaseMigration = {
@@ -138,4 +140,5 @@ export const schemaMigrations: DatabaseMigration[] = [
       CREATE INDEX IF NOT EXISTS idx_meal_log_profiles_profile_id ON meal_log_profiles(profile_id);
     `,
 	},
+	{ version: 2, name: "global_identities_and_sync_outbox", statements: syncSchemaStatements },
 ];

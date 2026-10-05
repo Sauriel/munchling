@@ -21,15 +21,15 @@ Teilupdates prüfen nur tatsächlich übergebene Felder. Explizites `null` ist b
 
 Die Berechnung historischer Nährwerte bleibt dynamisch. Die Validierung führt keine historischen Nährwert-Snapshots ein und verändert keine bereits gespeicherten Daten.
 
-## Backup-Format v1
+## Backup-Format v2 und v1-Kompatibilität
 
 `shared/domain/backup.ts` definiert und validiert das JSON-Format:
 
 ```json
 {
   "format": "munchling-backup",
-  "version": 1,
-  "schemaVersion": 1,
+  "version": 2,
+  "schemaVersion": 2,
   "exportedAt": "2026-10-05T12:00:00.000Z",
   "data": {
     "profiles": [],
@@ -38,15 +38,21 @@ Die Berechnung historischer Nährwerte bleibt dynamisch. Die Validierung führt 
     "recipeIngredients": [],
     "mealLogs": [],
     "mealLogProfiles": []
-  }
+  },
+  "identities": [],
+  "tombstones": []
 }
 ```
 
 Die Arrays enthalten die gespeicherten Fachdaten mit camelCase-Feldnamen. IDs, sämtliche Profilziele, optionale Werte, Flags, Zeitstempel, Zutaten, Gewichte und die **exakten gespeicherten Portionsfaktoren** bleiben erhalten. Mahlzeiten enthalten gespeicherte Felder, nicht abgeleitete Quellnamen oder berechnete Nährwerte.
 
-Nicht enthalten sind: Migrationstabellen, interne SQLite-Sequenzen, Geräte-/UI-Einstellungen, BLS-Katalog, Suche und Formularentwürfe. Der Restore setzt ID-Sequenzen nicht zurück. Neue IDs liegen weiterhin oberhalb bisher verwendeter bzw. importierter IDs.
+`identities` ordnet jede aktive Zeile einer globalen UUID zu: `{ entity, localId, uuid }`, mit den sechs SQLite-Tabellennamen als `entity`. `tombstones` bewahrt Löschungen einschließlich früherer Zutaten/Portionen: `{ entity, uuid, aggregateEntity, aggregateUuid, deletedAt }`. UUIDs sind kanonisch kleingeschrieben, global eindeutig und dürfen nicht zugleich aktiv und gelöscht sein. Jeder Löschmarker muss auf ein bekanntes aktives oder gelöschtes Aggregat zeigen.
 
-Der Import akzeptiert maximal **25 MiB und 100.000 fachliche Datensätze insgesamt**. Fehlende Tabellen oder Pflichtfelder, inkompatible Versionen, ungültige Werte, doppelte IDs/EANs/Profilzuordnungen, ungültige Referenzen und Rezeptzyklen werden abgewiesen. Es wird niemals SQL aus einer Datei ausgeführt.
+Alte Sicherungen mit **version/schemaVersion 1** werden weiterhin akzeptiert. Ihre numerischen IDs und Fachwerte bleiben unverändert; für jede Zeile wird eine neue UUID erzeugt. V2-Sicherungen erhalten vorhandene UUIDs und Löschmarker. Wiederherstellen einer v1-Datei ist keine Rückmigration der Datenbank: das aktuelle Schema bleibt v2.
+
+Nicht enthalten sind: Migrationstabellen, interne SQLite-Sequenzen, Geräte-/UI-Einstellungen, Geräte-ID, Serverbindung/Cursor, lokale und Serverversionen, Outbox-Operations-/Batch-IDs, Basisstände, Konflikte, BLS-Katalog, Suche und Formularentwürfe. Der Restore setzt ID-Sequenzen nicht zurück. Neue IDs liegen weiterhin oberhalb bisher verwendeter bzw. importierter IDs.
+
+Der Import akzeptiert maximal **25 MiB und 100.000 Fachzeilen und Löschmarker insgesamt**. Fehlende Tabellen oder Pflichtfelder, inkompatible Versionen, ungültige Werte, doppelte IDs/EANs/Profilzuordnungen, ungültige Referenzen und Rezeptzyklen werden abgewiesen. Es wird niemals SQL aus einer Datei ausgeführt.
 
 Leere Arrays sind ausdrücklich zulässig: eine bestätigte Wiederherstellung einer leeren Sicherung leert den lokalen Fachbestand. Fehlende Arrays werden dagegen nicht als leer interpretiert.
 
@@ -60,8 +66,9 @@ Durch das bisherige Löschen von Profilen können bestehende Mahlzeiten ohne ode
 4. Exklusiven SQLite-Zugriff und gemeinsame Transaktion öffnen.
 5. Den aktuellen Bestand konsistent als Sicherheitssicherung exportieren und separat speichern.
 6. Erst nach erfolgreicher Speicherung die Fachtabellen in referenzsicherer Reihenfolge leeren und importieren.
-7. Bei SQL-Fehlern vollständig zurückrollen; bei Erfolg committen und den Browser-Store persistieren.
-8. UI-Daten aktualisieren und das aktive Profil neu initialisieren.
+7. Alte Outbox, Basisstände und Konflikte entfernen; Serverbindung/Cursor trennen, Sync ausschalten und die lokale Epoch erneuern. Geräte-ID bleibt gerätebezogen erhalten. Aktive Aggregate und importierte Aggregat-Löschmarker werden als ein neuer Snapshot-Batch vorgemerkt. Verbindungen dürfen später nur nach explizitem Erstabgleich wiederhergestellt werden.
+8. Bei SQL-Fehlern **Fachdaten und alle Sync-Metadaten** vollständig zurückrollen; bei Erfolg gemeinsam committen und den Browser-Store persistieren.
+9. UI-Daten aktualisieren und das aktive Profil neu initialisieren.
 
 Ein Fehler beim Speichern der Sicherheitssicherung verhindert die Wiederherstellung. Ein Persistenzfehler **nach** erfolgreichem SQL-Commit ist nicht rückrollbar; dafür steht ebenfalls die vorher gespeicherte Sicherheitssicherung bereit.
 
@@ -73,15 +80,18 @@ Ein Fehler beim Speichern der Sicherheitssicherung verhindert die Wiederherstell
 - Browser-Exporte: JSON-Download; der Browser bestimmt den Zielort. Das Auslösen eines Downloads garantiert nicht, dass die Person die Datei dauerhaft außerhalb des Geräts aufbewahrt.
 - Automatische Sicherheitssicherung: `backups/before-restore.json` in `Directory.Data` (nativ app-privat, im Browser separate Filesystem-IndexedDB).
 - Die jeweils letzte Sicherheitssicherung kann in den Einstellungen wieder exportiert werden. Ein weiterer Restore ersetzt sie durch den unmittelbar vorherigen Bestand.
+- Vor Schema-v2-Upgrades: separate `backups/before-schema-v2.json` in `Directory.Data`. Nach erfolgreichem Upgrade kann diese Datei in den Einstellungen exportiert werden; sie überschreibt niemals die Restore-Sicherheitssicherung.
 - Dateien sind **nicht verschlüsselt**. Sie enthalten persönliche Ernährungsdaten und müssen geschützt aufbewahrt werden.
 - App-Deinstallation, Löschen der Browser-Sitedaten oder Geräteschäden können auch die lokale Sicherheitssicherung entfernen. Deshalb vor Migrationen zusätzlich eine externe Kopie exportieren.
 - Online-Serveradapter bekommen diese lokale Restore-Fähigkeit nicht automatisch; der gemeinsame Serverbestand darf nicht über einen lokalen Browser-Restore ersetzt werden.
 
-## Voraussetzung für die nächste Schemaänderung
+## SQLite-Migration v2
 
-Das Format unterstützt zunächst ausschließlich das bisherige Datenbankschema v1. Export/Restore verweigern neuere Schema-Metadaten, statt neue technische Felder still zu verlieren. Mit Einführung von UUIDs/Outbox muss das Backup-Format erweitert werden: IDs/Sync-Zustand/Serverbindung, Import alter v1-Sicherungen und ein kontrollierter Sync-Neustart sind ausdrücklich festzulegen.
+Vor Installation eines Updates zusätzlich extern exportieren. Beim ersten Start mit einem gefüllten v1-Bestand wird die unabhängige v1-Sicherheitssicherung **vor** allen Schemaänderungen gespeichert. Scheitert das Speichern, bleibt die Datenbank unverändert. Neue leere Installationen benötigen keine Vorabdatei.
 
-Vor automatischer Migration: externe Sicherung ermöglichen, konsistente lokale Sicherheitssicherung erzeugen und Wiederanlauf nach Abbruch testen. Die aktuelle Implementierung verändert noch nicht das Datenbankschema.
+DDL, UUID-Backfill, Identitätsregister, Trigger, Initial-Outbox und Migrationsmarker werden gemeinsam transaktional übernommen. Ein Abbruch oder SQL-Fehler rollt diese Änderungen zurück; ein Wiederanlauf kann erneut migrieren. Bereits erfolgreich migrierte Bestände behalten ihre UUIDs. Bestehende numerische IDs, Beziehungen und Fachwerte werden nicht verändert.
+
+Export/Restore verweigern weiterhin unbekannte neuere Schemaversionen. Die technische Sync-Grundlage ist dokumentiert in [local-sync-foundation.md](local-sync-foundation.md); Serverabgleich und Konfliktoberfläche sind noch nicht implementiert.
 
 ## Verifikation
 

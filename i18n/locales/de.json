@@ -271,10 +271,12 @@
       "export": "Sicherung exportieren",
       "import": "Sicherungsdatei auswählen",
       "summary": "Enthält {profiles} Profile, {foods} Lebensmittel, {recipes} Gerichte und {meals} Mahlzeiten.",
-      "replaceWarning": "Die Wiederherstellung ersetzt den gesamten lokalen Datenbestand; sie führt keine Bestände zusammen. Vorher wird automatisch eine Sicherheitssicherung auf diesem Gerät gespeichert.",
+      "replaceWarning": "Die Wiederherstellung ersetzt den gesamten lokalen Datenbestand; sie führt keine Bestände zusammen. Vorher wird automatisch eine Sicherheitssicherung auf diesem Gerät gespeichert. Eine vorhandene Sync-Verbindung wird getrennt; vor einer erneuten Verbindung ist ein neuer Abgleich nötig.",
+      "legacyWarning": "Diese ältere Sicherung enthält keine globalen Kennungen. Neue UUIDs werden erzeugt; lokale IDs und gespeicherte Werte bleiben erhalten.",
       "confirm": "Ich möchte den lokalen Datenbestand durch diese Sicherung ersetzen.",
       "restore": "Wiederherstellen",
       "exportRecovery": "Letzte Sicherheitssicherung exportieren",
+      "exportMigration": "Sicherung vor Datenbank-Upgrade exportieren",
       "restored": "Die Sicherung wurde wiederhergestellt. Der vorherige Bestand ist in der Sicherheitssicherung verfügbar.",
       "actionError": "Die Aktion konnte nicht abgeschlossen werden. Prüfe Speicherplatz und Dateizugriff. Falls eine Wiederherstellung bereits übernommen wurde, nutze die Sicherheitssicherung."
     }

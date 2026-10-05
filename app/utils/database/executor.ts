@@ -21,7 +21,7 @@ export interface SqlDriver extends SqlExecutor {
 
 // One connection, one queue: unrelated queries/writes cannot enter another
 // operation's transaction. Transaction callbacks MUST use their scoped executor.
-export function createSqlDatabase(driver: SqlDriver): SqlDatabase {
+export function createSqlDatabase(driver: SqlDriver, beforeCommit?: (sql: SqlExecutor) => Promise<void>): SqlDatabase {
 	let queue: Promise<unknown> = Promise.resolve();
 	let unusable = false;
 
@@ -37,13 +37,17 @@ export function createSqlDatabase(driver: SqlDriver): SqlDatabase {
 
 	const normalizeValues = (values: SqlValue[]) => values.map((value) => typeof value === "boolean" ? Number(value) : value);
 
-	return {
-		execute: (statements, transaction = true) => exclusive(async () => {
+	const database: SqlDatabase = {
+		execute: (statements, transaction = true) => beforeCommit
+			? database.transaction((sql) => sql.execute(statements, false))
+			: exclusive(async () => {
 			const result = await driver.execute(statements, transaction);
 			await driver.persist();
 			return result;
 		}),
-		run: (statement, values = []) => exclusive(async () => {
+		run: (statement, values = []) => beforeCommit
+			? database.transaction((sql) => sql.run(statement, values))
+			: exclusive(async () => {
 			const result = await driver.run(statement, normalizeValues(values));
 			await driver.persist();
 			return result;
@@ -63,6 +67,7 @@ export function createSqlDatabase(driver: SqlDriver): SqlDatabase {
 			let result: T;
 			try {
 				result = await work(scoped);
+				if (beforeCommit) await beforeCommit(scoped);
 				await driver.commit();
 			} catch (error) {
 				try {
@@ -81,6 +86,7 @@ export function createSqlDatabase(driver: SqlDriver): SqlDatabase {
 			return result;
 		}),
 	};
+	return database;
 }
 
 export function lastInsertId(result: SqlChanges) {

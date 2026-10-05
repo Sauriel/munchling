@@ -114,7 +114,7 @@ try {
 	await navigate("/settings");
 	await wait(() => evaluate('Boolean(document.querySelector("#backup-file"))'), "backup controls");
 	const empty = await download("Export backup");
-	if (empty.data.data.profiles.length !== 0) throw new Error("Expected an empty initial database.");
+	if (empty.data.version !== 2 || empty.data.schemaVersion !== 2 || empty.data.identities.length !== 0 || empty.data.data.profiles.length !== 0) throw new Error("Expected an empty v2 database.");
 	console.log("PASS: browser exports the empty local database");
 
 	await navigate("/profiles");
@@ -127,16 +127,21 @@ try {
 	await wait(() => evaluate('document.body.textContent.includes("Browser Smoke")'), "profile saved");
 	await navigate("/settings");
 	const populated = await download("Export backup");
-	if (populated.data.data.profiles.length !== 1) throw new Error("The profile did not persist.");
+	if (populated.data.data.profiles.length !== 1 || populated.data.identities.length !== 1) throw new Error("The profile identity did not persist.");
+	const originalUuid = populated.data.identities[0].uuid;
+	if (!/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/.test(originalUuid)) throw new Error("Invalid generated UUID.");
 	console.log("PASS: profile creation persists across navigation and export");
 
-	const doc = await cdp("DOM.getDocument");
-	const node = await cdp("DOM.querySelector", { nodeId: doc.root.nodeId, selector: "#backup-file" });
-	await cdp("DOM.setFileInputFiles", { nodeId: node.nodeId, files: [empty.file] });
-	await wait(() => evaluate('Boolean(document.querySelector("input[type=checkbox]"))'), "restore preview");
-	await evaluate('document.querySelector("input[type=checkbox]").click()');
-	await click("Restore");
-	await wait(() => evaluate('document.body.textContent.includes("The backup was restored.")'), "restore success");
+	const restoreFile = async (file) => {
+		const doc = await cdp("DOM.getDocument");
+		const node = await cdp("DOM.querySelector", { nodeId: doc.root.nodeId, selector: "#backup-file" });
+		await cdp("DOM.setFileInputFiles", { nodeId: node.nodeId, files: [file] });
+		await wait(() => evaluate('Boolean(document.querySelector("input[type=checkbox]"))'), "restore preview");
+		await evaluate('document.querySelector("input[type=checkbox]").click()');
+		await click("Restore");
+		await wait(() => evaluate('document.body.textContent.includes("The backup was restored.")'), "restore success");
+	};
+	await restoreFile(empty.file);
 	const after = await download("Export backup");
 	if (after.data.data.profiles.length !== 0) throw new Error("Restore did not replace the data.");
 	console.log("PASS: confirmed restore replaces the local data");
@@ -146,6 +151,18 @@ try {
 	await cdp("Page.reload");
 	await wait(() => evaluate('[...document.querySelectorAll("button")].some(b => b.textContent.trim() === "Export latest safety backup")'), "persistent safety backup");
 	console.log("PASS: safety backup contains previous data and survives reload");
+	await restoreFile(recovery.file);
+	const restored = await download("Export backup");
+	if (restored.data.identities[0]?.uuid !== originalUuid) throw new Error("V2 restore changed the profile UUID.");
+	console.log("PASS: v2 restore preserves UUIDs");
+	const legacyFile = path.join(downloads, "legacy-v1.json");
+	fs.writeFileSync(legacyFile, JSON.stringify({ format: "munchling-backup", version: 1, schemaVersion: 1, exportedAt: populated.data.exportedAt, data: populated.data.data }));
+	await restoreFile(legacyFile);
+	await cdp("Page.reload");
+	await wait(() => evaluate('Boolean(document.querySelector("#backup-file"))'), "settings after legacy restore");
+	const legacyRestored = await download("Export backup");
+	if (legacyRestored.data.version !== 2 || legacyRestored.data.data.profiles[0]?.name !== "Browser Smoke" || !legacyRestored.data.identities[0]?.uuid || legacyRestored.data.identities[0].uuid === originalUuid) throw new Error("Legacy restore did not create a new persistent identity.");
+	console.log("PASS: legacy v1 restore creates persistent new UUIDs");
 	if (exceptions.length) throw new Error("Uncaught browser exceptions: " + exceptions.join("; "));
 	console.log("PASS: no uncaught browser exceptions");
 } catch (error) {
