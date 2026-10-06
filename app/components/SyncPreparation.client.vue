@@ -116,5 +116,16 @@ async function download() {
 async function discard() { await action(async () => { await stage.discard(); progress.value = null; validated.value = false; info.value = null; decisionRevision.value++ }) }
 async function onDecision() { manual.value = await runner.status(); result.value = null; progress.value = await stage.progress(); boundUrl.value = (await stage.state()).url; address.value = await addresses.read(); if (!boundUrl.value) secure.value = false; validated.value = false; info.value = null; decisionRevision.value++ }
 watch(address, () => { info.value = null })
-onMounted(async () => { if (native) await action(async () => { progress.value = await stage.progress(); boundUrl.value = (await stage.state()).url; address.value = await addresses.read(); manual.value = await runner.status() }) })
+onMounted(async () => {
+  if (!native) return
+  // Child mounted hooks run first. SyncDecisions may already report busy;
+  // initial metadata reads must NOT use the guarded user-action wrapper.
+  busy.value = true
+  try {
+    progress.value = await stage.progress(); boundUrl.value = (await stage.state()).url
+    address.value = await addresses.read(); manual.value = await runner.status()
+  } catch (cause) {
+    error.value = t('settings.syncPreparation.failed', { code: cause instanceof SyncClientError ? cause.code : 'localOrNetworkError' })
+  } finally { busy.value = false }
+})
 </script>
