@@ -184,13 +184,13 @@ Abnahme: vorhandene Daten bleiben erhalten; jede neue Fachänderung ist dauerhaf
 - [x] Sicheres Migrationsverfahren beim Deployment festlegen; keine konkurrierenden Migrationen mehrerer Instanzen.
 - [x] Liveness-/Readiness-Endpunkte und strukturierte, datensparsame Fehlerlogs ergänzen.
 
-Implementiert und gegen echte MariaDB einschließlich Nitro-HTTP-Health geprüft: [server-foundation.md](server-foundation.md). Der gemeinsame Schreibdienst erzwingt Basisrevisionen, idempotente Batches, vollständige Löschabhängigkeits-Guards und Commit-geordnete Cursor. Historische Mahlzeiten-Uhrzeiten ohne Zeitzone bleiben unverändert. Die Web-CRUD-Versionsprüfung ist im Dienst bereit; die tatsächliche HTTP-/Web-Anbindung bleibt offen. Native/static und Backend-Build sind getrennt; eine fertige gemeinsame Weboberfläche ist noch nicht verfügbar.
+Implementiert und gegen echte MariaDB einschließlich Nitro-HTTP-Health geprüft: [server-foundation.md](server-foundation.md). Der gemeinsame Schreibdienst erzwingt Basisrevisionen, idempotente Batches, vollständige Löschabhängigkeits-Guards und Commit-geordnete Cursor. Historische Mahlzeiten-Uhrzeiten ohne Zeitzone bleiben unverändert. Der HTTP-Schreibpfad ist inzwischen versionsgeprüft und mit parallelen Bearbeitern getestet; die tatsächliche UI-Web-Anbindung bleibt offen. Native/static und Backend-Build sind getrennt; eine fertige gemeinsame Weboberfläche ist noch nicht verfügbar.
 
 Abnahme: MariaDB-Schema und Schreibdienst sind reproduzierbar aufsetzbar, validiert und transaktional konsistent.
 
 ### Phase 4 — Bidirektionales Sync-Protokoll
 
-Vorgesehene API-Aufgaben; endgültige Pfade im API-Vertrag festlegen:
+Implementierter HTTP-Vertrag: [sync-api.md](sync-api.md). Aufgaben:
 
 - Serverinfo: Protokoll-/Schemaversion, Serverinstanz-ID und Fähigkeiten.
 - Initialer Snapshot: konsistenter Bestand mit zugehörigem Change-Cursor.
@@ -200,18 +200,20 @@ Vorgesehene API-Aufgaben; endgültige Pfade im API-Vertrag festlegen:
 
 TODOs:
 
-- [ ] API-Vertrag einschließlich Fehler-, Konflikt-, Lösch- und Versionsantworten definieren.
-- [ ] Größenlimits, Paging, Zeitlimits und erlaubte Entitätstypen festlegen.
-- [ ] Konsistenten initialen Snapshot sicherstellen: Änderungen während eines mehrseitigen Downloads dürfen weder verloren gehen noch unbemerkt doppelt gelten.
-- [ ] Dauerhaftes Change-Log mit Commit-geordnetem Cursor implementieren.
-- [ ] Push-Idempotenz prüfen und Bestätigungen wiederholbarer Operations-IDs speichern.
-- [ ] Konflikte über Basisversionen erkennen, einschließlich Änderung-vs.-Löschung.
-- [ ] Eltern/Referenzen vor abhängigen Datensätzen anwenden bzw. referenzabhängige Änderungen zusammen transaktional übertragen.
-- [ ] Löschkaskaden als explizite, versionierte Änderungen behandeln; auch Änderungen an referenzierenden Aggregaten berücksichtigen.
-- [ ] Erfolgreiche und fehlgeschlagene Batch-Operationen eindeutig zuordnen; keine unklaren Teilzustände.
-- [ ] Unbekannte Cursor, inkompatible Versionen und geänderte Serverinstanzen mit kontrolliertem Resync statt stiller Übernahme behandeln.
-- [ ] Verhalten nach MariaDB-Backup-Restore festlegen: Sync-Epoch wechseln, damit bereits bestätigte, im Backup fehlende Änderungen nicht unbemerkt verloren bleiben.
-- [ ] Tombstone-/Change-Log-Aufbewahrung dokumentieren; späterer Cleanup benötigt Snapshot-/Resync-Konzept für alte Geräte.
+- [x] API-Vertrag einschließlich Fehler-, Konflikt-, Lösch- und Versionsantworten definieren.
+- [x] Größenlimits, Paging, Zeitlimits und erlaubte Entitätstypen festlegen.
+- [x] Konsistenten initialen Snapshot sicherstellen: Änderungen während eines mehrseitigen Downloads dürfen weder verloren gehen noch unbemerkt doppelt gelten.
+- [x] Dauerhaftes Change-Log mit Commit-geordnetem Cursor implementieren.
+- [x] Push-Idempotenz prüfen und Bestätigungen wiederholbarer Operations-IDs speichern.
+- [x] Konflikte über Basisversionen erkennen, einschließlich Änderung-vs.-Löschung.
+- [x] Eltern/Referenzen vor abhängigen Datensätzen anwenden bzw. referenzabhängige Änderungen zusammen transaktional übertragen.
+- [x] Löschkaskaden als explizite, versionierte Änderungen behandeln; auch Änderungen an referenzierenden Aggregaten berücksichtigen.
+- [x] Erfolgreiche und fehlgeschlagene Batch-Operationen eindeutig zuordnen; keine unklaren Teilzustände.
+- [x] Unbekannte Cursor, inkompatible Versionen und geänderte Serverinstanzen mit kontrolliertem Resync statt stiller Übernahme behandeln.
+- [x] Verhalten nach MariaDB-Backup-Restore festlegen: Sync-Epoch wechseln, damit bereits bestätigte, im Backup fehlende Änderungen nicht unbemerkt verloren bleiben.
+- [x] Tombstone-/Change-Log-Aufbewahrung dokumentieren; späterer Cleanup benötigt Snapshot-/Resync-Konzept für alte Geräte.
+
+Serverseitig implementiert: konsistente durable Snapshot-Seiten (Migration v2), vollständige Pull-Gruppen, versionsgebundene UUID-Batches, exakte Host-/Origin-Prüfung und Header-/Byte-/Zeitlimits. Zwei HTTP-Clients, gleichzeitige Bearbeiter, Replay, Änderung-vs.-Löschung, Ablauf/Freigabe und Epoch-Wechsel werden gegen den gebauten Nitro-Prozess und echte MariaDB geprüft. 134 lokale und 75 Server-/API-Tests bestanden. Kontrollierter Resync ist als API-Vertrag festgelegt; Bestandszusammenführung, lokale Anwendung und Dialoge werden in Phase 5/6 implementiert, nicht durch diese Endpunkte vorweggenommen.
 
 Abnahme: zwei unabhängig gestartete Clients können erzeugen, ändern und löschen, ohne ID-Kollisionen oder doppelte Operationen.
 

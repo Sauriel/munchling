@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import { ServerWriteError, type ServerAggregate, type ServerGuard, type ServerReceipt, type ServerWriteBatch } from "../../shared/domain/server";
 import type { SyncAggregate } from "../../shared/domain/sync";
+import { ServerProtocolError, syncLimits } from "../../shared/domain/protocol";
 import { DomainValidationError, fail, validateRecipeGraph } from "../../shared/domain/validation";
 import type { ServerDatabase, ServerSql } from "../database/connection";
 import { readServerState } from "../database/state";
@@ -129,13 +130,18 @@ async function commitBatch(sql: ServerSql, batch: ServerWriteBatch): Promise<Ser
 	}
 	const edges = await sql.query<{ recipeId: string; subRecipeId: string | null }>("SELECT i.recipe_id AS recipeId,i.sub_recipe_id AS subRecipeId FROM recipe_ingredients i JOIN recipes r ON r.uuid=i.recipe_id WHERE i.deleted_at IS NULL AND r.deleted_at IS NULL");
 	validateRecipeGraph(edges);
-	const snapshots: ServerAggregate[] = [];
+	const snapshots: ServerAggregate[] = []; let changeBytes = 200;
 	for (const [uuid, entity] of dirty) {
 		const meta = await identity(sql, uuid);
 		if (!meta || !Number.isSafeInteger(meta.version + 1)) throw new ServerStorageError();
 		await sql.write("UPDATE sync_identities SET version=version+1 WHERE uuid=?", [uuid]);
 		const snapshot = await aggregateSnapshot(sql, entity, uuid);
-		if (!snapshot) throw new ServerStorageError(); snapshots.push(snapshot);
+		if (!snapshot) throw new ServerStorageError();
+		// Bound the WHOLE atomic change batch, including implicit cascades.
+		// Otherwise pull could never transmit it without splitting dependencies.
+		changeBytes += Buffer.byteLength(JSON.stringify(snapshot)) + 64;
+		if (changeBytes > syncLimits.batchBytes) throw new ServerProtocolError("batchTooLarge");
+		snapshots.push(snapshot);
 	}
 	const cursor = state.last_cursor + snapshots.length;
 	if (!Number.isSafeInteger(cursor)) throw new ServerStorageError();
@@ -160,7 +166,7 @@ export async function writeServerBatch(database: ServerDatabase, input: unknown)
 	const batch = normalizeWriteBatch(input);
 	try { return await database.transaction((sql) => commitBatch(sql, batch)); }
 	catch (error) {
-		if (error instanceof ServerWriteError || error instanceof DomainValidationError || error instanceof ServerStorageError) throw error;
+		if (error instanceof ServerWriteError || error instanceof DomainValidationError || error instanceof ServerStorageError || error instanceof ServerProtocolError) throw error;
 		if (error !== null && typeof error === "object" && "errno" in error && error.errno === 1062) fail("duplicate", "ean");
 		// SQL driver errors can contain statements and parameter values. Never
 		// propagate those to future HTTP responses/logs.

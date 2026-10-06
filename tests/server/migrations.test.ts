@@ -16,13 +16,13 @@ describe("real MariaDB migrations and transaction foundation", () => {
 		const state = await database.withConnection((sql) => readServerState(sql));
 		expect(isUuid(state.instance_uuid) && isUuid(state.epoch_uuid)).toBe(true);
 		expect(state.last_cursor).toBe(0);
-		expect(await database.withConnection((sql) => sql.query("SELECT version,status,checksum FROM schema_migrations"))).toEqual([{ version: 1, status: "applied", checksum: migrationChecksum(serverMigrations[0]!.statements) }]);
+		expect(await database.withConnection((sql) => sql.query("SELECT version,status,checksum FROM schema_migrations"))).toEqual(serverMigrations.map((migration) => ({ version: migration.version, status: "applied", checksum: migrationChecksum(migration.statements) })));
 		await migrateServerDatabase(database, "munchling_test");
 		expect(await database.withConnection((sql) => readServerState(sql))).toEqual(state);
 	});
 	it("serializes concurrent startup migrations", async () => {
 		await Promise.all([migrateServerDatabase(database, "munchling_test"), migrateServerDatabase(database, "munchling_test")]);
-		expect(await database.withConnection((sql) => sql.query("SELECT COUNT(*) AS n FROM schema_migrations"))).toEqual([{ n: 1 }]);
+		expect(await database.withConnection((sql) => sql.query("SELECT COUNT(*) AS n FROM schema_migrations"))).toEqual([{ n: serverMigrations.length }]);
 	});
 	it("refuses changed checksums and future schema versions", async () => {
 		await migrateServerDatabase(database, "munchling_test");

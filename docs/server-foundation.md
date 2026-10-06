@@ -2,7 +2,7 @@
 
 ## Stand und Grenzen
 
-Die Server-Grundlage stellt eine MariaDB-Verbindung, versionierte Migrationen, einen gemeinsamen versionsgeprüften Schreibdienst sowie Health-Endpunkte bereit. **Noch keine Fach-HTTP-API, kein HTTP-Datenadapter und kein Netzwerk-Sync.** Auch die Oberfläche eines Backend-Builds verwendet derzeit noch den lokalen Datenadapter. Nicht als fertigen gemeinsamen Webbetrieb deployen; dieser folgt mit den nächsten Phasen.
+Die Server-Grundlage stellt eine MariaDB-Verbindung, versionierte Migrationen, einen gemeinsamen versionsgeprüften Schreibdienst sowie Health-Endpunkte bereit. Die Fach-HTTP-/Sync-API ist jetzt verfügbar ([sync-api.md](sync-api.md)); **noch kein UI-HTTP-Datenadapter und kein nativer Netzwerk-Sync.** Auch die Oberfläche eines Backend-Builds verwendet derzeit noch den lokalen Datenadapter. Nicht als fertigen gemeinsamen Webbetrieb deployen; dieser folgt mit den nächsten Phasen.
 
 Ein Server bedient genau einen gemeinsamen Haushaltsbestand. Keine Authentifizierung: ausschließlich im vereinbarten sicheren Netzwerk betreiben. MariaDB-Zugangsdaten bleiben serverseitig; niemals in `runtimeConfig.public` oder Client-Bundles.
 
@@ -26,6 +26,8 @@ Runtime-Variablen:
 | `NUXT_MARIA_DB_PASSWORD` | Pflichtwert; privat im Deployment setzen |
 | `NUXT_MARIA_DB_DATABASE` | Vorhandene Datenbank, Standard `munchling`; einfacher SQL-Bezeichner |
 | `NUXT_MARIA_DB_CONNECTION_LIMIT` | Poolgröße 1–32, Standard 5 |
+| `NUXT_SYNC_PUBLIC_ORIGIN` | Kanonischer HTTP(S)-Origin; ohne Konfiguration bleibt die Fach-API deaktiviert |
+| `NUXT_SYNC_ALLOWED_ORIGINS` | Optional exakte vertrauenswürdige Browser-/Capacitor-Origins |
 
 Ein direkt gestarteter Produktions-Node-Prozess liest `.env` nicht automatisch; Variablen über Prozess-/Containerumgebung setzen. Die Datenbank muss vorhanden sein. Der Benutzer benötigt für aktuelle Migrationen DDL-/Referenzrechte und für den Betrieb Lese-/Schreibrechte auf diesem Schema. Ein späteres Deployment kann Migrationen und Laufzeitberechtigungen trennen.
 
@@ -41,7 +43,7 @@ Bei `applying`: externes DB-Backup anfertigen, Marker/Prüfsumme und tatsächlic
 
 Die initiale Schema-Definition und ihre erzeugten Statements sind nach Freigabe **unveränderlich**. Künftige Änderungen in neuen versionierten Migrationen ergänzen; nicht durch Bearbeiten der v1-Definition eine bereits gespeicherte Prüfsumme verändern.
 
-Serverinstanz-UUID und Sync-Epoch entstehen einmal und bleiben bei gewöhnlichen Neustarts erhalten. Nach einem späteren MariaDB-Backup-Restore muss die Epoch bewusst erneuert werden; der administrative Ablauf und die Client-Reconciliation gehören zur folgenden Sync-Protokollphase. Ein bloßes Redeploy darf die Epoch nicht wechseln.
+Serverinstanz-UUID und Sync-Epoch entstehen einmal und bleiben bei gewöhnlichen Neustarts erhalten. Nach einem MariaDB-Backup-Restore muss die Epoch bewusst erneuert werden; administrativer Ablauf und API-Ablehnung alter Bindungen sind in [sync-api.md](sync-api.md) beschrieben. Der Native-Reconciliation-Dialog folgt noch. Ein bloßes Redeploy darf die Epoch nicht wechseln.
 
 ## Datenmodell und Zeit-/Zahlenregeln
 
@@ -56,7 +58,7 @@ Serverinstanz-UUID und Sync-Epoch entstehen einmal und bleiben bei gewöhnlichen
 
 ## Gemeinsamer Schreibvertrag
 
-`shared/domain/server.ts` definiert UUID-adressierte Batches; `server/services/write.ts` ist der **einzige zukünftige Fach-Schreibpfad** für Web und Sync. Derzeit noch ein interner Dienst, kein öffentlich erreichbarer CRUD-Endpunkt.
+`shared/domain/server.ts` definiert UUID-adressierte Batches; `server/services/write.ts` ist der **einzige Fach-Schreibpfad** für Web und Sync, erreichbar über `POST /api/sync/push`. Web-Adapter und Native-Runner müssen denselben Vertrag verwenden.
 
 Ein Batch enthält stabile Batch-/Operations-IDs, erwartete Serverinstanz/Epoch und volle Aggregate mit ihrer bekannten `baseRevision`. Eine neue UUID erwartet `0`. Payloads entsprechen den snake_case-Snapshots der nativen Outbox; Root-ID, Kinder-IDs und alle Referenzen sind UUIDs. Unbekannte Felder, ungültige Identitäten/Flags/Werte/Datumsangaben und nichtfinite Zahlen werden vor Schreiben abgewiesen. Grenze: 25 MiB und 100.000 Roots/Kinder/Guards insgesamt.
 
@@ -82,7 +84,7 @@ Das Löschen eines Lebensmittels/Gerichts entfernt betroffene Zutaten und direkt
 
 Der Cursor kommt nicht aus ungeschütztem Auto-Increment. Alle Dienst-Schreibtransaktionen halten dieselbe Haushalts-Zeile bis zum Commit; Cursor-Zuweisung und Change-Log stehen unter dieser Sperre. Ein zweiter Writer kann erst nach dem ersten Commit einen höheren sichtbaren Cursor vergeben. Rollbacks veröffentlichen keine Lücke/Teiloperation. Readonly-Aggregate werden in Repeatable-Read-Transaktionen konsistent gelesen.
 
-Das spätere Pull-Paging muss außerdem zusammengehörige Batches/Abhängigkeiten und einen konsistenten Initialsnapshot berücksichtigen. Event-Zeitpunkte sind informativ, nicht das Ordnungskriterium.
+Das HTTP-Pull-Paging hält zusammengehörige Batches/Abhängigkeiten vollständig; Initialsnapshots werden unter einer konsistenten RR-Sicht mit festem Cursor dauerhaft in Seiten materialisiert. Migration v2 ergänzt ausschließlich temporäre Snapshot-Tabellen, ohne die v1-Prüfsumme/Fachdaten zu ändern. Event-Zeitpunkte sind informativ, nicht das Ordnungskriterium.
 
 ## Betrieb und Prüfungen
 
@@ -104,6 +106,6 @@ pnpm test:browser         # nach mobilem Generate
 
 Abgedeckt sind Migration/Konkurrenz/Prüfsummen/DDL-Abbruch, CRUD-Aggregate, UUID-Referenzen, EANs und Portionstausch, Einzel-/Mehrfach-/Parallelzyklen, Versionskonflikte, Löschguards/Kaskaden/Tombstones, historische Uhrzeiten, Idempotenz, spätes Rollback, Commit-Reihenfolge und die tatsächliche SQLite-Outbox→MariaDB→Receipt-Kette. Der gebaute Nitro-Prozess wird separat mit realen Runtime-Credentials gestartet und über HTTP auf Health/503 und Credential-Abschirmung geprüft.
 
-Verifiziert: 134 bestehende Tests und 44 MariaDB-/Nitro-Tests; beide Typprüfungen, Backend-Build, mobile Generierung, Chromium-Smoke, Capacitor-Sync und Android `assembleDebug` erfolgreich. Keine privaten MariaDB-Bezeichner im mobilen Client-Bundle, keine verbliebenen Testcontainer. Die bekannte Nuxt-Module-Preload-Sourcemap-Warnung bleibt nichtblockierend. iOS wurde synchronisiert, aber mangels macOS/Xcode nicht kompiliert.
+Verifiziert: 134 bestehende Tests und 75 MariaDB-/Nitro-Tests; beide Typprüfungen, Backend-Build, mobile Generierung, Chromium-Smoke, Capacitor-Sync und Android `assembleDebug` erfolgreich. Keine privaten MariaDB-Bezeichner im mobilen Client-Bundle, keine verbliebenen Testcontainer. Die bekannte Nuxt-Module-Preload-Sourcemap-Warnung bleibt nichtblockierend. iOS wurde synchronisiert, aber mangels macOS/Xcode nicht kompiliert.
 
-Native Laufzeit, fertige HTTP-/Sync-API, Konfliktdialoge und Dokploy-Produktionsdeployment folgen noch. Hintergrundbetrieb bei geschlossener App bleibt nicht Teil des Ziels.
+Native Laufzeit/Sync-Engine, UI-HTTP-Datenadapter, Konfliktdialoge und Dokploy-Produktionsdeployment folgen noch. Hintergrundbetrieb bei geschlossener App bleibt nicht Teil des Ziels.

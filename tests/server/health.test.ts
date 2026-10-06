@@ -19,7 +19,7 @@ describe("built Nitro backend health and private configuration", () => {
 		database = newDatabase(); await resetDatabase(database, false);
 		const config = testConfig(); const port = await unusedPort(); base = `http://127.0.0.1:${port}`;
 		child = spawn(process.execPath, [".output/server/index.mjs"], { cwd: process.cwd(), stdio: ["ignore", "pipe", "pipe"], env: {
-			...process.env, NITRO_HOST: "127.0.0.1", NITRO_PORT: String(port),
+			...process.env, NITRO_HOST: "127.0.0.1", NITRO_PORT: String(port), NUXT_SERVER_ENABLED: "true", NUXT_SYNC_PUBLIC_ORIGIN: "", NUXT_SYNC_ALLOWED_ORIGINS: "",
 			NUXT_MARIA_DB_HOST: config.host, NUXT_MARIA_DB_PORT: String(config.port), NUXT_MARIA_DB_USER: config.user,
 			NUXT_MARIA_DB_PASSWORD: config.password, NUXT_MARIA_DB_DATABASE: config.database, NUXT_MARIA_DB_CONNECTION_LIMIT: "3",
 		} });
@@ -42,7 +42,10 @@ describe("built Nitro backend health and private configuration", () => {
 	it("migrates on actual server startup and exposes live/ready endpoints", async () => {
 		const live = await fetch(`${base}/api/health/live`); expect(live.status).toBe(200); expect(await live.json()).toEqual({ status: "ok" });
 		const ready = await fetch(`${base}/api/health/ready`); expect(ready.status).toBe(200); expect(await ready.json()).toEqual({ status: "ready" });
-		expect(await database.withConnection((sql) => sql.query("SELECT version,status FROM schema_migrations"))).toEqual([{ version: 1, status: "applied" }]);
+		expect(await database.withConnection((sql) => sql.query("SELECT version,status FROM schema_migrations"))).toEqual([{ version: 1, status: "applied" }, { version: 2, status: "applied" }]);
+	});
+	it("keeps data API disabled until a canonical public origin is configured", async () => {
+		const response = await fetch(`${base}/api/sync/info`); expect(response.status).toBe(503); expect(await response.json()).toMatchObject({ error: { code: "API_NOT_CONFIGURED" } });
 	});
 	it("does not expose private credentials in HTML, health responses or startup logs", async () => {
 		const secret = testConfig().password;

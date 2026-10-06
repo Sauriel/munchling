@@ -14,7 +14,7 @@ export async function resetDatabase(database: ServerDatabase, migrate = true) {
 		await sql.write("SET foreign_key_checks=0");
 		try {
 			// Trusted fixture-only table names, never a user/production database.
-			const tables = ["change_log", "write_operations", "write_batches", "sync_devices", ...Object.keys(serverTables), "sync_identities", "server_state", "schema_migrations"];
+			const tables = ["sync_snapshot_pages", "sync_snapshots", "sync_snapshot_lock", "change_log", "write_operations", "write_batches", "sync_devices", ...Object.keys(serverTables), "sync_identities", "server_state", "schema_migrations"];
 			for (const table of tables) await sql.write(`DROP TABLE IF EXISTS ${table}`);
 		} finally { await sql.write("SET foreign_key_checks=1"); }
 	});

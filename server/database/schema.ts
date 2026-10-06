@@ -70,7 +70,22 @@ const initialStatements = [
  payload LONGTEXT NOT NULL CHECK (JSON_VALID(payload)), committed_at DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
  KEY idx_change_batch(batch_uuid), FOREIGN KEY(batch_uuid) REFERENCES write_batches(uuid)) ENGINE=InnoDB`,
 ].map((statement) => statement.replace(/ENGINE=InnoDB$/, "ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin"));
-export const serverMigrations = [{ version: 1, name: "household_data_and_versioned_changes", statements: initialStatements }];
+// v1 remains byte-for-byte unchanged. Snapshot storage is a new migration.
+const snapshotStatements = [
+	`CREATE TABLE sync_snapshot_lock (id TINYINT PRIMARY KEY CHECK(id=1)) ENGINE=InnoDB`,
+	`INSERT INTO sync_snapshot_lock(id) VALUES (1)`,
+	`CREATE TABLE sync_snapshots (uuid CHAR(36) CHARACTER SET ascii COLLATE ascii_bin PRIMARY KEY,
+ instance_uuid CHAR(36) CHARACTER SET ascii COLLATE ascii_bin NOT NULL, epoch_uuid CHAR(36) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ change_cursor BIGINT UNSIGNED NOT NULL CHECK(change_cursor<=9007199254740991), page_count INT UNSIGNED NOT NULL DEFAULT 0,
+ expires_at DATETIME(3) NOT NULL, KEY idx_snapshot_expiry(expires_at)) ENGINE=InnoDB`,
+	`CREATE TABLE sync_snapshot_pages (snapshot_uuid CHAR(36) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ page_index INT UNSIGNED NOT NULL, payload LONGTEXT NOT NULL CHECK(JSON_VALID(payload)),
+ PRIMARY KEY(snapshot_uuid,page_index), FOREIGN KEY(snapshot_uuid) REFERENCES sync_snapshots(uuid) ON DELETE CASCADE) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin`,
+];
+export const serverMigrations = [
+	{ version: 1, name: "household_data_and_versioned_changes", statements: initialStatements },
+	{ version: 2, name: "durable_consistent_download_snapshots", statements: snapshotStatements },
+];
 
 export const tableStatements = Object.fromEntries(Object.entries(serverTables).map(([name, table]) => [name, {
 	select: `SELECT * FROM ${name} WHERE uuid=?`,

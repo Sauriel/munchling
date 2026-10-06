@@ -11,6 +11,8 @@ function cleanup() { if (started) { docker(["rm", "-f", name]); started = false;
 process.on("SIGINT", () => { cleanup(); process.exit(130); });
 process.on("SIGTERM", () => { cleanup(); process.exit(143); });
 try {
+	const filters = process.argv.slice(2);
+	if (filters.some((file) => !/^tests\/server\/[a-zA-Z0-9.-]+\.test\.ts$/.test(file))) throw new Error("Only explicit tests/server/*.test.ts filters are allowed.");
 	const start = docker(["run", "-d", "--rm", "--name", name, "-p", "127.0.0.1::3306",
 		"-e", `MARIADB_ROOT_PASSWORD=${password}`, "-e", `MARIADB_PASSWORD=${password}`,
 		"-e", "MARIADB_USER=munchling_test", "-e", "MARIADB_DATABASE=munchling_test", "mariadb:11.4", "--max-allowed-packet=64M"]);
@@ -27,7 +29,7 @@ try {
 	if (!ready) throw new Error("Disposable MariaDB did not become ready.");
 	console.log("MariaDB 11.4 ready (isolated loopback test database).");
 	const code = await new Promise((resolve, reject) => {
-		const child = spawn("pnpm", ["exec", "vitest", "run", "--config", "vitest.server.config.ts"], {
+		const child = spawn("pnpm", ["exec", "vitest", "run", "--config", "vitest.server.config.ts", ...filters], {
 			stdio: "inherit", env: { ...process.env, MUNCHLING_TEST_DB_HOST: "127.0.0.1", MUNCHLING_TEST_DB_PORT: String(port), MUNCHLING_TEST_DB_PASSWORD: password },
 		});
 		child.on("error", reject); child.on("exit", (status) => resolve(status ?? 1));

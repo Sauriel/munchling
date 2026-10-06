@@ -39,6 +39,7 @@ export default defineNuxtConfig({
 	},
 	runtimeConfig: {
 		serverEnabled: serverBuild,
+		sync: { publicOrigin: "", allowedOrigins: "" },
 		mariaDb: { host: "", port: 3306, user: "", password: "", database: "munchling", connectionLimit: 5 },
 	},
 	nitro: {
