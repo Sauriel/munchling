@@ -27,7 +27,7 @@ async function wireRow(sql: SqlExecutor, row: Row, identities: Map<string, strin
 	}
 	return { id: uuid, ...payload };
 }
-async function aggregatePayload(sql: SqlExecutor, entity: SyncAggregate, uuid: string, identities: Map<string, string>): Promise<Record<string, unknown>> {
+export async function aggregatePayload(sql: SqlExecutor, entity: SyncAggregate, uuid: string, identities: Map<string, string>): Promise<Record<string, unknown>> {
 	const row = await findRow(sql, entity, uuid);
 	if (!row) throw new Error("Missing active sync aggregate.");
 	identities.set(`${entity}:${row.id}`, uuid);

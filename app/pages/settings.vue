@@ -87,6 +87,7 @@
       <p v-if="error" role="alert" class="text-sm text-red-700 dark:text-red-300">{{ error }}</p>
       <p v-if="success" role="status" class="text-sm text-munchling-700 dark:text-munchling-500">{{ success }}</p>
     </section>
+    <SyncPreparation />
     <AppBottomNav />
   </main>
 </template>

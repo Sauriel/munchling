@@ -1,6 +1,6 @@
-# Client-Transport: geprüfte Antworten, noch keine lokale Übernahme
+# Client-Transport: geprüfte Antworten
 
-`app/utils/sync/http.ts` stellt `createSyncHttpClient()` bereit. Er ist weder beim App-Start noch in Pages eingebunden: Konstruktion führt keine Requests aus. SQLite, Outbox, Cursor und Einstellungen werden nicht geändert, Sync bleibt optional und ausgeschaltet. Web-HTTP-Datenadapter und Native-Runner folgen weiterhin.
+`app/utils/sync/http.ts` stellt `createSyncHttpClient()` bereit. Konstruktion führt keine Requests aus. Die native Vorbereitungseinstellung nutzt ihn nur nach ausdrücklichem Buttondruck; kein Netzwerk bei App-Start. SQLite, Outbox, Cursor und Einstellungen werden nicht geändert, Sync bleibt optional und ausgeschaltet. Web-HTTP-Datenadapter und Native-Runner folgen weiterhin.
 
 ## Transport
 
@@ -26,14 +26,14 @@
 
 `snapshotPages()` liefert einen Async-Iterator geprüfter Seiten, prüft zusätzliche Duplicate-/Gesamtgrößen-/Zahlengrenzen und gibt das Lease **nicht** automatisch frei. Seiten sind nur Staging-Eingabe; vollständige Referenzgraphen dürfen nicht durch einzelne früh sichtbare Seiten ersetzt werden.
 
-Ein optionaler Resume-Frame ermöglicht das Weiterladen nach bereits erhaltenen Seiten. Der zukünftige persistente Staging-Dienst muss dabei auch die vor dem Resume gespeicherten Seiten sowie globale Registry-/Referenzkonsistenz validieren. Der Transport allein behauptet diese Datenbank-Abnahme nicht.
+Ein optionaler Resume-Frame ermöglicht das Weiterladen nach bereits erhaltenen Seiten. Der persistente Staging-Dienst prüft gespeicherte Historie sowie die vollständige Registry-/Referenzkonsistenz; der Transport allein ersetzt diese Datenbank-Abnahme nicht. Details: [client-sync-receive.md](client-sync-receive.md).
 
-**Noch offen:** persistentes Staging mit lokaler Epoch-Bindung, UUID→numerische-ID-Abbildung, globale Referenz-/EAN-Prüfung, konfliktbewusste Bestandszusammenführung, lokale atomare Daten+Cursor-Anwendung, UI-Konflikte und Single-Flight-Trigger. `applyRemoteTransaction()` weiterhin nicht ungeprüft verwenden. Lokale Änderungen niemals gegen den aktuellen Serverstand automatisch rebasen.
+**Noch offen:** explizite Erstabgleich-Entscheidungen, manuelle UI-Konfliktauflösung und Single-Flight-Trigger. Persistentes Staging und atomare konfliktbewusste Aufnahme sind als Bibliothek implementiert, nicht automatisch aktiviert. `applyRemoteTransaction()` weiterhin nicht ungeprüft verwenden. Lokale Änderungen niemals gegen den aktuellen Serverstand automatisch rebasen.
 
 Nur Instanz/Epoch erscheinen in Bindungs-Querystrings; ein Snapshot-Objekt darf dort keine Payloads/Profilnamen serialisieren. Push friert seine normalisierte Anfrage vor dem Fetch ein; Caller-Retry nutzt persistierte identische IDs/Inhalte. Nach Netzwerkverlust ist ein Commit möglicherweise schon erfolgt.
 
 ## Prüfungen
 
-153 lokale Domain-/SQLite-/Client-Tests und 77 MariaDB-/Nitro-Tests bestanden, darunter der **produktive Client gegen tatsächliche Nitro-Antworten** (Info, Push/Replays, Snapshot, Pull und Freigabe). Beide Typprüfungen, Backend-/Mobile-Build und Chromium-Smoke-Test erfolgreich. Kein neuer Native-Gerätelaufzeittest; Sync wird noch nicht in Android/iOS ausgelöst.
+171 lokale Domain-/SQLite-/Client-Tests und 78 MariaDB-/Nitro-Tests bestanden, darunter der **produktive Client gegen tatsächliche Nitro-Antworten** (Info, Push/Replays, Snapshot, Pull und Freigabe). Beide Typprüfungen, Backend-/Mobile-Build und Chromium-Smoke-Test erfolgreich. Kein neuer Native-Gerätelaufzeittest; Sync bleibt aus, native Netzwerk-Vorbereitung ist nur ausdrücklich auslösbar.
 
 Vertrag und serverseitige Sicherheitsgrenzen: [sync-api.md](sync-api.md). Native-/lokale Grundlagen: [local-sync-foundation.md](local-sync-foundation.md).

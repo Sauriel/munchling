@@ -9,7 +9,7 @@ import { fromSqlBoolean, toSqlBoolean, type SqlDatabase, type SqlExecutor } from
 export async function snapshotBackup(sql: SqlExecutor): Promise<MunchlingBackup> {
 	const applied = await sql.query<{ version: number | null }>("SELECT MAX(version) AS version FROM schema_migrations;");
 	const version = Number(applied[0]?.version ?? 0);
-	if (schemaMigrations.some((migration) => migration.version > 2) || version > 2) fail("backupFormat", "schemaVersion");
+	if (version > schemaMigrations.at(-1)!.version) fail("backupFormat", "schemaVersion");
 	const profiles = await sql.query<Profile>(
 		`SELECT id, name, daily_calories_target AS dailyCaloriesTarget,
 		 daily_protein_target AS dailyProteinTarget, daily_carbs_target AS dailyCarbsTarget,
@@ -116,6 +116,12 @@ async function replaceData(sql: SqlExecutor, backup: MunchlingBackup) {
 	}
 	if (backup.version === 2) for (const row of backup.tombstones) {
 		await sql.run("INSERT INTO sync_records (uuid,entity,aggregate_entity,aggregate_uuid,deleted_at) VALUES (?,?,?,?,?);", [row.uuid, row.entity, row.aggregateEntity, row.aggregateUuid, row.deletedAt]);
+	}
+	const schema = (await sql.query<{ version: number }>("SELECT MAX(version) AS version FROM schema_migrations;"))[0]!.version;
+	if (schema >= 3) {
+		await sql.run("DELETE FROM sync_download;");
+		await sql.run("DELETE FROM sync_inbox;");
+		await sql.run("UPDATE sync_state SET server_epoch=NULL WHERE id=1;");
 	}
 	await sql.run("UPDATE sync_state SET enabled=0,development_seeded=0,server_url=NULL,server_instance_id=NULL,pull_cursor=NULL,local_epoch=?,tracking_enabled=1 WHERE id=1;", [createUuid()]);
 	await sql.run("INSERT INTO sync_dirty (entity,uuid) SELECT entity,uuid FROM sync_records WHERE uuid=aggregate_uuid;");

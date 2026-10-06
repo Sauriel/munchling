@@ -1,6 +1,6 @@
-# Lokale UUID-/Sync-Grundlage (Schema v2)
+# Lokale UUID-/Sync-Grundlage (UUID-Migration v2, Empfangsmetadata v3)
 
-Noch kein Netzwerk-Sync: MariaDB, HTTP-Adapter, Erstabgleich, Konfliktauflösung und Sync-Einstellungen folgen separat. Der lokale Betrieb bleibt offline-fähig und `enabled=0` ist der Standard.
+Noch kein laufender Netzwerk-Sync: MariaDB und Transport sowie getrenntes Empfangs-Staging sind vorhanden. Erstabgleich, manuelle Konfliktauflösung und Runner folgen separat; native Einstellungen bieten nur ausdrückliche Verbindungs-/Download-Vorbereitung. Der lokale Betrieb bleibt offline-fähig und `enabled=0` ist der Standard.
 
 ## Identitäten und Zustände
 
@@ -9,7 +9,7 @@ Alle sechs Fachtabellen bekommen zusätzlich `uuid`, ohne numerische IDs oder Re
 - `sync_records`: UUID-zu-lokaler-ID-Auflösung, Aggregatzuordnung, monotone lokale Revision, bestätigte Serverrevision und Löschzeitpunkt. Gelöschte Zutaten/Portionen bleiben ebenfalls erfasst; keine automatische Tombstone-Bereinigung.
 - `sync_state`: Geräte-ID, lokale Epoch, Serveradresse/-instanz, Cursor, Aktivierung und scoped Tracking-Modus. Eine lokale Epoch unterscheidet Datenbestände vor/nach einem Restore; Geräte-ID bleibt unverändert.
 - `sync_baselines`: exakt bestätigter Operationsinhalt, nicht der möglicherweise inzwischen lokal weiter bearbeitete Datensatz.
-- `sync_conflicts`: vorbereiteter Speicher für Basis-/Lokal-/Remote-Daten und Serverrevision. Noch kein Konfliktprozessor oder Dialog.
+- `sync_conflicts`: vorbereiteter Speicher für Basis-/Lokal-/Remote-Daten und Serverrevision. Der atomare Empfänger sichert blockierte Gruppen; manuelle Auflösungsdialoge folgen.
 - `development_seeded`: automatisches Dev-Seeding schaltet Sync aus und markiert den Bestand. Eine DB-Constraint verhindert die Aktivierung solcher Installationen. Ein bewusst bestätigter Backup-Restore setzt einen neuen, ungebundenen Bestand auf; bei erneutem Dev-Seeding wird dieser wieder gesperrt.
 
 ## Atomarer Schreibpfad
@@ -42,7 +42,7 @@ Der zukünftige Transport muss atomare Batches unterstützen und Idempotenz gege
 
 Ein Backup-Restore ersetzt ausschließlich den lokalen Bestand. Er entfernt alte Operations-IDs, Basisstände und Konflikte, trennt die Serverbindung und erneuert die lokale Epoch. Globale UUIDs/Tombstones bleiben bei v2 erhalten; v1 bekommt neue UUIDs. Der neue vollständige Snapshot bleibt lokal vorgemerkt, bis ein expliziter Erstabgleich erlaubt ist. Alte Serverantworten können keine entfernten Batches quittieren. Ein zukünftiger Sync-Runner muss vor jedem Request/Receipt außerdem Aktivierung, Serverinstanz und lokale Epoch überprüfen.
 
-Details: [data-integrity-and-backups.md](data-integrity-and-backups.md).
+Schema v3 ergänzt Server-Epoch, persistente Download-Seiten und eine Inbox mit vollständigen angewendeten/zurückgehaltenen Gruppen. Restore löscht auch diese technischen Daten. Der getestete, explizit aufgerufene Empfänger löst UUIDs auf, prüft Konflikte/Abhängigkeiten und committet Daten bzw. Konflikte mit Cursor. Details: [client-sync-receive.md](client-sync-receive.md) und [data-integrity-and-backups.md](data-integrity-and-backups.md).
 
 ## Nachweise und Grenzen
 

@@ -264,6 +264,23 @@
       "title": "Profile",
       "hint": "Körperdaten, Ziele und aktive Profile verwalten."
     },
+    "syncPreparation": {
+      "title": "Server-Synchronisierung vorbereiten",
+      "scope": "Sync bleibt ausgeschaltet. Dieser Schritt prüft die Verbindung und lädt Serverdaten nur in einen getrennten Zwischenspeicher. Kein Upload, keine Übernahme, kein Ersetzen deiner Daten. Erstabgleich und manuelle Konfliktentscheidungen folgen im nächsten Schritt.",
+      "security": "Es gibt noch keine Anmeldung. Verbinde dich nur mit einem Server in deinem abgesicherten privaten Netz. Ernährungsdaten werden an die gewählte Adresse übertragen.",
+      "secure": "Ich vertraue dieser Adresse und ihrer Netzwerk-Absicherung.",
+      "address": "Serveradresse (HTTP-/HTTPS-Origin)",
+      "inspect": "Verbindung und Bestand prüfen",
+      "inventory": "Aktive Datensätze",
+      "counts": "lokal {local} / Server {server}",
+      "download": "Serverbestand zwischenspeichern",
+      "resume": "Download fortsetzen / prüfen",
+      "discard": "Lokalen Zwischenspeicher verwerfen",
+      "progress": "{done} von {total} Seiten heruntergeladen",
+      "validated": "Vollständiger Bestand geprüft. Lokale Geschäftsdaten unverändert; Sync bleibt aus.",
+      "failed": "Vorbereitung fehlgeschlagen ({code}). Keine automatische Wiederholung oder Server-Umbindung.",
+      "entities": { "profiles": "Profile", "foods": "Lebensmittel", "recipes": "Gerichte", "meal_logs": "Mahlzeiten", "recipe_ingredients": "Zutaten", "meal_log_profiles": "Portionen" }
+    },
     "backup": {
       "title": "Lokale Datensicherung",
       "hint": "Sichere alle Profile, Lebensmittel, Gerichte, Zutaten, Mahlzeiten und Portionen als JSON. Geräteinstellungen und der BLS-Katalog sind nicht enthalten.",

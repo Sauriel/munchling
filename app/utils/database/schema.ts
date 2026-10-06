@@ -1,3 +1,4 @@
+import { receiveSchemaStatements } from "./receive-schema";
 import { syncSchemaStatements } from "./sync-schema";
 
 export const DATABASE_NAME = "munchling";
@@ -141,4 +142,5 @@ export const schemaMigrations: DatabaseMigration[] = [
     `,
 	},
 	{ version: 2, name: "global_identities_and_sync_outbox", statements: syncSchemaStatements },
+	{ version: 3, name: "durable_sync_receive_control", statements: receiveSchemaStatements },
 ];

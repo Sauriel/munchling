@@ -8,6 +8,10 @@ import type { ServerWriteBatch } from "../../shared/domain/server";
 import { createUuid } from "../../shared/domain/sync";
 import { createSyncHttpClient } from "../../app/utils/sync/http";
 import { newDatabase, resetDatabase, testConfig } from "./helpers";
+import { createTestDatabase } from "../helpers/sqlite";
+import { createSnapshotStaging } from "../../app/utils/sync/staging";
+import { createRemoteReceiver } from "../../app/utils/sync/apply";
+import { createSyncQueue } from "../../app/utils/database/outbox";
 const profile = (name = "HTTP 🥗") => ({ id: createUuid(), name, daily_calories_target: 2000, daily_protein_target: null, daily_carbs_target: null, daily_fat_target: null, daily_sugar_target: null, daily_fiber_target: null, daily_salt_target: null, created_at: "2026-10-05T12:00:00.000Z", updated_at: null });
 
 describe("built Nitro sync HTTP API", () => {
@@ -43,6 +47,28 @@ describe("built Nitro sync HTTP API", () => {
 		const snapshot = await client.startSnapshot(binding); expect(snapshot.aggregates[0]!.data).toEqual(command.operations[0]!.payload);
 		expect((await client.changes(binding, "0")).batches[0]!.changes[0]!.aggregate.id).toBe(command.operations[0]!.entityUuid);
 		await client.releaseSnapshot(snapshot);
+	});
+	it("stages and atomically applies real HTTP replies across independent SQLite clients and restart", async () => {
+		const a = await createTestDatabase(), b = await createTestDatabase(); let reopened: typeof a | undefined;
+		try {
+			const client = createSyncHttpClient(base), p = profile(); await client.push(batch(p)); const first = await client.startSnapshot(binding);
+			for (const local of [a, b]) {
+				const store = createSnapshotStaging(local.database), epoch = (await store.state()).localEpoch;
+				await store.begin(epoch, base, first);
+				for (let index = 1; index < first.pageCount; index++) await store.save(await client.snapshotPage(first, index));
+				expect((await createRemoteReceiver(local.database).adoptSnapshot(epoch)).status).toBe("applied");
+			}
+			await client.releaseSnapshot(first); const aId = (await a.service.profiles.listProfiles())[0]!.id;
+			await a.service.profiles.updateProfile(aId, { name: "Offline edit" }); const pending = await createSyncQueue(a.database).list(); await client.push(batch({ ...p, name: "Server edit" }, 1));
+			const changes = await client.changes(binding, first.cursor);
+			for (const local of [a, b]) {
+				const context = { ...binding, localEpoch: (await createSnapshotStaging(local.database).state()).localEpoch, url: base, cursor: first.cursor };
+				expect((await createRemoteReceiver(local.database).applyPage(context, changes))[0]!.status).toBe(local === a ? "blocked" : "applied");
+				expect(await createRemoteReceiver(local.database).applyPage(context, changes)).toEqual([]);
+			}
+			expect((await b.service.profiles.listProfiles())[0]!.name).toBe("Server edit"); expect(await createSyncQueue(b.database).list()).toEqual([]);
+			reopened = await createTestDatabase({ bytes: a.exportBytes() }); expect((await reopened.service.profiles.listProfiles())[0]!.name).toBe("Offline edit"); expect(await createSyncQueue(reopened.database).list()).toEqual(pending); expect(await createRemoteReceiver(reopened.database).conflicts()).toHaveLength(1);
+		} finally { reopened?.close(); a.close(); b.close(); }
 	});
 	it("negotiates info, pushes/replays and pulls exact confirmed data without duplicate operations", async () => {
 		const infoResponse = await fetch(`${base}/api/sync/info`); expect(infoResponse.status).toBe(200); expect(infoResponse.headers.get("cache-control")).toBe("no-store"); expect(await infoResponse.json()).toMatchObject({ protocolVersion: 1, schemaVersion: 2, capabilities: { authentication: "none" } });

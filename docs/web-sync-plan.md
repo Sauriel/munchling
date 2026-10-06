@@ -1,8 +1,8 @@
 # Munchling: Web, MariaDB und optionaler bidirektionaler Sync
 
-Status: Implementierung begonnen; erstes Fundament umgesetzt und automatisiert geprüft. MariaDB, HTTP-Adapter, Deployment und Sync sind noch nicht implementiert.
+Status: SQLite/Backup/Outbox, MariaDB, HTTP-Protokoll/Transport und dauerhafter konfliktbewusster Remote-Empfang sind implementiert und geprüft. Native Einstellungen bieten ausdrücklich ausgelöste Vorbereitung; Sync bleibt aus. Vollständige Erstabgleich-/Konfliktentscheidungen, Runner, Web-HTTP-Datenadapter und Deployment fehlen. Details: [client-sync-receive.md](client-sync-receive.md).
 
-### Aktueller Teilstand
+### Ursprünglicher Teilstand (Phase 0/1, historisch)
 
 - Gemeinsame Fachdaten-Typen und CRUD-Service-Vertrag in `shared/domain/`.
 - Persistenzunabhängige Nährwertberechnung; dynamische historische Nährwerte bleiben erhalten.
@@ -219,8 +219,8 @@ Abnahme: zwei unabhängig gestartete Clients können erzeugen, ändern und lösc
 
 ### Phase 5 — Ersteinrichtung, Bestandszusammenführung und Konflikte
 
-- [ ] Einrichtungsdialog mit Serveradresse, Verbindungstest und Hinweis „gemeinsamer Bestand, keine Authentifizierung“ erstellen.
-- [ ] Lokalen und serverseitigen Bestand vor Erstverbindung zählen und Zusammenführung verständlich ankündigen.
+- [x] Native Vorbereitung mit Serveradresse, Verbindungstest und Hinweis „gemeinsamer Bestand, keine Authentifizierung“ erstellen; noch keine Aktivierung/Erstabgleich-Entscheidung.
+- [x] Lokalen und serverseitigen Bestand vor Erstverbindung zählen; klar trennen zwischen Download-Staging und späterer Zusammenführung.
 - [ ] Standard: lokale Daten hinzufügen und Serverdaten herunterladen; keine Seite ungefragt ersetzen oder löschen.
 - [ ] Bestehende Datensätze nicht allein anhand gleicher Namen als identisch ansehen.
 - [ ] EAN-Kollisionen und mutmaßliche Dubletten gesondert anzeigen; Zusammenführung mit korrekter Neuzuordnung aller Referenzen ermöglichen.
@@ -236,10 +236,12 @@ Abnahme: volle Bestandsdatenbanken lassen sich ohne ungefragten Datenverlust ver
 
 ### Phase 6 — Sync-Engine in der App
 
+Dauerhafter Empfang und native Vorbereitungsoberfläche: [client-sync-receive.md](client-sync-receive.md). Kein Upload/automatischer Runner und keine UI-Übernahme. 171 lokale und 78 Server-/API-Tests; Native-Gerätelaufzeit noch offen.
+
 - [ ] Einen Single-Flight-Sync-Runner implementieren; kein paralleler automatischer und manueller Sync.
 - [ ] Änderungen pushen, Serveränderungen pullen und unbestätigte lokale Daten konfliktbewusst erhalten.
-- [ ] Pull-Änderungen samt lokalem Cursor atomar anwenden; Outbox erst nach eindeutiger Serverbestätigung quittieren.
-- [ ] Downloads als Remote-Änderungen kennzeichnen, damit keine erneute Outbox entsteht.
+- [x] Pull-Änderungen oder dauerhaft zurückgehaltene Konfliktgruppen samt lokalem Cursor atomar aufnehmen; Outbox unverändert bis eindeutiger Serverbestätigung.
+- [x] Downloads als Remote-Änderungen kennzeichnen, damit keine erneute Outbox entsteht.
 - [ ] Debounce für lokale Änderungen und Backoff mit Jitter für Netzwerk-/Serverfehler ergänzen.
 - [ ] Trigger für Start, Resume und Verbindungsrückkehr ergänzen; Netzstatus allein nicht als Server-Erreichbarkeit interpretieren.
 - [ ] Änderungen der Webseite während geöffneter App durch ein begrenztes Pull-Intervall erkennen; zunächst kein WebSocket notwendig.

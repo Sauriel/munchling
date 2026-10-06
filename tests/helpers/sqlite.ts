@@ -11,7 +11,7 @@ export async function createTestDatabase(options: { version?: number; bytes?: Ui
 	const SQL = await initSqlJs();
 	const sqlite = new SQL.Database(options.bytes);
 	if (!options.bytes) for (const migration of schemaMigrations) {
-		if (migration.version > (options.version ?? 2)) continue;
+		if (migration.version > (options.version ?? schemaMigrations.at(-1)!.version)) continue;
 		sqlite.run(migration.statements);
 		sqlite.run("INSERT INTO schema_migrations (version,name) VALUES (?,?);", [migration.version, migration.name]);
 	}

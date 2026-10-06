@@ -200,7 +200,7 @@ describe("local JSON backups", () => {
 	});
 
 	it("refuses export/restore if unknown newer schema metadata is present", async () => {
-		await target.database.run("INSERT INTO schema_migrations (version, name) VALUES (3, 'future');");
+		await target.database.run("INSERT INTO schema_migrations (version, name) VALUES (99, 'future');");
 		await expect(target.service.backups!.exportBackup()).rejects.toMatchObject({ code: "backupFormat" });
 		await expect(target.service.backups!.restoreBackup(backup, async () => {})).rejects.toMatchObject({ code: "backupFormat" });
 	});

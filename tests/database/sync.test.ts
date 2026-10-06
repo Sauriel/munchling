@@ -94,7 +94,7 @@ describe("safe schema v2 migration", () => {
 
 	it("rejects a future database before modifying its fach schema", async () => {
 		const test = await open({ version: 1 });
-		await test.database.run("INSERT INTO schema_migrations (version,name) VALUES (3,'future');");
+		await test.database.run("INSERT INTO schema_migrations (version,name) VALUES (99,'future');");
 		await expect(migrate(test)).rejects.toThrow("newer");
 		expect(await hasUuid(test)).toBe(false);
 	});

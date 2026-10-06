@@ -264,6 +264,23 @@
       "title": "Profiles",
       "hint": "Manage body data, goals, and active profiles."
     },
+    "syncPreparation": {
+      "title": "Prepare server synchronization",
+      "scope": "Synchronization remains off. This step checks the connection and stages server data only. It does not upload, adopt or replace your data. Initial reconciliation and manual conflict decisions come next.",
+      "security": "There is no authentication yet. Only connect to a server on your secure private network. Nutrition data is transferred to the selected address.",
+      "secure": "I trust this address and its network access controls.",
+      "address": "Server address (HTTP/HTTPS origin)",
+      "inspect": "Check connection and inventory",
+      "inventory": "Active records",
+      "counts": "local {local} / server {server}",
+      "download": "Stage server snapshot",
+      "resume": "Resume / validate download",
+      "discard": "Discard local staging",
+      "progress": "Downloaded {done} of {total} pages",
+      "validated": "Complete dataset validated. Local business data is unchanged; synchronization remains off.",
+      "failed": "Preparation failed ({code}). No automatic retry or binding switch.",
+      "entities": { "profiles": "Profiles", "foods": "Foods", "recipes": "Recipes", "meal_logs": "Meals", "recipe_ingredients": "Ingredients", "meal_log_profiles": "Portions" }
+    },
     "backup": {
       "title": "Local backup",
       "hint": "Export all profiles, foods, recipes, ingredients, meals and portions as JSON. Device settings and the BLS catalog are not included.",
