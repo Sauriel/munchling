@@ -34,8 +34,9 @@ export function useMealLogs() {
 		id: number,
 		input: UpdateMealLogInput,
 		refreshOptions: { profileId?: number; date?: string } = {},
+		revision?: number,
 	) => {
-		const mealLog = await updateMealLogRecord(id, input);
+		const mealLog = await updateMealLogRecord(id, input, revision);
 		await refreshMealLogs(refreshOptions);
 		return mealLog;
 	};
@@ -43,8 +44,9 @@ export function useMealLogs() {
 	const deleteMealLog = async (
 		id: number,
 		refreshOptions: { profileId?: number; date?: string } = {},
+		revision?: number,
 	) => {
-		const deleted = await deleteMealLogRecord(id);
+		const deleted = await deleteMealLogRecord(id, revision);
 		await refreshMealLogs(refreshOptions);
 		return deleted;
 	};

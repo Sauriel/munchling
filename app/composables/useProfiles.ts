@@ -25,14 +25,14 @@ export function useProfiles() {
 		return profile;
 	};
 
-	const updateProfile = async (id: number, input: UpdateProfileInput) => {
-		const profile = await updateProfileRecord(id, input);
+	const updateProfile = async (id: number, input: UpdateProfileInput, revision?: number) => {
+		const profile = await updateProfileRecord(id, input, revision);
 		await refreshProfiles();
 		return profile;
 	};
 
-	const deleteProfile = async (id: number) => {
-		const deleted = await deleteProfileRecord(id);
+	const deleteProfile = async (id: number, revision?: number) => {
+		const deleted = await deleteProfileRecord(id, revision);
 		await refreshProfiles();
 		return deleted;
 	};

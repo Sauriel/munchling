@@ -16,8 +16,8 @@ export interface MunchlingDataService {
 		listProfiles(): Promise<Profile[]>;
 		getProfileById(id: number): Promise<Profile | null>;
 		createProfile(input: CreateProfileInput): Promise<Profile | null>;
-		updateProfile(id: number, input: UpdateProfileInput): Promise<Profile | null>;
-		deleteProfile(id: number): Promise<number>;
+		updateProfile(id: number, input: UpdateProfileInput, revision?: number): Promise<Profile | null>;
+		deleteProfile(id: number, revision?: number): Promise<number>;
 	};
 	foods: {
 		listFoods(searchTerm?: string): Promise<Food[]>;
@@ -25,8 +25,8 @@ export interface MunchlingDataService {
 		getFoodByEan(ean: string): Promise<Food | null>;
 		getFoodByNameDe(nameDe: string): Promise<Food | null>;
 		createFood(input: CreateFoodInput): Promise<Food | null>;
-		updateFood(id: number, input: UpdateFoodInput): Promise<Food | null>;
-		deleteFood(id: number): Promise<number>;
+		updateFood(id: number, input: UpdateFoodInput, revision?: number): Promise<Food | null>;
+		deleteFood(id: number, revision?: number): Promise<number>;
 	};
 	recipes: {
 		listRecipes(): Promise<Recipe[]>;
@@ -34,20 +34,20 @@ export interface MunchlingDataService {
 		listRecipeIngredients(recipeId: number): Promise<RecipeIngredient[]>;
 		getRecipeWithIngredients(id: number): Promise<RecipeWithIngredients | null>;
 		createRecipe(input: CreateRecipeInput): Promise<RecipeWithIngredients | null>;
-		updateRecipe(id: number, input: UpdateRecipeInput): Promise<RecipeWithIngredients | null>;
-		deleteRecipe(id: number): Promise<number>;
-		addRecipeIngredient(recipeId: number, input: RecipeIngredientInput): Promise<RecipeIngredient | null>;
+		updateRecipe(id: number, input: UpdateRecipeInput, revision?: number): Promise<RecipeWithIngredients | null>;
+		deleteRecipe(id: number, revision?: number): Promise<number>;
+		addRecipeIngredient(recipeId: number, input: RecipeIngredientInput, revision?: number): Promise<RecipeIngredient | null>;
 		getRecipeIngredientById(id: number): Promise<RecipeIngredient | null>;
-		updateRecipeIngredient(id: number, input: RecipeIngredientInput): Promise<RecipeIngredient | null>;
-		deleteRecipeIngredient(id: number): Promise<number>;
-		replaceRecipeIngredients(recipeId: number, ingredients: RecipeIngredientInput[]): Promise<RecipeIngredient[]>;
+		updateRecipeIngredient(id: number, input: RecipeIngredientInput, revision?: number): Promise<RecipeIngredient | null>;
+		deleteRecipeIngredient(id: number, revision?: number): Promise<number>;
+		replaceRecipeIngredients(recipeId: number, ingredients: RecipeIngredientInput[], revision?: number): Promise<RecipeIngredient[]>;
 		calculateRecipeNutrition(recipeId: number): Promise<RecipeNutrition>;
 	};
 	mealLogs: {
 		listMealLogs(options?: MealLogFilter): Promise<MealLog[]>;
 		getMealLogById(id: number): Promise<MealLog | null>;
 		createMealLog(input: CreateMealLogInput): Promise<MealLog | null>;
-		updateMealLog(id: number, input: UpdateMealLogInput): Promise<MealLog | null>;
-		deleteMealLog(id: number): Promise<number>;
+		updateMealLog(id: number, input: UpdateMealLogInput, revision?: number): Promise<MealLog | null>;
+		deleteMealLog(id: number, revision?: number): Promise<number>;
 	};
 }

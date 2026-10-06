@@ -188,6 +188,7 @@ const { currentProfileId, selectProfile, initializeCurrentProfile } = useCurrent
 const isSaving = ref(false)
 const formError = ref('')
 const editingProfileId = ref<number | null>(null)
+const editingRevision = ref<number>()
 const isEditing = computed(() => editingProfileId.value !== null)
 
 const emptyForm = (): ProfileForm => ({
@@ -223,6 +224,7 @@ function resetForm() {
 
 function editProfile(profile: Profile) {
   editingProfileId.value = profile.id
+  editingRevision.value = profile.revision
   Object.assign(form, {
     name: profile.name,
     dailyCaloriesTarget: profile.dailyCaloriesTarget,
@@ -253,7 +255,7 @@ async function submitForm() {
     }
 
     if (editingProfileId.value) {
-      await updateProfile(editingProfileId.value, input)
+      await updateProfile(editingProfileId.value, input, editingRevision.value)
     } else {
       const profile = await createProfile(input)
 
@@ -275,7 +277,8 @@ async function removeProfile(profile: Profile) {
     return
   }
 
-  await deleteProfile(profile.id)
+  try { await deleteProfile(profile.id, profile.revision) }
+  catch (error) { formError.value = validationMessage(error, t); window.scrollTo({ top: 0, behavior: 'smooth' }) }
 }
 
 function formatTarget(value: number | null, suffix = 'g') {

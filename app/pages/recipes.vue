@@ -258,6 +258,7 @@ const { recipes, isLoading, refreshRecipes, loadRecipe, createRecipe, updateReci
 const isSaving = ref(false)
 const formError = ref('')
 const editingRecipeId = ref<number | null>(null)
+const editingRevision = ref<number>()
 const isEditing = computed(() => editingRecipeId.value !== null)
 const recipeNutritionMap = reactive<Record<number, RecipeNutrition>>({})
 const expandedRecipeId = ref<number | null>(null)
@@ -470,6 +471,7 @@ async function editRecipe(recipe: Recipe) {
   if (!recipeWithIngredients) return
 
   editingRecipeId.value = recipe.id
+  editingRevision.value = recipeWithIngredients.revision
   Object.assign(form, {
     name: recipeWithIngredients.nameDe,
     description: recipeWithIngredients.description ?? '',
@@ -512,7 +514,7 @@ async function submitForm() {
     }
 
     if (editingRecipeId.value) {
-      await updateRecipe(editingRecipeId.value, input)
+      await updateRecipe(editingRecipeId.value, input, editingRevision.value)
     } else {
       await createRecipe(input)
     }
@@ -530,9 +532,11 @@ async function submitForm() {
 async function removeRecipe(recipe: Recipe) {
   if (!confirm(t('recipes.confirmDelete', { name: recipe.nameDe }))) return
 
-  await deleteRecipe(recipe.id)
-  delete recipeNutritionMap[recipe.id]
-  await refreshRecipeNutrition()
+  try {
+    await deleteRecipe(recipe.id, recipe.revision)
+    delete recipeNutritionMap[recipe.id]
+    await refreshRecipeNutrition()
+  } catch (error) { formError.value = validationMessage(error, t); window.scrollTo({ top: 0, behavior: 'smooth' }) }
 }
 
 function addNutritionFromFood(total: NutritionValues, food: Food, amountGrams: number) {

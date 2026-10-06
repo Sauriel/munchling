@@ -146,7 +146,9 @@ import { useMealLogs } from '~/composables/useMealLogs'
 import { useProfiles } from '~/composables/useProfiles'
 import { useMunchlingData } from '~/composables/useMunchlingData'
 import { calculateMealLogProfileNutrition } from '../../../shared/domain/nutrition'
+import { validationMessage } from '../../../shared/domain/validation'
 import type { MealLog, NutritionValues } from '../../../shared/domain/types'
+const { t } = useI18n()
 
 const { listMealLogs } = useMunchlingData().mealLogs
 const route = useRoute()
@@ -245,8 +247,12 @@ function profilePortion(mealLog: MealLog) {
 async function removeMealLog(id: number) {
   const currentProfile = profile.value
   if (!currentProfile) return
-  await deleteMealLog(id, { profileId: currentProfile.id, date: todayDate.value })
-  await refreshDashboard()
+  const meal = mealLogs.value.find(row => row.id === id)
+  if (!meal || !confirm(t('mealLog.confirmDelete', { name: meal.sourceName }))) return
+  try {
+    await deleteMealLog(id, { profileId: currentProfile.id, date: todayDate.value }, meal.revision)
+    await refreshDashboard()
+  } catch (error) { alert(validationMessage(error, t)) }
 }
 
 async function refreshDashboard() {

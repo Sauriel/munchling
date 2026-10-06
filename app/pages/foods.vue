@@ -273,6 +273,7 @@ const { isLookingUpProduct, productLookupError, lookupProductByEan } = useOpenFo
 
 const isSaving = ref(false)
 const editingFoodId = ref<number | null>(null)
+const editingRevision = ref<number>()
 const isEditing = computed(() => editingFoodId.value !== null)
 const searchModel = ref(searchTerm.value)
 const showSearchResults = ref(false)
@@ -333,6 +334,7 @@ async function isDuplicateFoodName(name: string) {
 
 function editFood(food: Food) {
   editingFoodId.value = food.id
+  editingRevision.value = food.revision
   Object.assign(form, {
     name: food.nameDe,
     brand: food.brand ?? '',
@@ -410,7 +412,7 @@ async function submitForm() {
     }
 
     if (editingFoodId.value) {
-      await updateFood(editingFoodId.value, input)
+      await updateFood(editingFoodId.value, input, editingRevision.value)
     } else {
       await createFood(input)
     }
@@ -429,7 +431,8 @@ async function removeFood(food: Food) {
     return
   }
 
-  await deleteFood(food.id)
+  try { await deleteFood(food.id, food.revision) }
+  catch (error) { formError.value = validationMessage(error, t); window.scrollTo({ top: 0, behavior: 'smooth' }) }
 }
 
 async function scanBarcode() {

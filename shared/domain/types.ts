@@ -2,6 +2,7 @@
 // the forthcoming sync protocol will use additional global UUIDs.
 export type Profile = {
 	id: number;
+	revision?: number;
 	name: string;
 	dailyCaloriesTarget: number;
 	dailyProteinTarget: number | null;
@@ -28,6 +29,7 @@ export type UpdateProfileInput = Partial<CreateProfileInput>;
 
 export type Food = {
 	id: number;
+	revision?: number;
 	nameDe: string;
 	nameEn: string;
 	brand: string | null;
@@ -43,7 +45,7 @@ export type Food = {
 	createdAt: string;
 	updatedAt: string | null;
 };
-export type CreateFoodInput = Omit<Food, "id" | "createdAt" | "updatedAt" | "brand" | "ean" | "isCustom"> & {
+export type CreateFoodInput = Omit<Food, "id" | "revision" | "createdAt" | "updatedAt" | "brand" | "ean" | "isCustom"> & {
 	brand?: string | null;
 	ean?: string | null;
 	isCustom?: boolean;
@@ -52,6 +54,7 @@ export type UpdateFoodInput = Partial<CreateFoodInput>;
 
 export type Recipe = {
 	id: number;
+	revision?: number;
 	nameDe: string;
 	nameEn: string;
 	description: string | null;
@@ -105,6 +108,7 @@ export type MealLogProfile = {
 };
 export type MealLog = {
 	id: number;
+	revision?: number;
 	loggedAt: string;
 	foodId: number | null;
 	recipeId: number | null;

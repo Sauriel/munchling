@@ -1,6 +1,15 @@
 # Munchling: Web, MariaDB und optionaler bidirektionaler Sync
 
-Status: SQLite/Backup/Outbox, MariaDB, HTTP-Protokoll/Transport und dauerhafter konfliktbewusster Remote-Empfang sind implementiert und geprüft. Native Einstellungen bieten ausdrücklich ausgelöste Vorbereitung; Sync bleibt aus. Gesonderte Erstabgleich-/Konfliktentscheidungen mit frischem Serverbeleg und Sicherheitsdatei sind vorhanden. Geführte lokale EAN-Import-Zuordnung und lokales Trennen mit neuem Erstabgleich sind vorhanden. Allgemeine Server-Merges, Runner, Web-HTTP-Datenadapter und Deployment fehlen. Details: [client-sync-receive.md](client-sync-receive.md).
+Status: SQLite/Backup/Outbox, MariaDB, HTTP-Protokoll/Transport und dauerhafter konfliktbewusster Remote-Empfang sind implementiert und geprüft. Native Einstellungen bieten ausdrücklich ausgelöste Vorbereitung; Sync bleibt aus. Gesonderte Erstabgleich-/Konfliktentscheidungen mit frischem Serverbeleg und Sicherheitsdatei sind vorhanden. Geführte lokale EAN-Import-Zuordnung und lokales Trennen mit neuem Erstabgleich sind vorhanden. Der Online-Web-Adapter ist angeschlossen und gegen Nitro/MariaDB sowie Chromium geprüft. Allgemeine Server-Merges, Native-Runner und Deployment fehlen. Details: [client-sync-receive.md](client-sync-receive.md).
+
+## Aktuelle Lieferreihenfolge
+
+1. Online-Web-Grundbetrieb mit vorhandenen Pages/Versionsprüfungen (umgesetzt; [Grenzen](web-data-adapter.md)).
+2. Docker-/Dokploy-Build und isolierter Container-/Datenbank-Smoke.
+3. Manueller Native-Sync-Runner und Android-Abnahme mit deploybarem Server; **keine vorgezogenen Android-Gerätetests**.
+4. Erst danach automatische Native-Trigger, allgemeine serverseitige Dubletten-Merges und zusätzliche Komfortfunktionen.
+
+Die historische Phasenreihenfolge unten beschreibt Bausteine, nicht eine strikt lineare Warteschlange. Keine Sicherheits-/Versionsprüfung wird für schnellere Lieferung weggelassen.
 
 ### Ursprünglicher Teilstand (Phase 0/1, historisch)
 
@@ -143,10 +152,10 @@ Abnahme: fachlicher Sync-Umfang und verlustfreie Migrationsstrategie sind dokume
 - [x] Persistenzunabhängige DTOs und Nährwertberechnung aus SQLite-Implementierungen lösen.
 - [x] Gemeinsame Eingabevalidierung aus SQLite-Constraints und UI-Prüfungen lösen.
 - [x] Gemeinsame Repository-/Service-Verträge für die bestehenden CRUD-Funktionen schaffen.
-- [ ] Lokalen SQLite-Adapter und HTTP-Adapter vorsehen; Pages sollen nicht wissen, wo Daten gespeichert werden.
+- [x] Lokalen SQLite-Adapter und HTTP-Adapter über denselben Datenservice bereitstellen.
 - [x] Composables auf den injizierten Datenservice umstellen, bestehende Rückgabewerte und Ladezustände möglichst erhalten.
-- [ ] Auswahl zwischen lokalem und HTTP-Datenadapter über den Betriebsmodus ergänzen.
-- [ ] SQLite-Initialisierung und `jeep-sqlite` nur im lokalen Modus starten.
+- [x] Auswahl zwischen lokalem und HTTP-Datenadapter über den Betriebsmodus ergänzen.
+- [x] SQLite-Initialisierung und `jeep-sqlite` nur im lokalen Modus starten.
 - [ ] Native Plugins im Browser korrekt abgrenzen; Barcode-Kamera mit unterstütztem Browser und manueller EAN-Eingabe als Fallback testen.
 - [x] Mehrteilige lokale Änderungen in echte gemeinsame Transaktionen verlagern, ohne jeden Teil separat zu persistieren.
 - [ ] Berechnungen und Validierung sowohl lokal als auch serverseitig verwenden.
@@ -257,16 +266,18 @@ Abnahme: Offline-Arbeit bleibt erhalten und konvergiert nach Wiederverbindung; d
 
 ### Phase 7 — Webseite mit vollständigen Schreibfunktionen
 
-- [ ] HTTP-Datenadapter an CRUD-API anschließen; produktive Webdaten nicht mehr in Browser-SQLite speichern.
-- [ ] Vorhandene Pages für Profile, Lebensmittel, Gerichte, Mahlzeiten und Dashboard wiederverwenden.
+- [x] HTTP-Datenadapter an konsistente Lesesicht/versionierte Push-API anschließen; keine Browser-Fachdaten-SQLite.
+- [x] Vorhandene Pages für Profile, Lebensmittel, Gerichte, Mahlzeiten und Dashboard wiederverwenden.
+- [x] Grundlegenden vollständigen Adapter-CRUD einschließlich Untergerichten/Portionen gegen echte API prüfen; Browser-Profilbearbeitung und Reload ohne SQLite prüfen.
+- [ ] Komfortable explizite Web-Konfliktvergleiche und versionsgebundene Kaskadenvorschauen ergänzen (erster Stand verweigert referenzierte Löschungen).
 - [ ] Gerichte erstellen/bearbeiten/löschen, Untergerichte wählen und Nährwertberechnung im Web prüfen.
 - [ ] Lebensmittel inklusive manueller EAN und Nährwerten erfassen/bearbeiten/löschen.
 - [ ] Mahlzeiten und Portionen mehrerer Profile eintragen/bearbeiten/löschen.
 - [ ] Profilziele verwalten und Tagesübersichten servergestützt laden.
 - [ ] BLS-Suche und Open-Food-Facts-Übernahme im Browser und in der App prüfen.
 - [ ] API-Fehler und nicht erreichbaren Server sichtbar behandeln; erfolgreiche Speicherung nicht vortäuschen.
-- [ ] Konfliktbehandlung auch für veraltete Browserformulare und mehrere Tabs nutzen.
-- [ ] Bei konkurrierender Löschung verständliche Rückmeldung statt stiller Wiederanlage geben.
+- [x] Veraltete Formulare explizit versionieren; mehrere Tabs über Web Locks und unveränderliches Schreibjournal absichern.
+- [x] Bei konkurrierender Löschung Konflikt statt stiller Wiederanlage geben; Entwurf bleibt erhalten.
 - [ ] Änderungen anderer Clients durch Refresh bzw. begrenztes Polling anzeigen; Formularentwürfe nicht ungefragt überschreiben.
 - [ ] Desktoplayout und Tastaturbedienung verbessern, mobile Bedienbarkeit erhalten.
 - [ ] Neue Texte, Sync-Status und Konfliktdialoge vollständig DE/EN übersetzen.
@@ -275,8 +286,8 @@ Abnahme: eine im Browser erstellte Mahlzeit/ein Gericht erscheint nach Sync in d
 
 ### Phase 8 — Build-Trennung und Dokploy-Deployment
 
-- [ ] Explizite Skripte für mobilen statischen Build und Web-Server-Build ergänzen.
-- [ ] Nitro-Preset pro Build-Modus wählen; Capacitor muss weiterhin `.output/public` erhalten.
+- [x] Explizite Skripte für mobilen statischen Build und Web-Server-Build ergänzen.
+- [x] Nitro-Preset pro Build-Modus wählen; Capacitor erhält weiterhin `.output/public`.
 - [ ] Bestehende `cap:sync`-/Android-Skripte auf den Mobile-Build ausrichten.
 - [ ] Mobile- und Web-Build-Ausgaben nicht gleichzeitig im gleichen `.output`-Verzeichnis erzeugen; separate CI-Jobs/Workspaces verwenden.
 - [ ] BLS-/WASM-Assetbereitstellung reproducierbar machen: Generator mit Python-Abhängigkeiten im Build oder kontrolliertes versioniertes Vorbuild-Artefakt.

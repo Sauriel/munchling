@@ -1,6 +1,7 @@
 import { normalizeWriteBatch } from "../../../shared/domain/server-validation";
 import { replyAggregate, replyChanges, replyInfo, replyReceipt, replySnapshot, SyncClientError, validated, wireCursor } from "../../../shared/domain/replies";
 import { syncLimits, syncProtocolVersion, type ServerBinding, type SnapshotPage } from "../../../shared/domain/protocol";
+import { replyWebState } from "../../../shared/domain/web";
 import type { ServerWriteBatch } from "../../../shared/domain/server";
 
 const errorCodes = new Set(["versionConflict", "dependencyConflict", "identityConflict", "idempotencyConflict", "serverChanged", "cursorInvalid", "snapshotExpired", "snapshotBusy", "snapshotLimit", "batchTooLarge", "protocolMismatch", "invalidRequest", "DB_READ_FAILED", "DB_WRITE_FAILED", "DB_UNAVAILABLE", "API_NOT_CONFIGURED", "ORIGIN_DENIED", "JSON_REQUIRED", "BODY_TOO_LARGE", "REQUEST_TIMEOUT", "REQUEST_ABORTED", "INVALID_JSON", "required", "invalidType", "invalidNumber", "invalidDate", "invalidSource", "duplicate", "reference", "cycle", "backupFormat", "backupLimit"]);
@@ -51,6 +52,7 @@ export function createSyncHttpClient(address: string, options: { fetch?: typeof 
 	const client = {
 		url: base,
 		info: async (signal?: AbortSignal) => replyInfo(await request("info", "GET", undefined, signal)),
+		webState: async (binding: ServerBinding, signal?: AbortSignal) => replyWebState(await request(`view?${query(binding)}`, "GET", undefined, signal), binding),
 		push: async (input: ServerWriteBatch, signal?: AbortSignal) => { const batch = normalizeWriteBatch(input); return replyReceipt(await request("push", "POST", batch, signal), batch); },
 		changes: async (binding: ServerBinding, cursor: string, signal?: AbortSignal) => { wireCursor(cursor); return replyChanges(await request(`changes?${query(binding, { cursor })}`, "GET", undefined, signal), binding, cursor); },
 		startSnapshot: async (binding: ServerBinding, signal?: AbortSignal) => replySnapshot(await request("snapshots", "POST", binding, signal), binding, 0),

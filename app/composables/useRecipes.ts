@@ -40,15 +40,15 @@ export function useRecipes() {
 		return recipe;
 	};
 
-	const updateRecipe = async (id: number, input: UpdateRecipeInput) => {
-		const recipe = await updateRecipeRecord(id, input);
+	const updateRecipe = async (id: number, input: UpdateRecipeInput, revision?: number) => {
+		const recipe = await updateRecipeRecord(id, input, revision);
 		await refreshRecipes();
 		selectedRecipe.value = recipe;
 		return recipe;
 	};
 
-	const deleteRecipe = async (id: number) => {
-		const deleted = await deleteRecipeRecord(id);
+	const deleteRecipe = async (id: number, revision?: number) => {
+		const deleted = await deleteRecipeRecord(id, revision);
 		if (selectedRecipe.value?.id === id) {
 			selectedRecipe.value = null;
 		}
@@ -59,8 +59,9 @@ export function useRecipes() {
 	const addIngredient = async (
 		recipeId: number,
 		input: RecipeIngredientInput,
+		revision?: number,
 	) => {
-		const ingredient = await addRecipeIngredient(recipeId, input);
+		const ingredient = await addRecipeIngredient(recipeId, input, revision);
 		await loadRecipe(recipeId);
 		return ingredient;
 	};
@@ -68,10 +69,12 @@ export function useRecipes() {
 	const replaceIngredients = async (
 		recipeId: number,
 		ingredients: RecipeIngredientInput[],
+		revision?: number,
 	) => {
 		const nextIngredients = await replaceRecipeIngredients(
 			recipeId,
 			ingredients,
+			revision,
 		);
 		await loadRecipe(recipeId);
 		return nextIngredients;

@@ -15,6 +15,7 @@
     "test:watch": "vitest",
     "test:browser": "node scripts/browser-backup-smoke.mjs",
     "test:server": "pnpm build:server && node scripts/test-server-db.mjs",
+    "test:deployment": "docker build -t munchling:deployment-test . && MUNCHLING_TEST_IMAGE=munchling:deployment-test node scripts/test-server-db.mjs tests/server/deployment.test.ts",
     "typecheck": "nuxt typecheck",
     "typecheck:server": "MUNCHLING_BUILD_MODE=server nuxt typecheck",
     "postinstall": "nuxt prepare",

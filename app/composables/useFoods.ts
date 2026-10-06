@@ -27,14 +27,14 @@ export function useFoods() {
 		return food;
 	};
 
-	const updateFood = async (id: number, input: UpdateFoodInput) => {
-		const food = await updateFoodRecord(id, input);
+	const updateFood = async (id: number, input: UpdateFoodInput, revision?: number) => {
+		const food = await updateFoodRecord(id, input, revision);
 		await refreshFoods();
 		return food;
 	};
 
-	const deleteFood = async (id: number) => {
-		const deleted = await deleteFoodRecord(id);
+	const deleteFood = async (id: number, revision?: number) => {
+		const deleted = await deleteFoodRecord(id, revision);
 		await refreshFoods();
 		return deleted;
 	};

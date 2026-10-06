@@ -174,6 +174,7 @@ const { mealLogs, isLoading, refreshMealLogs, createMealLog, updateMealLog, dele
 const isSaving = ref(false)
 const formError = ref('')
 const editingMealLogId = ref<number | null>(null)
+const editingRevision = ref<number>()
 const isEditing = computed(() => editingMealLogId.value !== null)
 const profilePortions = reactive<Record<number, number>>({})
 const recipeNutritionMap = reactive<Record<number, RecipeNutrition>>({})
@@ -292,7 +293,7 @@ async function submitForm() {
 
   try {
     if (editingMealLogId.value) {
-      await updateMealLog(editingMealLogId.value, mealLogInput())
+      await updateMealLog(editingMealLogId.value, mealLogInput(), {}, editingRevision.value)
     } else {
       await createMealLog(mealLogInput())
     }
@@ -307,6 +308,7 @@ async function submitForm() {
 
 function editMealLog(mealLog: MealLog) {
   editingMealLogId.value = mealLog.id
+  editingRevision.value = mealLog.revision
   form.loggedAt = toInputDateTime(mealLog.loggedAt)
   form.sourceType = mealLog.sourceType
   form.sourceId = mealLog.foodId ?? mealLog.recipeId
@@ -317,7 +319,8 @@ function editMealLog(mealLog: MealLog) {
 
 async function removeMealLog(mealLog: MealLog) {
   if (!confirm(t('mealLog.confirmDelete', { name: mealLog.sourceName }))) return
-  await deleteMealLog(mealLog.id)
+  try { await deleteMealLog(mealLog.id, {}, mealLog.revision) }
+  catch (error) { formError.value = validationMessage(error, t); window.scrollTo({ top: 0, behavior: 'smooth' }) }
 }
 
 function formatDate(value: string) {

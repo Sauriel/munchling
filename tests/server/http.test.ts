@@ -15,6 +15,9 @@ import { createSyncQueue } from "../../app/utils/database/outbox";
 import { createSyncDecisions } from "../../app/utils/sync/decisions";
 import { fetchDecisionProof } from "../../app/utils/sync/proof";
 import { createFoodAliases } from "../../app/utils/sync/food-alias";
+import { createHttpDataService, type WebWriteLock } from "../../app/utils/data/http";
+const webLock: WebWriteLock = { run: async (_key, action) => action() };
+function journalStore() { const values = new Map<string, string>(); return { getItem: (key: string) => values.get(key) ?? null, setItem: (key: string, value: string) => { values.set(key, value); }, removeItem: (key: string) => { values.delete(key); } }; }
 import { food as wireFood } from "../helpers/sync-wire";
 const profile = (name = "HTTP 🥗") => ({ id: createUuid(), name, daily_calories_target: 2000, daily_protein_target: null, daily_carbs_target: null, daily_fat_target: null, daily_sugar_target: null, daily_fiber_target: null, daily_salt_target: null, created_at: "2026-10-05T12:00:00.000Z", updated_at: null });
 
@@ -91,6 +94,35 @@ describe("built Nitro sync HTTP API", () => {
 			await expect(client.push(attempt)).rejects.toMatchObject({ code: "versionConflict" }); expect(await createSyncQueue(local.database).list()).toEqual(queued);
 			expect((await fetchDecisionProof(base, binding))[0]!.aggregates[0]!.data!.name).toBe("Another editor v4");
 		} finally { local.close(); }
+	});
+	it("serves a genuinely online, editable website without browser SQLite", async () => {
+		const output = await new Promise<string>((resolve, reject) => {
+			const browser = spawn(process.execPath, ["scripts/browser-web-smoke.mjs", base], { cwd: process.cwd(), env: process.env, stdio: ["ignore", "pipe", "pipe"] }); let text = "";
+			const timer = setTimeout(() => { browser.kill("SIGTERM"); reject(new Error("Browser web smoke timeout")); }, 60_000);
+			browser.stdout.on("data", data => { text += data; }); browser.stderr.on("data", data => { text += data; }); browser.once("error", error => { clearTimeout(timer); reject(error); }); browser.once("exit", code => { clearTimeout(timer); if (code !== 0) reject(new Error(text)); else resolve(text); });
+		});
+		expect(output).toContain("PASS: versioned website edit survives reload"); expect((await createSyncHttpClient(base).webState(binding)).snapshot.aggregates[0]!.data!.name).toBe("Browser updated");
+	}, 75_000);
+	it("edits the shared household through the online adapter with stable view IDs and optimistic forms", async () => {
+		const a = createHttpDataService(base, journalStore(), { lock: webLock }), b = createHttpDataService(base, journalStore(), { lock: webLock });
+		const p = (await a.profiles.createProfile({ name: "Web", dailyCaloriesTarget: 2000 }))!, q = (await a.profiles.createProfile({ name: "Second", dailyCaloriesTarget: 1000 }))!;
+		const food = (await a.foods.createFood({ nameDe: "Food", nameEn: "Food", ean: "123", caloriesPer100g: 100, fatPer100g: 0, carbsPer100g: 10, proteinPer100g: 0, sugarPer100g: 0, fiberPer100g: 0, saltPer100g: 0 }))!;
+		const old = (await b.foods.listFoods())[0]!; await a.foods.updateFood(food.id, { brand: "New" }, food.revision); await expect(b.foods.updateFood(old.id, { brand: "Stale" }, old.revision)).rejects.toThrow("versionConflict"); expect(b.hasPendingWrite()).toBe(false); expect((await b.foods.listFoods())[0]).toMatchObject({ id: food.id, brand: "New", revision: 2 });
+		await expect(b.foods.updateFood(old.id, { brand: "Still stale" }, old.revision)).rejects.toThrow("versionConflict");
+		const recipe = (await a.recipes.createRecipe({ nameDe: "R", nameEn: "R", ingredients: [{ foodId: food.id, amountGrams: 50 }] }))!, nested = (await a.recipes.createRecipe({ nameDe: "Nested", nameEn: "Nested", ingredients: [{ subRecipeId: recipe.id, amountGrams: 75 }] }))!;
+		expect((await a.recipes.calculateRecipeNutrition(nested.id)).per100g.calories).toBe(100);
+		const loggedAt = "2019-06-07 12:34:56", meal = (await a.mealLogs.createMealLog({ loggedAt, recipeId: nested.id, profiles: [{ profileId: p.id, portionGrams: 33.3 }, { profileId: q.id, portionGrams: 66.7 }] }))!;
+		expect(meal).toMatchObject({ loggedAt, totalWeightGrams: 100 }); expect(meal.profiles.map(row => row.portionGrams).sort()).toEqual([33.3, 66.7]); expect(await a.mealLogs.listMealLogs({ profileId: p.id, date: "2019-06-07" })).toHaveLength(1);
+		await expect(a.foods.deleteFood(food.id, 2)).rejects.toThrow("dependencyConflict");
+		await a.mealLogs.deleteMealLog(meal.id, meal.revision); await a.recipes.deleteRecipe(nested.id, nested.revision); await a.recipes.deleteRecipe(recipe.id, recipe.revision); await a.foods.deleteFood(food.id, 2); await a.profiles.deleteProfile(q.id, q.revision);
+		expect((await createHttpDataService(base, journalStore(), { lock: webLock }).profiles.listProfiles())[0]!.id).toBe(p.id); expect(a.backups).toBeUndefined();
+	});
+	it("retains a lost web receipt across restart and replays the identical journal, never a fresh create", async () => {
+		const store = journalStore(); let lose = true, writes = 0;
+		const fetcher: typeof fetch = async (input, init) => { const target = new URL(String(input)); if (target.origin !== base || !target.pathname.startsWith("/api/sync/") || target.username || target.password) throw new Error("Unexpected test URL"); const response = await fetch(target, init); if (String(input).endsWith("/push")) { writes++; if (lose && response.ok) { lose = false; await response.text(); throw new Error("lost receipt"); } } return response; };
+		const a = createHttpDataService(base, store, { lock: webLock, fetch: fetcher }); await expect(a.profiles.createProfile({ name: "Once", dailyCaloriesTarget: 1000 })).rejects.toThrow("network"); expect(a.hasPendingWrite()).toBe(true);
+		await expect(a.profiles.createProfile({ name: "Duplicate", dailyCaloriesTarget: 1000 })).rejects.toThrow("unconfirmedUpload");
+		const restarted = createHttpDataService(base, store, { lock: webLock, fetch: fetcher }); await restarted.retryPendingWrite(); expect(restarted.hasPendingWrite()).toBe(false); expect(await restarted.profiles.listProfiles()).toHaveLength(1); expect(writes).toBe(2);
 	});
 	it("maps a local EAN import to an actual server UUID and uploads only remapped aggregates", async () => {
 		const local = await createTestDatabase();

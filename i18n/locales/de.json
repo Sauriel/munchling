@@ -1,4 +1,14 @@
 {
+  "web": {
+    "readFailed": "Der aktuelle Serverbestand konnte nicht geladen werden. Leere oder alte Anzeigen sind keine Bestätigung des Serverstands. Dein Formular bleibt erhalten; bitte Verbindung/Serverkonfiguration prüfen.",
+    "pendingWrite": "Eine Server-Schreibanfrage ist noch nicht abschließend geklärt. Weitere Schreibvorgänge sind gesperrt. Sie wird nicht automatisch erneut gesendet; dieselben IDs und Inhalte bleiben lokal gespeichert.",
+    "retryWrite": "Gespeicherte Anfrage prüfen / identisch wiederholen",
+    "journalInvalid": "Das Schreibjournal kann nicht gelesen werden. Bitte nicht löschen oder neue Anfragen senden.",
+    "retryFailed": "Noch nicht geklärt. Bei Serverwechsel/Restore ist eine gesonderte Prüfung nötig. Das Journal bleibt erhalten.",
+    "versionConflict": "Dieser Datensatz wurde inzwischen geändert oder gelöscht. Dein Formular bleibt erhalten. Bitte aktuellen Serverstand laden und bewusst vergleichen; es wurde nichts überschrieben.",
+    "dependencyConflict": "Der Datensatz wird noch verwendet oder seine Abhängigkeiten haben sich geändert. Bitte diese zuerst prüfen; keine automatische Web-Löschkaskade.",
+    "unconfirmedUpload": "Bitte zuerst die gespeicherte Server-Anfrage oben klären."
+  },
   "app": {
     "name": "Munchling",
     "tagline": "Lokaler Kalorien- & Nährwerttracker"

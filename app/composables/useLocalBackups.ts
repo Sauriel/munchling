@@ -72,6 +72,7 @@ export function useLocalBackups() {
 		await run(async () => exportBackupFile(await readMigrationBackup(), "munchling-before-schema-v2"));
 	}
 	onMounted(async () => {
+		if (!backups) return;
 		[recoveryAvailable.value, migrationAvailable.value] = await Promise.all([hasRecoveryBackup(), hasMigrationBackup()]);
 	});
 

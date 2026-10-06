@@ -1,4 +1,14 @@
 {
+  "web": {
+    "readFailed": "The current server data could not be loaded. Empty or old displays do not confirm the server state. Your form is preserved; check the connection/server configuration.",
+    "pendingWrite": "A server write has not been fully settled. Further writes are blocked. It is not retried automatically; the exact IDs and content remain stored locally.",
+    "retryWrite": "Check / replay saved request unchanged",
+    "journalInvalid": "The write journal cannot be read. Do not delete it or issue new writes.",
+    "retryFailed": "Still unsettled. Server switches/restores need separate review. The journal is retained.",
+    "versionConflict": "This record has changed or been deleted. Your form is preserved. Load and consciously compare the current server state; nothing was overwritten.",
+    "dependencyConflict": "This record is still referenced or dependencies have changed. Review these first; no automatic web deletion cascade.",
+    "unconfirmedUpload": "Please settle the saved server request shown above first."
+  },
   "app": {
     "name": "Munchling",
     "tagline": "Local calorie & nutrition tracker"
