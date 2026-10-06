@@ -9,7 +9,7 @@ Ein gemeinsamer Haushaltsbestand, **keine Authentifizierung**. Zugriff ausschlie
 Zusätzliche private Runtime-Variablen:
 
 - `NUXT_SYNC_PUBLIC_ORIGIN`: Pflicht für die API, z. B. `https://munchling.intern.example`. Ohne Wert bleiben Fach-Endpunkte mit 503 `API_NOT_CONFIGURED` deaktiviert; Health bleibt verfügbar.
-- `NUXT_SYNC_ALLOWED_ORIGINS`: optional, kommaseparierte **exakte** vertrauenswürdige Origins. Für Standard-Capacitor beispielsweise `capacitor://localhost,http://localhost`; keine Wildcards, niemals `null`. Leer erlaubt nur den kanonischen Web-Origin und direkte Requests ohne Origin.
+- `NUXT_SYNC_ALLOWED_ORIGINS`: optional, kommaseparierte **exakte** vertrauenswürdige Origins. Für Standard-Capacitor beispielsweise `capacitor://localhost,https://localhost,http://localhost` (Android hier `https://localhost`); keine Wildcards, niemals `null`. Leer erlaubt nur den kanonischen Web-Origin und direkte Requests ohne Origin.
 
 Der tatsächliche `Host` muss zum kanonischen öffentlichen Origin passen. Der Reverse-Proxy muss diesen Host erhalten; `X-Forwarded-Host` wird absichtlich nicht als Ersatz vertraut (DNS-Rebinding). CORS nur für freigegebene Origins, ohne Credentials-Freigabe. JSON-Schreibzugriffe verlangen den Versionsheader und `application/json` (optional `charset=utf-8`); HTML-Form-/Text- und komprimierte Bodies sind nicht erlaubt. Native Origin-/TLS-Verhalten auf echten Android-/iOS-Geräten ist später noch zu prüfen.
 

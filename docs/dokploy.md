@@ -25,7 +25,7 @@ Der App-Benutzer benötigt Fachrechte (`SELECT`, `INSERT`, `UPDATE`, `DELETE`) p
 
 ```dotenv
 NUXT_SYNC_PUBLIC_ORIGIN=https://munchling.example.internal
-NUXT_SYNC_ALLOWED_ORIGINS=capacitor://localhost,http://localhost
+NUXT_SYNC_ALLOWED_ORIGINS=capacitor://localhost,https://localhost,http://localhost
 NUXT_MARIA_DB_HOST=INTERNER_DOKPLOY_DB_HOST
 NUXT_MARIA_DB_PORT=3306
 NUXT_MARIA_DB_DATABASE=munchling
@@ -36,7 +36,7 @@ NITRO_HOST=0.0.0.0
 NITRO_PORT=3000
 ```
 
-`NUXT_SYNC_PUBLIC_ORIGIN` ist die exakte externe Origin, ohne Pfad, Query oder Zugangsdaten. Für reine Webnutzung sind zusätzliche erlaubte Origins nicht erforderlich. Die angegebenen Capacitor-Origins nur freigeben, wenn die native App verwendet werden soll; keine Wildcards.
+`NUXT_SYNC_PUBLIC_ORIGIN` ist die exakte externe Origin, ohne Pfad, Query oder Zugangsdaten. Für reine Webnutzung sind zusätzliche erlaubte Origins nicht erforderlich. Die angegebenen Capacitor-Origins nur freigeben, wenn die native App verwendet werden soll; keine Wildcards. Diese Android-App verwendet durch `androidScheme: "https"` tatsächlich **`https://localhost`**, iOS normalerweise `capacitor://localhost`. Nach einer Runtime-Änderung neu deployen. Native DNS-/CA-/CORS-Diagnose: [native-homelab-https.md](native-homelab-https.md).
 
 Nuxt lädt im Produktionsstart **keine `.env` automatisch**. Variablen müssen dem Container tatsächlich als Runtime-Umgebung übergeben werden. `NUXT_PUBLIC_DATA_MODE` nicht auf `local` überschreiben; der Server-Build setzt `online`. MariaDB-Zugangsdaten bleiben ausschließlich serverseitig.
 

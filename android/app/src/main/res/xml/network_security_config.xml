@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<network-security-config>
+    <!-- Normal servers keep Android's system CA trust. No cleartext bypass. -->
+    <base-config cleartextTrafficPermitted="false">
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </base-config>
+    <!-- Explicit household host only: allow a CA installed by the device owner.
+         Certificate signature, validity and hostname checks still apply.
+         No private key or CA certificate is bundled in the APK. -->
+    <domain-config cleartextTrafficPermitted="false">
+        <domain includeSubdomains="false">munchling.homelab.lan</domain>
+        <trust-anchors>
+            <certificates src="system" />
+            <certificates src="user" />
+        </trust-anchors>
+    </domain-config>
+</network-security-config>

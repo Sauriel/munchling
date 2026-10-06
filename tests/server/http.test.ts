@@ -37,7 +37,7 @@ describe("built Nitro sync HTTP API", () => {
 		db = newDatabase(); await resetDatabase(db, false);
 		const socket = createServer(); await new Promise<void>((resolve) => socket.listen(0, "127.0.0.1", resolve)); const address = socket.address(); if (!address || typeof address === "string") throw new Error("Missing HTTP port"); const port = address.port; await new Promise<void>((resolve) => socket.close(() => resolve())); base = `http://127.0.0.1:${port}`;
 		const config = testConfig(); child = spawn(process.execPath, [".output/server/index.mjs"], { cwd: process.cwd(), stdio: ["ignore", "pipe", "pipe"], env: {
-			...process.env, NITRO_HOST: "127.0.0.1", NITRO_PORT: String(port), NUXT_SERVER_ENABLED: "true", NUXT_MARIA_DB_CONNECTION_LIMIT: "3", NUXT_SYNC_PUBLIC_ORIGIN: base, NUXT_SYNC_ALLOWED_ORIGINS: "capacitor://localhost,http://localhost",
+			...process.env, NITRO_HOST: "127.0.0.1", NITRO_PORT: String(port), NUXT_SERVER_ENABLED: "true", NUXT_MARIA_DB_CONNECTION_LIMIT: "3", NUXT_SYNC_PUBLIC_ORIGIN: base, NUXT_SYNC_ALLOWED_ORIGINS: "capacitor://localhost,https://localhost,http://localhost",
 			NUXT_MARIA_DB_HOST: config.host, NUXT_MARIA_DB_PORT: String(config.port), NUXT_MARIA_DB_USER: config.user, NUXT_MARIA_DB_PASSWORD: config.password, NUXT_MARIA_DB_DATABASE: config.database,
 		} }); child.stdout?.on("data", (value) => { logs += String(value); }); child.stderr?.on("data", (value) => { logs += String(value); });
 		for (let i = 0; i < 100; i++) { if (child.exitCode !== null) throw new Error("Backend exited during startup"); try { if ((await fetch(`${base}/api/health/ready`, { signal: AbortSignal.timeout(1000) })).status === 200) return; } catch { /* waiting */ } await new Promise((resolve) => setTimeout(resolve, 100)); }
@@ -179,13 +179,14 @@ describe("built Nitro sync HTTP API", () => {
 		const changed = await post("snapshots", { ...binding, serverEpoch: createUuid() }); expect(changed.status).toBe(409); expect(await changed.json()).toMatchObject({ error: { code: "serverChanged", resync: true } });
 	});
 	it("allows explicitly trusted native/browser origins and rejects hostile/null origins and rebinding hosts", async () => {
-		for (const origin of [base, "capacitor://localhost", "http://localhost"]) { const response = await fetch(`${base}/api/sync/info`, { headers: { origin } }); expect(response.status).toBe(200); expect(response.headers.get("access-control-allow-origin")).toBe(origin); expect(response.headers.get("access-control-allow-credentials")).toBeNull(); }
-		for (const origin of ["https://evil.invalid", "null"]) expect((await post("push", batch(), { origin })).status).toBe(403);
+		for (const origin of [base, "capacitor://localhost", "https://localhost", "http://localhost"]) { const response = await fetch(`${base}/api/sync/info`, { headers: { origin } }); expect(response.status).toBe(200); expect(response.headers.get("access-control-allow-origin")).toBe(origin); expect(response.headers.get("access-control-allow-credentials")).toBeNull(); }
+		for (const origin of ["https://evil.invalid", "https://localhost.evil.invalid", "null"]) expect((await post("push", batch(), { origin })).status).toBe(403);
 		const denied = await raw({ ...headers, host: "evil.invalid" }, Buffer.from(JSON.stringify(batch()))); expect(denied.status).toBe(403);
 		expect(await db.withConnection((sql) => sql.query("SELECT COUNT(*) AS n FROM write_batches"))).toEqual([{ n: 0 }]);
 	});
 	it("serves restricted native preflight but rejects extra headers/methods", async () => {
-		const h = { origin: "capacitor://localhost", "access-control-request-method": "POST", "access-control-request-headers": "Content-Type, X-Munchling-Protocol" };
+		const h = { origin: "https://localhost", "access-control-request-method": "POST", "access-control-request-headers": "Content-Type, X-Munchling-Protocol" };
+		const info = await fetch(`${base}/api/sync/info`, { method: "OPTIONS", headers: { ...h, "access-control-request-method": "GET", "access-control-request-headers": "X-Munchling-Protocol" } }); expect(info.status).toBe(204); expect(info.headers.get("access-control-allow-origin")).toBe(h.origin);
 		const good = await fetch(`${base}/api/sync/push`, { method: "OPTIONS", headers: h }); expect(good.status).toBe(204); expect(good.headers.get("access-control-allow-origin")).toBe(h.origin);
 		expect((await fetch(`${base}/api/sync/push`, { method: "OPTIONS", headers: { ...h, "access-control-request-headers": "authorization" } })).status).toBe(403);
 		expect((await fetch(`${base}/api/sync/push`, { method: "OPTIONS", headers: { ...h, "access-control-request-method": "PUT" } })).status).toBe(403);
