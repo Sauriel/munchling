@@ -4,6 +4,22 @@
     <p class="text-sm">{{ $t('settings.syncDecision.scope') }}</p>
     <button v-if="!state?.cursor" type="button" :disabled="blocked || !ready" class="min-h-11 rounded-xl bg-slate-200 px-3 disabled:opacity-50 dark:bg-slate-800" @click="previewInitial">{{ $t('settings.syncDecision.initialReview') }}</button>
     <button v-else type="button" :disabled="blocked" class="min-h-11 rounded-xl bg-slate-200 px-3 disabled:opacity-50 dark:bg-slate-800" @click="previewConflicts">{{ $t('settings.syncDecision.conflictReview') }}</button>
+    <button v-if="state?.cursor" type="button" :disabled="blocked" class="min-h-11 rounded-xl bg-slate-200 px-3 disabled:opacity-50 dark:bg-slate-800" @click="previewAliases">{{ $t('settings.foodAlias.review') }}</button>
+    <div v-if="aliasReviews" class="space-y-3">
+      <p v-if="!aliasReviews.length" class="text-sm">{{ $t('settings.foodAlias.none') }}</p>
+      <article v-for="entry in aliasReviews" :key="entry.sourceId" class="space-y-3 rounded-xl bg-slate-50 p-3 dark:bg-slate-950">
+        <h4 class="font-semibold">EAN: {{ entry.source.ean }}</h4>
+        <div><p class="text-sm font-semibold">{{ $t('settings.syncDecision.local') }}</p><SyncVersionView :payload="entry.source" /></div>
+        <div><p class="text-sm font-semibold">{{ $t('settings.syncDecision.serverVersion', { version: entry.target.version }) }}</p><SyncVersionView :payload="entry.target" /></div>
+        <p class="text-sm">{{ $t('settings.foodAlias.references', { ingredients: entry.ingredientCount, meals: entry.mealCount, companions: entry.companions.length }) }}</p>
+        <ul class="text-xs"><li v-for="root in entry.companions" :key="root.id" class="break-all">{{ root.name }} · {{ root.id }}</li></ul>
+        <p class="text-sm text-amber-800 dark:text-amber-200">{{ $t('settings.foodAlias.warning') }}</p>
+        <p class="text-sm">{{ $t('settings.syncDecision.backupHint') }}</p>
+        <label class="flex min-h-11 gap-2 text-sm"><input v-model="aliasConfirmed[entry.sourceId]" type="checkbox" :disabled="busy">{{ $t('settings.foodAlias.confirm') }}</label>
+        <button type="button" :disabled="blocked || !aliasConfirmed[entry.sourceId]" class="min-h-11 rounded-xl bg-munchling-600 px-3 font-semibold text-white disabled:opacity-50" @click="commitAlias(entry)">{{ $t('settings.foodAlias.apply') }}</button>
+      </article>
+      <button type="button" :disabled="busy" class="min-h-11 px-3" @click="cancel">{{ $t('common.cancel') }}</button>
+    </div>
     <div v-if="initial" class="space-y-3 rounded-xl bg-slate-50 p-3 dark:bg-slate-950">
       <p class="text-sm">{{ $t('settings.syncDecision.inventory', { local: initial.localCount, server: initial.serverCount }) }}</p>
       <label v-for="option in modes" :key="option" class="flex min-h-11 gap-2 text-sm"><input v-model="mode" type="radio" :value="option" :disabled="busy || option === 'local' && initial.serverCount > 0"><span>{{ $t(`settings.syncDecision.modes.${option}`) }}</span></label>
@@ -36,6 +52,15 @@
       </template>
       <button type="button" :disabled="busy" class="min-h-11 px-3" @click="cancel">{{ $t('common.cancel') }}</button>
     </div>
+    <button v-if="state?.url" type="button" :disabled="busy || disabled" class="min-h-11 rounded-xl px-3 text-sm disabled:opacity-50" @click="previewDisconnect">{{ $t('settings.syncDisconnect.review') }}</button>
+    <div v-if="disconnectReview" class="space-y-3 rounded-xl bg-slate-50 p-3 dark:bg-slate-950">
+      <p class="break-all text-sm">{{ disconnectReview.url }}</p>
+      <p class="text-sm">{{ $t('settings.syncDisconnect.warning', { roots: disconnectReview.roots }) }}</p>
+      <p class="text-sm">{{ $t('settings.syncDecision.backupHint') }}</p>
+      <label class="flex min-h-11 gap-2 text-sm"><input v-model="disconnectConfirmed" type="checkbox" :disabled="busy">{{ $t('settings.syncDisconnect.confirm') }}</label>
+      <button type="button" :disabled="busy || disabled || !disconnectConfirmed" class="min-h-11 rounded-xl bg-red-600 px-3 font-semibold text-white disabled:opacity-50" @click="commitDisconnect">{{ $t('settings.syncDisconnect.apply') }}</button>
+      <button type="button" :disabled="busy" class="min-h-11 px-3" @click="cancel">{{ $t('common.cancel') }}</button>
+    </div>
     <button v-if="recovery" type="button" :disabled="busy || disabled" class="min-h-11 rounded-xl px-3 text-sm disabled:opacity-50" @click="exportRecovery">{{ $t('settings.syncDecision.exportRecovery') }}</button>
     <p v-if="busy" role="status" class="text-sm">{{ $t('common.loading') }}</p>
     <p v-if="error" role="alert" class="text-sm text-red-700 dark:text-red-300">{{ error }}</p>
@@ -46,11 +71,15 @@
 import { databaseSql } from '~/utils/database/sql'
 import { createSyncDecisions, type InitialReview, type ConflictReview, type InitialMode, type DecisionChoice } from '~/utils/sync/decisions'
 import { createSnapshotStaging, type ReceiveState } from '~/utils/sync/staging'
+import { createSyncDisconnect, type DisconnectReview } from '~/utils/sync/disconnect'
+import { createFoodAliases, type FoodAliasReview } from '~/utils/sync/food-alias'
 import { fetchDecisionProof } from '~/utils/sync/proof'
 import { saveSyncDecisionBackup, hasSyncDecisionBackup, readSyncDecisionBackup, exportBackupFile } from '~/utils/backup/files'
 import { SyncClientError } from '../../shared/domain/replies'
 const props = defineProps<{ revision: number; approved: boolean; disabled: boolean }>(), emit = defineEmits<{ changed: []; busy: [value: boolean] }>()
 const { t, te } = useI18n(), stage = createSnapshotStaging(databaseSql), decisions = createSyncDecisions(databaseSql, saveSyncDecisionBackup)
+const disconnect = createSyncDisconnect(databaseSql, saveSyncDecisionBackup), disconnectReview = shallowRef<DisconnectReview | null>(null), disconnectConfirmed = ref(false)
+const aliases = createFoodAliases(databaseSql, saveSyncDecisionBackup), aliasReviews = shallowRef<FoodAliasReview[] | null>(null), aliasConfirmed = ref<Record<string, boolean>>({})
 const busy = ref(false), error = ref(''), success = ref(''), recovery = ref(false), ready = ref(false), state = shallowRef<ReceiveState | null>(null)
 const initial = shallowRef<InitialReview | null>(null), conflict = shallowRef<ConflictReview | null>(null), choices = ref<Record<string, DecisionChoice>>({})
 const modes: InitialMode[] = ['combine', 'local', 'server'], mode = ref<InitialMode>('combine'), confirmed = ref(false), confirmDeletion = ref(false)
@@ -60,7 +89,7 @@ const allChosen = computed(() => conflict.value?.entries.every(entry => choices.
 const { refreshProfiles } = useProfiles(), { refreshFoods } = useFoods(), { refreshRecipes, selectedRecipe } = useRecipes(), { refreshMealLogs } = useMealLogs(), { selectProfile, initializeCurrentProfile } = useCurrentProfile()
 const controller = new AbortController()
 onBeforeUnmount(() => controller.abort())
-function cancel() { initial.value = null; conflict.value = null; choices.value = {}; confirmed.value = false; confirmDeletion.value = false }
+function cancel() { disconnectReview.value = null; disconnectConfirmed.value = false; aliasReviews.value = null; aliasConfirmed.value = {}; initial.value = null; conflict.value = null; choices.value = {}; confirmed.value = false; confirmDeletion.value = false }
 async function refresh() { state.value = await stage.state(); ready.value = (await stage.progress())?.ready ?? false; recovery.value = await hasSyncDecisionBackup() }
 async function run(work: () => Promise<void>, network = true) {
   if (busy.value || props.disabled || network && !props.approved) return
@@ -77,6 +106,26 @@ async function previewConflicts() {
     cancel(); const current = await stage.state(); if (!current.url) throw new SyncClientError('notInitialized')
     conflict.value = await decisions.conflictPreview(await fetchDecisionProof(current.url, current, controller.signal))
   })
+}
+async function previewAliases() {
+  await run(async () => {
+    cancel(); const current = await stage.state(); if (!current.url) throw new SyncClientError('notInitialized')
+    aliasReviews.value = await aliases.preview(await fetchDecisionProof(current.url, current, controller.signal))
+  })
+}
+async function commitAlias(review: FoodAliasReview) {
+  if (!aliasConfirmed.value[review.sourceId]) return
+  await run(async () => {
+    const current = await stage.state(), fresh = await fetchDecisionProof(review.url, current, controller.signal)
+    await aliases.commit(review.token, review.sourceId, review.targetId, fresh, true)
+    await dataChanged(); success.value = t('settings.foodAlias.applied')
+  })
+}
+async function previewDisconnect() { await run(async () => { cancel(); disconnectReview.value = await disconnect.preview() }, false) }
+async function commitDisconnect() {
+  if (!disconnectReview.value || !disconnectConfirmed.value) return
+  const review = disconnectReview.value
+  await run(async () => { await disconnect.commit(review.token, true); await dataChanged(); success.value = t('settings.syncDisconnect.applied') }, false)
 }
 async function dataChanged() {
   cancel(); await refresh(); emit('changed')

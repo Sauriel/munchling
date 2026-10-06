@@ -311,6 +311,22 @@
       "resolved": "Decisions saved. Local winners wait in new operations; nothing uploaded.",
       "errors": { "previewChanged": "Local or server data changed since the preview. Please review and decide again.", "unconfirmedUpload": "An unconfirmed upload may already have committed on the server. Its outcome must be settled before its contents can be discarded.", "eanConflict": "The selected states contain a duplicate EAN. Edit it first; records will not be silently merged.", "localDependency": "Accepting this would delete local dependencies. Edit them first or keep a consistent local state.", "serverDependency": "The local winners are incompatible with current server references. Additional dependent changes are needed.", "identityConflict": "A UUID belongs to a different owner. No automatic remapping is possible.", "recipeCycle": "This combination would create a recipe cycle." }
     },
+    "syncDisconnect": {
+      "review": "Disconnect / prepare server switch",
+      "warning": "{roots} active aggregates keep all UUIDs, numeric IDs and references on this device. The old binding, cursor and technical conflicts are removed. Unsent operations are replaced by the latest local state. Another server or a restored server requires fresh initial reconciliation. No network request or server deletion.",
+      "confirm": "I confirm local detachment and fresh initial reconciliation before reconnecting.",
+      "apply": "Disconnect locally",
+      "applied": "Disconnected; business data preserved. Sync remains off. Confirm the address and reconcile again before reconnecting."
+    },
+    "foodAlias": {
+      "review": "Map local EAN duplicates",
+      "none": "No safe local EAN mappings. Server-registered foods or locally edited targets need ordinary version decisions.",
+      "references": "{ingredients} ingredients and {meals} direct meals will be remapped. {companions} related local aggregates will be queued again, preserving their original base revisions.",
+      "warning": "The local food is replaced by the server identity. Its nutrition values will also affect existing recipes and historical meals. Amounts, portion factors and logged times remain unchanged. No server deletion or upload. Other retained groups still need ordinary decisions.",
+      "confirm": "I confirm this identity/reference mapping, nutrition change and replacement of related unsent operations.",
+      "apply": "Recheck and apply mapping",
+      "applied": "Mapping saved and references updated. Nothing uploaded; sync remains off. Review remaining conflict groups again."
+    },
     "backup": {
       "title": "Local backup",
       "hint": "Export all profiles, foods, recipes, ingredients, meals and portions as JSON. Device settings and the BLS catalog are not included.",

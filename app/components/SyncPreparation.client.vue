@@ -78,7 +78,7 @@ async function download() {
   })
 }
 async function discard() { await action(async () => { await stage.discard(); progress.value = null; validated.value = false; info.value = null; decisionRevision.value++ }) }
-async function onDecision() { progress.value = await stage.progress(); validated.value = false; info.value = null; decisionRevision.value++ }
+async function onDecision() { progress.value = await stage.progress(); if (!(await stage.state()).url) secure.value = false; validated.value = false; info.value = null; decisionRevision.value++ }
 watch(address, () => { info.value = null })
 onMounted(async () => { if (native) await action(async () => { progress.value = await stage.progress(); if (progress.value) address.value = progress.value.row.server_url }) })
 </script>

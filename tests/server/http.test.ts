@@ -14,6 +14,8 @@ import { createRemoteReceiver } from "../../app/utils/sync/apply";
 import { createSyncQueue } from "../../app/utils/database/outbox";
 import { createSyncDecisions } from "../../app/utils/sync/decisions";
 import { fetchDecisionProof } from "../../app/utils/sync/proof";
+import { createFoodAliases } from "../../app/utils/sync/food-alias";
+import { food as wireFood } from "../helpers/sync-wire";
 const profile = (name = "HTTP 🥗") => ({ id: createUuid(), name, daily_calories_target: 2000, daily_protein_target: null, daily_carbs_target: null, daily_fat_target: null, daily_sugar_target: null, daily_fiber_target: null, daily_salt_target: null, created_at: "2026-10-05T12:00:00.000Z", updated_at: null });
 
 describe("built Nitro sync HTTP API", () => {
@@ -88,6 +90,21 @@ describe("built Nitro sync HTTP API", () => {
 			const attempt: ServerWriteBatch = { ...binding, batchId: queued[0]!.batchId, operations: queued.map(op => ({ operationId: op.operationId, entity: op.entity, entityUuid: op.entityUuid, baseRevision: op.baseRevision, operation: op.operation, payload: op.payload })) };
 			await expect(client.push(attempt)).rejects.toMatchObject({ code: "versionConflict" }); expect(await createSyncQueue(local.database).list()).toEqual(queued);
 			expect((await fetchDecisionProof(base, binding))[0]!.aggregates[0]!.data!.name).toBe("Another editor v4");
+		} finally { local.close(); }
+	});
+	it("maps a local EAN import to an actual server UUID and uploads only remapped aggregates", async () => {
+		const local = await createTestDatabase();
+		try {
+			const client = createSyncHttpClient(base), target = wireFood("C"); await client.push({ ...binding, batchId: createUuid(), operations: [{ operationId: createUuid(), entity: "foods", entityUuid: target.id, baseRevision: 0, operation: "upsert", payload: target.data! }] });
+			const source = await local.service.foods.createFood({ nameDe: "Local", nameEn: "Local", ean: "C", caloriesPer100g: 200, fatPer100g: 0, carbsPer100g: 0, sugarPer100g: 0, fiberPer100g: 0, proteinPer100g: 0, saltPer100g: 0 });
+			const sourceId = (await local.database.query<{ uuid: string }>("SELECT uuid FROM foods WHERE id=?;", [source!.id]))[0]!.uuid;
+			await local.service.recipes.createRecipe({ nameDe: "Recipe", nameEn: "Recipe", ingredients: [{ foodId: source!.id, amountGrams: 12.5 }] });
+			const store = createSnapshotStaging(local.database), epoch = (await store.state()).localEpoch, first = await client.startSnapshot(binding); await store.begin(epoch, base, first); await client.releaseSnapshot(first); expect((await createRemoteReceiver(local.database).adoptSnapshot(epoch)).status).toBe("blocked");
+			const aliases = createFoodAliases(local.database, async () => {}), review = (await aliases.preview(await fetchDecisionProof(base, binding)))[0]!; await aliases.commit(review.token, sourceId, target.id, await fetchDecisionProof(base, binding), true);
+			const queue = createSyncQueue(local.database), operations = await queue.claimNextBatch(); expect(operations).toHaveLength(1); expect(operations[0]!.entity).toBe("recipes"); expect(JSON.stringify(operations[0]!.payload)).not.toContain(sourceId);
+			const receipt = await client.push({ ...binding, batchId: operations[0]!.batchId, operations: operations.map(op => ({ operationId: op.operationId, entity: op.entity, entityUuid: op.entityUuid, baseRevision: op.baseRevision, operation: op.operation, payload: op.payload })) }); await queue.acknowledgeBatch(receipt.batchId, receipt.operations.map(op => ({ operationId: op.operationId, serverRevision: op.serverRevision })));
+			const proof = await fetchDecisionProof(base, binding); expect(proof.flatMap(page => page.identities).some(row => row.uuid === sourceId)).toBe(false);
+			const recipe = proof.flatMap(page => page.aggregates).find(root => root.entity === "recipes")!; expect((recipe.data!.ingredients as Record<string, unknown>[])[0]!.food_id).toBe(target.id); expect(await queue.list()).toEqual([]);
 		} finally { local.close(); }
 	});
 	it("negotiates info, pushes/replays and pulls exact confirmed data without duplicate operations", async () => {

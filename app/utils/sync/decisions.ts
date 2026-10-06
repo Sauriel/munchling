@@ -25,21 +25,21 @@ function canonical(value: unknown): string {
 	if (Array.isArray(value)) return `[${value.map(canonical).join(",")}]`;
 	return `{${Object.entries(value).sort(([a], [b]) => a.localeCompare(b, "en")).map(([key, entry]) => `${JSON.stringify(key)}:${canonical(entry)}`).join(",")}}`;
 }
-async function digest(value: unknown) {
+export async function digest(value: unknown) {
 	if (!globalThis.crypto?.subtle) throw new SyncClientError("secureContextRequired");
 	const bytes = await globalThis.crypto.subtle.digest("SHA-256", new TextEncoder().encode(canonical(value)));
 	return Array.from(new Uint8Array(bytes), (value) => value.toString(16).padStart(2, "0")).join("");
 }
-async function localDigest(sql: SqlExecutor) {
+export async function localDigest(sql: SqlExecutor) {
 	return digest({ business: (await snapshotBackup(sql)).data, state: await sql.query("SELECT * FROM sync_state;"), records: await sql.query("SELECT * FROM sync_records ORDER BY uuid;"), queue: await sql.query("SELECT * FROM sync_outbox ORDER BY sequence;"), dirty: await sql.query("SELECT * FROM sync_dirty ORDER BY uuid;"), conflicts: await sql.query("SELECT * FROM sync_conflicts ORDER BY uuid;"), inbox: await sql.query("SELECT * FROM sync_inbox ORDER BY id;"), downloads: await sql.query("SELECT * FROM sync_download ORDER BY id;") });
 }
-async function remoteDigest(snapshot: CompleteSnapshot) {
+export async function remoteDigest(snapshot: CompleteSnapshot) {
 	return digest({ instance: snapshot.first.serverInstanceId, epoch: snapshot.first.serverEpoch, cursor: snapshot.first.cursor, roots: [...snapshot.aggregates].sort((a, b) => a.id.localeCompare(b.id)), identities: [...snapshot.identities].sort((a, b) => a.uuid.localeCompare(b.uuid)) });
 }
-async function uncertain(sql: SqlExecutor) {
+export async function uncertain(sql: SqlExecutor) {
 	if ((await sql.query("SELECT operation_id FROM sync_outbox WHERE status='inflight' LIMIT 1;")).length) throw new SyncClientError("unconfirmedUpload");
 }
-function checkProof(state: ReceiveState, snapshot: CompleteSnapshot, localEpoch: string, url: string) {
+export function checkProof(state: ReceiveState, snapshot: CompleteSnapshot, localEpoch: string, url: string) {
 	checkLocalContext(state, localEpoch, url, snapshot.first);
 	if (state.cursor !== null && Number(snapshot.first.cursor) < Number(state.cursor)) throw new SyncClientError("staleServerSnapshot");
 }

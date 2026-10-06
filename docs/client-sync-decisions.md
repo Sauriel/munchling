@@ -33,14 +33,17 @@ Vor lokaler Übernahme wird unter `backups/before-sync-decision.json` ein validi
 
 Der SQL-Commit umfasst Fachwerte/UUIDs, ersetzte Queue-Intents, neue versionierte Operationen, Baselines, Konflikte und Gruppenstatus gemeinsam. Späte SQL-Fehler rollen alles zurück. Eine bereits geschriebene unabhängige Sicherung bleibt dabei erhalten. Browser-Persistierung/anschließende UI-Aktualisierung können nach einem SQL-Commit fehlschlagen; das ist kein nachträglicher SQL-Rollback. Tickets verhindern eine unbemerkte doppelte Entscheidung.
 
+## EAN-Zuordnung und kontrolliertes Trennen
+
+Geführte EAN-Zuordnung lokaler, noch nicht serverregistrierter Quellen sowie offline-fähiges lokales Trennen mit neuem Erstabgleich sind umgesetzt: [client-sync-food-alias.md](client-sync-food-alias.md).
+
 ## Noch offen
 
-- Geführte EAN-/Dubletten-Zuordnung mit Referenz-Neuzuordnung. Derzeit muss eine Kollision bewusst in den vorhandenen Formularen korrigiert werden; keine automatische Zusammenlegung und keine stille Löschkaskade.
-- Kontrolliertes Trennen/Serverwechseln und Wiederabgleich nach Server-Restore.
+- Allgemeines serverseitiges Zusammenlegen bereits registrierter Lebensmittel bleibt ein eigener versions-/guardgeprüfter Ablauf; keine automatische Namens- oder EAN-Zusammenlegung.
 - Konfliktbewusster Single-Flight-Runner einschließlich eindeutig abgelehnter/ungeklärter Uploads, Deletion-Guards, Aktivierung, Manual-Button und Lifecycle/Reconnect-Triggern.
 - Web-HTTP-Datenadapter und Dokploy-Deployment.
 - Native Android/iOS-Laufzeitprüfungen, einschließlich WebCrypto-Tickets/Netzwerk/Dateisicherung. Die native Oberfläche wird nicht durch den Browser-Backup-Smoke getestet.
 
 ## Nachweise
 
-190 lokale und 79 MariaDB/Nitro-Tests, beide Typprüfungen und Backend-/Mobile-Build sowie Browser-Backup-Smoke. SQLite-Prüfungen: beide Bestände/gleichnamige UUIDs, lokale Ersetzung mit Sicherung/Epoch, Verbot shared-data replacement, veraltete Vorschauen, Backup-/SQL-Rollback, vollständige Pending-Batch-Closure, unveränderliche In-flight-Anfragen, neue versionierte lokale Gewinner nach Neustart, Restore, Löschabhängigkeiten und historische EAN-Intents. Echter Nitro/MariaDB-Test prüft frische Serverbelege, Änderung zwischen Anzeige/Entscheidung und einen weiteren Bearbeiter **nach** dem lokalen Gewinner: dessen Upload scheitert korrekt mit `versionConflict`.
+203 lokale und 80 MariaDB/Nitro-Tests, beide Typprüfungen und Backend-/Mobile-Build sowie Browser-Backup-Smoke. SQLite-Prüfungen: beide Bestände/gleichnamige UUIDs, lokale Ersetzung mit Sicherung/Epoch, Verbot shared-data replacement, veraltete Vorschauen, Backup-/SQL-Rollback, vollständige Pending-Batch-Closure, unveränderliche In-flight-Anfragen, neue versionierte lokale Gewinner nach Neustart, Restore, Löschabhängigkeiten und historische EAN-Intents. Echter Nitro/MariaDB-Test prüft frische Serverbelege, Änderung zwischen Anzeige/Entscheidung und einen weiteren Bearbeiter **nach** dem lokalen Gewinner: dessen Upload scheitert korrekt mit `versionConflict`.

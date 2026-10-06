@@ -311,6 +311,22 @@
       "resolved": "Entscheidungen gespeichert. Lokale Gewinner warten in neuen Operationen; kein Upload erfolgt.",
       "errors": { "previewChanged": "Lokaler oder Serverbestand hat sich seit der Vorschau geändert. Bitte erneut prüfen und entscheiden.", "unconfirmedUpload": "Ein unbestätigter Upload könnte bereits auf dem Server angekommen sein. Er muss erst eindeutig geklärt werden; seine Inhalte dürfen nicht verworfen werden.", "eanConflict": "Die gewählten Stände enthalten eine doppelte EAN. Bearbeite die EAN zuerst; es wird nichts still zusammengelegt.", "localDependency": "Die Übernahme würde lokale Abhängigkeiten löschen. Bearbeite sie zuerst oder behalte einen konsistenten lokalen Stand.", "serverDependency": "Die gewählten lokalen Gewinner passen nicht zu den aktuellen Serverreferenzen. Zusätzliche abhängige Änderungen sind nötig.", "identityConflict": "Eine UUID hat einen anderen Besitzer. Keine automatische Neuzuordnung möglich.", "recipeCycle": "Diese Kombination würde einen Rezeptzyklus erzeugen." }
     },
+    "syncDisconnect": {
+      "review": "Verbindung trennen / Serverwechsel vorbereiten",
+      "warning": "{roots} aktive Aggregate bleiben mit allen UUIDs, IDs und Referenzen auf diesem Gerät erhalten. Die alte Serverbindung, Cursor und technischen Konflikte werden entfernt. Unversandte Operationen werden durch den neuesten lokalen Bestand ersetzt. Vor einem anderen Server oder nach Server-Restore ist ein neuer Erstabgleich nötig. Kein Netzwerkaufruf, keine Server-Löschung.",
+      "confirm": "Ich bestätige das lokale Trennen und den vollständigen neuen Erstabgleich vor Wiederverbindung.",
+      "apply": "Lokal trennen",
+      "applied": "Verbindung getrennt; Geschäftsdaten erhalten. Sync bleibt aus. Bitte vor dem Neuverbinden Serveradresse und Erstabgleich erneut bestätigen."
+    },
+    "foodAlias": {
+      "review": "Lokale EAN-Dubletten zuordnen",
+      "none": "Keine sicher zuordenbaren lokalen EAN-Dubletten. Bereits serverregistrierte Lebensmittel oder lokal bearbeitete Ziele benötigen normale Versionsentscheidungen.",
+      "references": "{ingredients} Zutaten und {meals} direkte Mahlzeiten werden umgestellt. {companions} zusammenhängende lokale Aggregate werden neu vorgemerkt; bisherige Basisversionen bleiben erhalten.",
+      "warning": "Das lokale Lebensmittel wird durch die Server-Identität ersetzt. Künftig gelten deren Nährwerte auch für bestehende Gerichte und historische Mahlzeiten. Mengen, Portionsfaktoren und Verzehrzeiten bleiben erhalten. Keine Server-Löschung und kein Upload. Andere zurückgehaltene Gruppen bleiben zur normalen Entscheidung gespeichert.",
+      "confirm": "Ich bestätige diese Identitäts- und Referenzzuordnung samt Nährwertänderung und Ersetzung der zusammenhängenden unversandten Operationen.",
+      "apply": "Zuordnung erneut prüfen und übernehmen",
+      "applied": "Zuordnung gespeichert; Referenzen umgestellt. Kein Upload, Sync bleibt aus. Verbleibende Konfliktgruppen bitte erneut prüfen."
+    },
     "backup": {
       "title": "Lokale Datensicherung",
       "hint": "Sichere alle Profile, Lebensmittel, Gerichte, Zutaten, Mahlzeiten und Portionen als JSON. Geräteinstellungen und der BLS-Katalog sind nicht enthalten.",
