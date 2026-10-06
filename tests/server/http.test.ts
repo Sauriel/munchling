@@ -6,6 +6,7 @@ import type { ServerDatabase } from "../../server/database/connection";
 import type { ServerBinding, ServerInfo, SnapshotPage, ChangePage } from "../../shared/domain/protocol";
 import type { ServerWriteBatch } from "../../shared/domain/server";
 import { createUuid } from "../../shared/domain/sync";
+import { createSyncHttpClient } from "../../app/utils/sync/http";
 import { newDatabase, resetDatabase, testConfig } from "./helpers";
 const profile = (name = "HTTP 🥗") => ({ id: createUuid(), name, daily_calories_target: 2000, daily_protein_target: null, daily_carbs_target: null, daily_fat_target: null, daily_sugar_target: null, daily_fiber_target: null, daily_salt_target: null, created_at: "2026-10-05T12:00:00.000Z", updated_at: null });
 
@@ -35,6 +36,13 @@ describe("built Nitro sync HTTP API", () => {
 	afterAll(async () => {
 		if (child && child.exitCode === null && child.signalCode === null) { const exited = new Promise<void>((resolve) => child.once("exit", () => resolve())); child.kill("SIGTERM"); const timer = setTimeout(() => child.kill("SIGKILL"), 6000); try { await exited; } finally { clearTimeout(timer); } }
 		if (db) await db.close();
+	});
+	it("uses the production client decoder against actual Nitro responses", async () => {
+		const client = createSyncHttpClient(base); expect((await client.info()).serverEpoch).toBe(binding.serverEpoch);
+		const command = batch(); const receipt = await client.push(command); expect(await client.push(command)).toEqual(receipt);
+		const snapshot = await client.startSnapshot(binding); expect(snapshot.aggregates[0]!.data).toEqual(command.operations[0]!.payload);
+		expect((await client.changes(binding, "0")).batches[0]!.changes[0]!.aggregate.id).toBe(command.operations[0]!.entityUuid);
+		await client.releaseSnapshot(snapshot);
 	});
 	it("negotiates info, pushes/replays and pulls exact confirmed data without duplicate operations", async () => {
 		const infoResponse = await fetch(`${base}/api/sync/info`); expect(infoResponse.status).toBe(200); expect(infoResponse.headers.get("cache-control")).toBe("no-store"); expect(await infoResponse.json()).toMatchObject({ protocolVersion: 1, schemaVersion: 2, capabilities: { authentication: "none" } });

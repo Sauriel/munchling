@@ -2,7 +2,7 @@
 
 ## Stand und Sicherheitsgrenze
 
-Die Server-API für UUID-basierte Fach-Batches, Snapshots und Änderungen ist implementiert. Sie bearbeitet alle sechs Facharten über vier Aggregate: `profiles`, `foods`, `recipes` (einschließlich `recipe_ingredients`) und `meal_logs` (einschließlich `meal_log_profiles`). Die UI verwendet **noch den lokalen Adapter**; native Sync-Engine, Einrichtungs-/Konfliktdialoge und Web-HTTP-Datenadapter folgen. Keine Hintergrundarbeit bei geschlossener App.
+Die Server-API für UUID-basierte Fach-Batches, Snapshots und Änderungen ist implementiert. Sie bearbeitet alle sechs Facharten über vier Aggregate: `profiles`, `foods`, `recipes` (einschließlich `recipe_ingredients`) und `meal_logs` (einschließlich `meal_log_profiles`). Die UI verwendet **noch den lokalen Adapter**; native Sync-Engine, Einrichtungs-/Konfliktdialoge und Web-HTTP-Datenadapter folgen. Keine Hintergrundarbeit bei geschlossener App. Der geprüfte Client-Transport ist vorbereitet, aber noch nicht in den lokalen Sync-/UI-Ablauf eingebunden: [client-sync-transport.md](client-sync-transport.md).
 
 Ein gemeinsamer Haushaltsbestand, **keine Authentifizierung**. Zugriff ausschließlich innerhalb des genehmigten sicheren Netzwerks, möglichst HTTPS. Jeder berechtigte Netzteilnehmer kann lesen/schreiben; Origin-/Host-Prüfungen sind **kein Benutzer-/Geräteauthentifizierungsverfahren**.
 

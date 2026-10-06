@@ -1,7 +1,8 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import type { ServerDatabase, ServerSql } from "../../server/database/connection";
 import { migrateServerDatabase, migrationChecksum } from "../../server/database/migrations";
-import { serverMigrations } from "../../server/database/schema";
+import { wireColumns } from "../../shared/domain/wire-columns";
+import { serverMigrations, serverTables } from "../../server/database/schema";
 import { readServerState } from "../../server/database/state";
 import { isUuid } from "../../shared/domain/sync";
 import { newDatabase, resetDatabase } from "./helpers";
@@ -19,6 +20,9 @@ describe("real MariaDB migrations and transaction foundation", () => {
 		expect(await database.withConnection((sql) => sql.query("SELECT version,status,checksum FROM schema_migrations"))).toEqual(serverMigrations.map((migration) => ({ version: migration.version, status: "applied", checksum: migrationChecksum(migration.statements) })));
 		await migrateServerDatabase(database, "munchling_test");
 		expect(await database.withConnection((sql) => readServerState(sql))).toEqual(state);
+	});
+	it("keeps protocol field lists aligned with the frozen SQL manifest", () => {
+		for (const [entity, table] of Object.entries(serverTables)) expect(table.columns).toEqual(wireColumns[entity as keyof typeof wireColumns]);
 	});
 	it("serializes concurrent startup migrations", async () => {
 		await Promise.all([migrateServerDatabase(database, "munchling_test"), migrateServerDatabase(database, "munchling_test")]);
