@@ -41,8 +41,8 @@ Geführte EAN-Zuordnung lokaler, noch nicht serverregistrierter Quellen sowie of
 
 - Allgemeines serverseitiges Zusammenlegen bereits registrierter Lebensmittel bleibt ein eigener versions-/guardgeprüfter Ablauf; keine automatische Namens- oder EAN-Zusammenlegung.
 - Konfliktbewusster Single-Flight-Runner einschließlich eindeutig abgelehnter/ungeklärter Uploads, Deletion-Guards, Aktivierung, Manual-Button und Lifecycle/Reconnect-Triggern.
-- Web-HTTP-Datenadapter und Dokploy-Deployment.
-- Native Android/iOS-Laufzeitprüfungen, einschließlich WebCrypto-Tickets/Netzwerk/Dateisicherung. Die native Oberfläche wird nicht durch den Browser-Backup-Smoke getestet.
+- Konkrete Dokploy-Host-/TLS-/Zugangs-Abnahme. Online-Web-Adapter und Docker-Runtime sind inzwischen vorhanden: [web-data-adapter.md](web-data-adapter.md), [dokploy.md](dokploy.md).
+- Native Android/iOS-Laufzeitprüfungen nach deploybarem Server, einschließlich WebCrypto-Tickets/Netzwerk/Dateisicherung. Die native Oberfläche wird nicht durch den Browser-Backup-Smoke getestet.
 
 ## Nachweise
 

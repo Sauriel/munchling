@@ -32,4 +32,4 @@ Nach einem validierten Receipt wird der bestätigte Status gespeichert **bevor**
 
 209 lokale und 83 MariaDB/Nitro-Tests. Reale API: Profile/Lebensmittel/Gerichte/Untergerichte/Mahlzeiten/Portionen, historische Zeiten, dynamische Nährwerte, stabile IDs über Neustart, konkurrierende Formulare, referenzierte Löschsperren und verlorenes Receipt mit identischem Replay. Chromium gegen den echten Nitro-/MariaDB-Prozess erzeugt/bearbeitet ein Profil, prüft Reload und Abwesenheit von Browser-SQLite.
 
-Docker/Dokploy und Native-Runner folgen. Android-Gerätetests gemäß Priorisierung erst nach deploybarem Server. Automatische Native-Trigger und allgemeine serverseitige Dubletten-Merges bleiben nachrangig.
+Dockerfile und Runtime-Abnahme sind vorhanden ([Dokploy-Anleitung](dokploy.md)); tatsächliche Host-/TLS-/Zugangs-Abnahme sowie Native-Runner folgen. Zusätzlich besteht ein isolierter Deployment-Test für non-root/read-only Betrieb, Health, SIGTERM und DB-Erhalt nach Neustart. Android-Gerätetests gemäß Priorisierung erst nach deploybarem Server. Automatische Native-Trigger und allgemeine serverseitige Dubletten-Merges bleiben nachrangig.

@@ -1,11 +1,11 @@
 # Munchling: Web, MariaDB und optionaler bidirektionaler Sync
 
-Status: SQLite/Backup/Outbox, MariaDB, HTTP-Protokoll/Transport und dauerhafter konfliktbewusster Remote-Empfang sind implementiert und geprüft. Native Einstellungen bieten ausdrücklich ausgelöste Vorbereitung; Sync bleibt aus. Gesonderte Erstabgleich-/Konfliktentscheidungen mit frischem Serverbeleg und Sicherheitsdatei sind vorhanden. Geführte lokale EAN-Import-Zuordnung und lokales Trennen mit neuem Erstabgleich sind vorhanden. Der Online-Web-Adapter ist angeschlossen und gegen Nitro/MariaDB sowie Chromium geprüft. Allgemeine Server-Merges, Native-Runner und Deployment fehlen. Details: [client-sync-receive.md](client-sync-receive.md).
+Status: SQLite/Backup/Outbox, MariaDB, HTTP-Protokoll/Transport und dauerhafter konfliktbewusster Remote-Empfang sind implementiert und geprüft. Native Einstellungen bieten ausdrücklich ausgelöste Vorbereitung; Sync bleibt aus. Gesonderte Erstabgleich-/Konfliktentscheidungen mit frischem Serverbeleg und Sicherheitsdatei sind vorhanden. Geführte lokale EAN-Import-Zuordnung und lokales Trennen mit neuem Erstabgleich sind vorhanden. Der Online-Web-Adapter ist angeschlossen und gegen Nitro/MariaDB sowie Chromium geprüft. Dockerfile, Deployment-Anleitung und isolierter Runtime-/Browser-Smoke sind vorhanden. Tatsächliches Dokploy-Deployment, Native-Runner und allgemeine Server-Merges bleiben offen. Details: [client-sync-receive.md](client-sync-receive.md).
 
 ## Aktuelle Lieferreihenfolge
 
 1. Online-Web-Grundbetrieb mit vorhandenen Pages/Versionsprüfungen (umgesetzt; [Grenzen](web-data-adapter.md)).
-2. Docker-/Dokploy-Build und isolierter Container-/Datenbank-Smoke.
+2. Docker-/Dokploy-Build und isolierter Container-/Datenbank-Smoke (umgesetzt; [Anleitung](dokploy.md)); konkreten Dokploy-Host konfigurieren/abnehmen.
 3. Manueller Native-Sync-Runner und Android-Abnahme mit deploybarem Server; **keine vorgezogenen Android-Gerätetests**.
 4. Erst danach automatische Native-Trigger, allgemeine serverseitige Dubletten-Merges und zusätzliche Komfortfunktionen.
 
@@ -290,15 +290,16 @@ Abnahme: eine im Browser erstellte Mahlzeit/ein Gericht erscheint nach Sync in d
 - [x] Nitro-Preset pro Build-Modus wählen; Capacitor erhält weiterhin `.output/public`.
 - [ ] Bestehende `cap:sync`-/Android-Skripte auf den Mobile-Build ausrichten.
 - [ ] Mobile- und Web-Build-Ausgaben nicht gleichzeitig im gleichen `.output`-Verzeichnis erzeugen; separate CI-Jobs/Workspaces verwenden.
-- [ ] BLS-/WASM-Assetbereitstellung reproducierbar machen: Generator mit Python-Abhängigkeiten im Build oder kontrolliertes versioniertes Vorbuild-Artefakt.
-- [ ] Docker-Multi-Stage-Build mit unterstütztem festgelegtem Node, pnpm-Lockfile, Build- und schlanker Runtime-Stufe erstellen.
-- [ ] Produktionsstart über Nitro-Node-Einstiegspunkt (typischerweise `.output/server/index.mjs`), Bind auf `0.0.0.0`, konfigurierbarer Port.
-- [ ] `.dockerignore` ergänzen; `.env`, lokale DBs, native Build-Artefakte und sonstige Geheimnisse ausschließen.
-- [ ] Container nicht als root ausführen, Shutdown und Healthchecks prüfen.
+- [x] BLS als kontrolliertes versioniertes Vorbuild-Artefakt und WASM aus gepinnten npm-Paketen im Docker-Build bereitstellen.
+- [x] Docker-Multi-Stage-Build mit unterstützter Node-22-Linie, festem pnpm/Lockfile und schlanker Runtime-Stufe erstellen; Basisimage-Patches regelmäßig prüfen.
+- [x] Produktionsstart über Nitro-Node-Einstiegspunkt, Bind auf `0.0.0.0`, konfigurierbarer Port.
+- [x] `.dockerignore` ergänzt; `.env`, lokale DBs, native Build-Artefakte und Geheimnisse ausgeschlossen.
+- [x] Non-root/read-only Runtime, Shutdown/Exit 0, Healthcheck und Neustart mit erhaltenen DB-Daten geprüft.
 - [ ] MariaDB als separaten Dokploy-Dienst mit persistentem Volume und internem Netzwerk betreiben; DB-Port nicht unnötig veröffentlichen.
-- [ ] DB-Host, Port, Datenbank, Nutzer, Passwort und erlaubte Origins als serverseitige Runtime-Konfiguration dokumentieren.
-- [ ] DB-Nutzer mit begrenzten Rechten und dokumentierter Migrationsstrategie einsetzen.
-- [ ] Dokploy-Anleitung für Build, Port, Routing, TLS, Umgebungsvariablen, Migration, Healthcheck und Rollback schreiben.
+- [x] DB-Host, Port, Datenbank, Nutzer, Passwort und erlaubte Origins als private Runtime-Konfiguration dokumentiert.
+- [x] Beschränkten DB-Testnutzer und dokumentierte Schema-Rechte/Migrationsstrategie verwendet; auf Dokploy separat einrichten.
+- [x] Dokploy-Anleitung für Build, Port, Routing, TLS, Variablen, Migration, Healthcheck und Rollback geschrieben.
+- [ ] Tatsächlichen Dokploy-Host mit privater MariaDB, TLS/Host-Weitergabe und Zugriffsbeschränkung deployen/abnehmen.
 - [ ] Bei gewünschtem Nixpacks-Weg Node/pnpm und gegebenenfalls Python explizit konfigurieren, Web-Build und Nitro-Start festlegen und separat testen.
 - [ ] Backup-/Restore-Verfahren für MariaDB und Sync-Epoch dokumentieren und praktisch prüfen.
 
