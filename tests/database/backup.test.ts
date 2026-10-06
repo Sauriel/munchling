@@ -150,7 +150,7 @@ describe("local JSON backups", () => {
 		await populate(target);
 		const old = (await target.database.query<{ device_id: string; local_epoch: string }>("SELECT device_id,local_epoch FROM sync_state;"))[0]!;
 		const queue = createSyncQueue(target.database);
-		const previous = await queue.claimNextBatch();
+		const previous = await queue.list();
 		await target.database.run("UPDATE sync_state SET enabled=1,server_url='https://old.example',server_instance_id='old-instance',pull_cursor='42';");
 		await target.database.run("INSERT INTO sync_conflicts (uuid,local_payload,remote_payload,server_revision) VALUES (?,?,?,?);", [previous[0]!.entityUuid, "{}", "{}", 4]);
 		await target.service.backups!.restoreBackup(backup, async () => {});
@@ -166,9 +166,9 @@ describe("local JSON backups", () => {
 		expect(await queue.acknowledgeBatch(previous[0]!.batchId, previous.map((row) => ({ operationId: row.operationId, serverRevision: 1 })))).toBe(false);
 	});
 
-	it("rolls back identities, server state and in-flight operations together with the fach data", async () => {
+	it("rolls back identities, server state and pending operations together with the fach data", async () => {
 		await populate(target);
-		const queue = createSyncQueue(target.database); await queue.claimNextBatch();
+		const queue = createSyncQueue(target.database);
 		const previous = await target.service.backups!.exportBackup();
 		const operations = await queue.list(); const state = await target.database.query("SELECT * FROM sync_state;");
 		const run = target.driver.run;

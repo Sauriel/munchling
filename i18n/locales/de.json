@@ -274,9 +274,29 @@
       "title": "Profile",
       "hint": "Körperdaten, Ziele und aktive Profile verwalten."
     },
+    "syncManual": {
+      "title": "Manuelle Synchronisierung",
+      "scope": "Dieser Knopf sendet vorgemerkte Handy-Änderungen und übernimmt neue Serverdaten. Kein automatischer Sync bei Start, Änderung oder im Hintergrund.",
+      "setup": "Einmalig: Verbindung prüfen → Serverbestand zwischenspeichern → Erstabgleich prüfen → Beide behalten bestätigen. Danach erscheint Jetzt synchronisieren.",
+      "status": "{pending} vorgemerkte Änderungen · {blocked} blockierte Empfangspakete",
+      "uncertain": "Eine frühere Upload-Antwort fehlt. Nur exakt dieselbe gespeicherte Anfrage wird erneut gesendet; lokale Entwürfe bleiben erhalten.",
+      "run": "Jetzt synchronisieren: senden und empfangen",
+      "retry": "Gespeicherten Upload klären und synchronisieren",
+      "result": "{uploaded} Upload-Pakete bestätigt · {received} Empfangspakete verarbeitet · {pending} Änderungen verbleiben · {blocked} Pakete blockiert",
+      "errors": {
+        "conflictsPending": "Es gibt offene Konflikte. Bitte unten Aktuelle Konflikte prüfen und bewusst entscheiden; es wird nichts still überschrieben.",
+        "unconfirmedUpload": "Ein Upload ist noch unbestätigt. Nicht trennen oder wiederherstellen, sondern den gespeicherten Upload klären.",
+        "writeJournalInvalid": "Das lokale Upload-Journal ist unvollständig oder verändert. Keine neue Anfrage gesendet; bitte Diagnose anfordern.",
+        "syncBusy": "Eine Synchronisierung läuft bereits.",
+        "confirmSync": "Synchronisierung muss ausdrücklich gestartet werden.",
+        "moreWork": "Weitere Empfangsdaten liegen vor. Gesicherter Fortschritt bleibt erhalten; bitte erneut synchronisieren.",
+        "versionConflict": "Der Serverstand wurde zwischenzeitlich geändert. Keine automatische Überschreibung; bitte Konflikte prüfen.",
+        "dependencyConflict": "Eine Server-Abhängigkeit hat sich geändert. Keine unbestätigte Kaskadenlöschung; bitte Konflikte prüfen."
+      }
+    },
     "syncPreparation": {
-      "title": "Server-Synchronisierung vorbereiten",
-      "scope": "Sync bleibt ausgeschaltet. Verbindungstest und Download verändern keine Geschäftsdaten. Ein Erstabgleich oder eine Konfliktentscheidung wird erst nach gesonderter Bestätigung übernommen. Es gibt noch keinen Upload oder automatischen Sync.",
+      "title": "Server verbinden und synchronisieren",
+      "scope": "Automatischer Sync bleibt ausgeschaltet. Verbindungstest und Download verändern keine Geschäftsdaten. Ein Erstabgleich oder eine Konfliktentscheidung wird erst nach gesonderter Bestätigung übernommen. Upload und Empfang erfolgen anschließend nur über Jetzt synchronisieren; automatischer Sync bleibt aus.",
       "security": "Es gibt noch keine Anmeldung. Verbinde dich nur mit einem Server in deinem abgesicherten privaten Netz. Ernährungsdaten werden an die gewählte Adresse übertragen.",
       "secure": "Ich vertraue dieser Adresse und ihrer Netzwerk-Absicherung.",
       "address": "Serveradresse (HTTP-/HTTPS-Origin)",
@@ -287,7 +307,7 @@
       "resume": "Download fortsetzen / prüfen",
       "discard": "Lokalen Zwischenspeicher verwerfen",
       "progress": "{done} von {total} Seiten heruntergeladen",
-      "validated": "Vollständiger Bestand geprüft. Lokale Geschäftsdaten unverändert; Sync bleibt aus.",
+      "validated": "Vollständiger Bestand geprüft. Lokale Geschäftsdaten unverändert; automatischer Sync bleibt aus.",
       "failed": "Vorbereitung fehlgeschlagen ({code}). Keine automatische Wiederholung oder Server-Umbindung.",
       "entities": { "profiles": "Profile", "foods": "Lebensmittel", "recipes": "Gerichte", "meal_logs": "Mahlzeiten", "recipe_ingredients": "Zutaten", "meal_log_profiles": "Portionen" }
     },
@@ -316,9 +336,9 @@
       "fullFields": "Alle Felder und UUID-Referenzen anzeigen",
       "dependencies": "Unverträgliche Referenzen, EAN-Dubletten oder Rezeptzyklen werden nicht automatisch aufgelöst. Bearbeite betroffene Daten zuerst oder wähle eine konsistente Kombination; keine Abhängigkeit wird ungefragt gelöscht.",
       "exportRecovery": "Sicherung vor letzter Sync-Entscheidung exportieren",
-      "connected": "Erstabgleich übernommen. Sync bleibt aus; kein Upload erfolgt.",
-      "connectedBlocked": "Verbindung vorgemerkt. Konfliktgruppen bleiben vollständig zurückgehalten; bitte gesondert prüfen. Sync bleibt aus.",
-      "resolved": "Entscheidungen gespeichert. Lokale Gewinner warten in neuen Operationen; kein Upload erfolgt.",
+      "connected": "Erstabgleich übernommen. Jetzt synchronisieren sendet deine Handy-Änderungen und empfängt Serverdaten. Bisher kein Upload erfolgt.",
+      "connectedBlocked": "Verbindung vorgemerkt. Konfliktgruppen bleiben vollständig zurückgehalten; bitte gesondert prüfen. Kein automatischer Upload.",
+      "resolved": "Entscheidungen gespeichert. Lokale Gewinner warten in neuen Operationen. Jetzt synchronisieren sendet sie; bisher kein Upload erfolgt.",
       "errors": { "previewChanged": "Lokaler oder Serverbestand hat sich seit der Vorschau geändert. Bitte erneut prüfen und entscheiden.", "unconfirmedUpload": "Ein unbestätigter Upload könnte bereits auf dem Server angekommen sein. Er muss erst eindeutig geklärt werden; seine Inhalte dürfen nicht verworfen werden.", "eanConflict": "Die gewählten Stände enthalten eine doppelte EAN. Bearbeite die EAN zuerst; es wird nichts still zusammengelegt.", "localDependency": "Die Übernahme würde lokale Abhängigkeiten löschen. Bearbeite sie zuerst oder behalte einen konsistenten lokalen Stand.", "serverDependency": "Die gewählten lokalen Gewinner passen nicht zu den aktuellen Serverreferenzen. Zusätzliche abhängige Änderungen sind nötig.", "identityConflict": "Eine UUID hat einen anderen Besitzer. Keine automatische Neuzuordnung möglich.", "recipeCycle": "Diese Kombination würde einen Rezeptzyklus erzeugen." }
     },
     "syncDisconnect": {

@@ -15,6 +15,10 @@ import { createSyncQueue } from "../../app/utils/database/outbox";
 import { createSyncDecisions } from "../../app/utils/sync/decisions";
 import { fetchDecisionProof } from "../../app/utils/sync/proof";
 import { createFoodAliases } from "../../app/utils/sync/food-alias";
+import { createManualSyncRunner } from "../../app/utils/sync/runner";
+import { createSyncAddressSettings } from "../../app/utils/sync/address";
+import { utcTimestamp } from "../../shared/domain/server-validation";
+const technicalTimes = (data: unknown) => JSON.parse(JSON.stringify(data, (key, value) => value !== null && ["createdAt", "updatedAt"].includes(key) ? utcTimestamp(value, key) : value));
 import { createHttpDataService, type WebWriteLock } from "../../app/utils/data/http";
 const webLock: WebWriteLock = { run: async (_key, action) => action() };
 function journalStore() { const values = new Map<string, string>(); return { getItem: (key: string) => values.get(key) ?? null, setItem: (key: string, value: string) => { values.set(key, value); }, removeItem: (key: string) => { values.delete(key); } }; }
@@ -54,6 +58,92 @@ describe("built Nitro sync HTTP API", () => {
 		const snapshot = await client.startSnapshot(binding); expect(snapshot.aggregates[0]!.data).toEqual(command.operations[0]!.payload);
 		expect((await client.changes(binding, "0")).batches[0]!.changes[0]!.aggregate.id).toBe(command.operations[0]!.entityUuid);
 		await client.releaseSnapshot(snapshot);
+	});
+	async function runnerTransport(input: RequestInfo | URL, init?: RequestInit) {
+		const target = new URL(String(input));
+		if (target.origin !== base) throw new Error("Non-test transport origin");
+		if (target.pathname === "/api/sync/info") return fetch(`${base}/api/sync/info`, init);
+		if (target.pathname === "/api/sync/push") return fetch(`${base}/api/sync/push`, init);
+		if (target.pathname === "/api/sync/changes") return fetch(`${base}/api/sync/changes?${target.searchParams}`, init);
+		throw new Error("Unsupported test transport endpoint");
+	}
+	async function prepareNative(local: Awaited<ReturnType<typeof createTestDatabase>>) {
+		const stage = createSnapshotStaging(local.database), state = await stage.state();
+		const pages = await fetchDecisionProof(base, binding);
+		await stage.begin(state.localEpoch, base, pages[0]!); for (const page of pages.slice(1)) await stage.save(page);
+		const decisions = createSyncDecisions(local.database, async () => {}), review = await decisions.initialPreview();
+		await decisions.initialCommit(review.token, "combine", await fetchDecisionProof(base, binding));
+	}
+	it("manually round-trips all six business tables between two phones and editable web across restart", async () => {
+		let a = await createTestDatabase(); const b = await createTestDatabase();
+		try {
+			const p = (await a.service.profiles.createProfile({ name: "Phone household", dailyCaloriesTarget: 2000 }))!;
+			const f = (await a.service.foods.createFood({ nameDe: "Phone food", nameEn: "Phone food", ean: "9123456789012", caloriesPer100g: 100, fatPer100g: 2, carbsPer100g: 10, sugarPer100g: 1, fiberPer100g: 2, proteinPer100g: 10, saltPer100g: 0.5 }))!;
+			const r = (await a.service.recipes.createRecipe({ nameDe: "Phone recipe", nameEn: "Phone recipe", ingredients: [{ foodId: f.id, amountGrams: 150 }] }))!;
+			const m = (await a.service.mealLogs.createMealLog({ loggedAt: "2019-02-03 12:30", recipeId: r.id, profiles: [{ profileId: p.id, portionGrams: 33.125 }] }))!;
+			await createSyncAddressSettings(a.database).remember(base); await prepareNative(a);
+			const identities = (await a.service.backups!.exportBackup());
+			expect((await createManualSyncRunner(a.database).sync(true)).uploaded).toBe(4);
+			await prepareNative(b); expect(technicalTimes((await b.service.backups!.exportBackup()).data)).toEqual(technicalTimes((await a.service.backups!.exportBackup()).data));
+			const web = createHttpDataService(base, journalStore(), { lock: webLock });
+			const wp = (await web.profiles.listProfiles())[0]!, wf = (await web.foods.listFoods())[0]!, wr = (await web.recipes.listRecipes())[0]!, wm = (await web.mealLogs.listMealLogs())[0]!;
+			await web.profiles.updateProfile(wp.id, { name: "Edited online" }, wp.revision);
+			await web.foods.updateFood(wf.id, { proteinPer100g: 20 }, wf.revision);
+			await web.recipes.updateRecipe(wr.id, { nameDe: "Web recipe", ingredients: [{ foodId: wf.id, amountGrams: 200 }] }, wr.revision);
+			await web.mealLogs.updateMealLog(wm.id, { recipeId: wr.id, loggedAt: "2019-02-03 12:30", profiles: [{ profileId: wp.id, portionGrams: 88.125 }] }, wm.revision);
+			const newProfile = (await web.profiles.createProfile({ name: "Created online", dailyCaloriesTarget: 2100 }))!;
+			const newFood = (await web.foods.createFood({ nameDe: "New online food", nameEn: "New online food", caloriesPer100g: 200, fatPer100g: 1, carbsPer100g: 20, sugarPer100g: 1, fiberPer100g: 2, proteinPer100g: 5, saltPer100g: 0.1 }))!;
+			const newRecipe = (await web.recipes.createRecipe({ nameDe: "New online recipe", nameEn: "New online recipe", ingredients: [{ foodId: newFood.id, amountGrams: 75 }] }))!;
+			await web.mealLogs.createMealLog({ recipeId: newRecipe.id, loggedAt: "2026-10-06T13:14:15+02:00", profiles: [{ profileId: newProfile.id, portionGrams: 40 }] });
+			const bytes = a.exportBytes(); a.close(); a = await createTestDatabase({ bytes });
+			expect(await createSyncAddressSettings(a.database).read()).toBe(base);
+			expect((await createManualSyncRunner(a.database).sync(true)).uploaded).toBe(0);
+			await createManualSyncRunner(b.database).sync(true);
+			expect((await a.service.profiles.getProfileById(p.id))!.name).toBe("Edited online");
+			expect((await a.service.foods.getFoodById(f.id))!.proteinPer100g).toBe(20);
+			expect((await a.service.recipes.listRecipeIngredients(r.id))[0]!.amountGrams).toBe(200);
+			expect((await a.service.mealLogs.getMealLogById(m.id))!.loggedAt).toBe("2019-02-03 12:30");
+			expect((await a.service.mealLogs.getMealLogById(m.id))!.totalWeightGrams).toBe(88.13);
+			expect(await a.service.profiles.listProfiles()).toHaveLength(2);
+			expect(await a.service.foods.listFoods()).toHaveLength(2); expect(await a.service.recipes.listRecipes()).toHaveLength(2); expect(await a.service.mealLogs.listMealLogs()).toHaveLength(2);
+			expect((await a.service.mealLogs.listMealLogs()).some(meal => meal.loggedAt === "2026-10-06T13:14:15+02:00")).toBe(true);
+			expect(technicalTimes((await a.service.backups!.exportBackup()).data)).toEqual(technicalTimes((await b.service.backups!.exportBackup()).data));
+			if (identities.version === 2) { const next = await a.service.backups!.exportBackup(); if (next.version !== 2) throw new Error("v2 backup expected"); expect(next.identities.filter(row => ["profiles", "foods", "recipes", "meal_logs"].includes(row.entity))).toEqual(expect.arrayContaining(identities.identities.filter(row => ["profiles", "foods", "recipes", "meal_logs"].includes(row.entity)))); }
+			const before = (await createSyncHttpClient(base).info()).cursor; await createManualSyncRunner(a.database).sync(true); await createManualSyncRunner(b.database).sync(true);
+			expect((await createSyncHttpClient(base).info()).cursor).toBe(before); expect(await createSyncQueue(a.database).list()).toEqual([]);
+		} finally { a.close(); b.close(); }
+	});
+	it("settles a real committed/lost receipt after restart without duplicating or overwriting a newer phone draft", async () => {
+		let local = await createTestDatabase();
+		try {
+			const p = (await local.service.profiles.createProfile({ name: "Original", dailyCaloriesTarget: 2000 }))!; await prepareNative(local);
+			const bodies: string[] = []; let lose = true;
+			const transport: typeof fetch = async (input, init) => {
+				const response = await runnerTransport(input, init);
+				if (String(input).endsWith("/push")) { bodies.push(String(init!.body)); if (lose && response.ok) { lose = false; await response.text(); throw new TypeError("reply lost after commit"); } }
+				return response;
+			};
+			await expect(createManualSyncRunner(local.database, { fetch: transport }).sync(true)).rejects.toThrow("network");
+			await local.service.profiles.updateProfile(p.id, { name: "New offline draft" }); const bytes = local.exportBytes(); local.close(); local = await createTestDatabase({ bytes });
+			await createManualSyncRunner(local.database, { fetch: transport }).sync(true);
+			expect(bodies[0]).toBe(bodies[1]); expect(JSON.parse(bodies[2]!).operations[0].baseRevision).toBe(1);
+			const web = createHttpDataService(base, journalStore(), { lock: webLock }); const profiles = await web.profiles.listProfiles();
+			expect(profiles).toHaveLength(1); expect(profiles[0]!.name).toBe("New offline draft"); expect((await createManualSyncRunner(local.database).status()).uncertain).toBe(false);
+		} finally { local.close(); }
+	});
+	it("keeps captured bases on a real late web race, records the conflict and releases definitive uncertainty", async () => {
+		const local = await createTestDatabase();
+		try {
+			const p = (await local.service.profiles.createProfile({ name: "Initial", dailyCaloriesTarget: 2000 }))!; await prepareNative(local); await createManualSyncRunner(local.database).sync(true);
+			await local.service.profiles.updateProfile(p.id, { name: "Offline draft" }); const old = await createSyncQueue(local.database).list(); let raced = false;
+			const transport: typeof fetch = async (input, init) => {
+				if (String(input).endsWith("/push") && !raced) { raced = true; const web = createHttpDataService(base, journalStore(), { lock: webLock }), wp = (await web.profiles.listProfiles())[0]!; await web.profiles.updateProfile(wp.id, { name: "Web race" }, wp.revision); }
+				return runnerTransport(input, init);
+			};
+			await expect(createManualSyncRunner(local.database, { fetch: transport }).sync(true)).rejects.toThrow("versionConflict");
+			expect(await createSyncQueue(local.database).list()).toEqual(old); const status = await createManualSyncRunner(local.database).status(); expect(status.uncertain).toBe(false); expect(status.blocked).toBe(1);
+			expect((await local.service.profiles.getProfileById(p.id))!.name).toBe("Offline draft");
+		} finally { local.close(); }
 	});
 	it("stages and atomically applies real HTTP replies across independent SQLite clients and restart", async () => {
 		const a = await createTestDatabase(), b = await createTestDatabase(); let reopened: typeof a | undefined;

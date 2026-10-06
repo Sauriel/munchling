@@ -25,7 +25,7 @@ END;`;
 		for (const script of ["CREATE TABLE t(v TEXT); SELECT 'unfinished", "CREATE TABLE t(v); /* unfinished", "CREATE TRIGGER t AFTER INSERT ON x BEGIN SELECT CASE WHEN 1 THEN 2 END;"]) await expect(execute(script)).rejects.toThrow("Unterminated SQL");
 		expect(driver.run).not.toHaveBeenCalled(); expect(driver.begin).not.toHaveBeenCalled();
 	});
-	it("applies published v1/v2/v3 without rewriting DDL and preserves legacy rows through a native-like bridge", async () => {
+	it("applies published v1/v2/v3 and additive v4 without rewriting DDL and preserves legacy rows through a native-like bridge", async () => {
 		const db = await createTestDatabase({ version: 1 }); opened.push(db);
 		const p = await db.service.profiles.createProfile({ name: "Legacy", dailyCaloriesTarget: 2100 });
 		const f = await db.service.foods.createFood({ nameDe: "Food", nameEn: "Food", caloriesPer100g: 100, fatPer100g: 0, carbsPer100g: 10, sugarPer100g: 0, proteinPer100g: 0, fiberPer100g: 0, saltPer100g: 0 });
@@ -34,7 +34,7 @@ END;`;
 		const before = (await db.service.backups!.exportBackup()).data, save = vi.fn(async () => {}), run = vi.fn(db.driver.run), native = { ...db.driver, run, execute: createSqlScriptExecutor({ ...db.driver, run }) };
 		await runLocalMigrations(createSqlDatabase(native), save); expect(save).toHaveBeenCalledOnce();
 		const after = createLocalDataService(createSqlDatabase(native, flushOutbox)); expect((await after.backups!.exportBackup()).data).toEqual(before);
-		expect((await db.database.query<{ version: number }>("SELECT version FROM schema_migrations ORDER BY version;"))).toEqual([{ version: 1 }, { version: 2 }, { version: 3 }]);
+		expect((await db.database.query<{ version: number }>("SELECT version FROM schema_migrations ORDER BY version;"))).toEqual([{ version: 1 }, { version: 2 }, { version: 3 }, { version: 4 }]);
 		const triggers = run.mock.calls.map(call => call[0]).filter(sql => /CREATE TRIGGER/.test(sql)); expect(triggers.length).toBeGreaterThan(20); expect(triggers.every(sql => /END;\s*$/.test(sql))).toBe(true);
 		await after.foods.updateFood(f!.id, { brand: "Updated" }); expect((await db.database.query<{ count: number }>("SELECT COUNT(*) AS count FROM sync_outbox;"))[0]!.count).toBeGreaterThan(0);
 		await expect(db.database.run("UPDATE foods SET uuid=? WHERE id=?;", ["other", f!.id])).rejects.toThrow("UUID is immutable");

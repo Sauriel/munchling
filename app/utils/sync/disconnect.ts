@@ -25,6 +25,7 @@ export function createSyncDisconnect(db: SqlDatabase, saveSafety: (backup: Munch
 			await saveSafety(cloneBackup(await snapshotBackup(sql)));
 			for (const statement of ["DELETE FROM sync_outbox;", "DELETE FROM sync_baselines;", "DELETE FROM sync_conflicts;", "DELETE FROM sync_inbox;", "DELETE FROM sync_download;", "DELETE FROM sync_dirty;"]) await sql.run(statement);
 			await sql.run("UPDATE sync_records SET server_revision=0;");
+			if ((await sql.query("SELECT name FROM sqlite_master WHERE name='sync_upload';")).length) { await sql.run("DELETE FROM sync_upload;"); await sql.run("UPDATE sync_state SET draft_url=NULL WHERE id=1;"); }
 			await sql.run("UPDATE sync_state SET enabled=0,server_url=NULL,server_instance_id=NULL,server_epoch=NULL,pull_cursor=NULL,local_epoch=?,tracking_enabled=1 WHERE id=1;", [createUuid()]);
 			// UUIDs/numeric IDs/tombstones and latest business values stay intact;
 			// old server-bound requests are replaced with unbound latest intents.

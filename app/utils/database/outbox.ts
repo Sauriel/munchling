@@ -89,7 +89,12 @@ export function createSyncQueue(database: SqlDatabase) {
 			}
 			return (await sql.query<OutboxRow>("SELECT * FROM sync_outbox WHERE batch_id=? ORDER BY sequence;", [first.batch_id])).map(mapOperation);
 		}),
-		acknowledgeBatch: (batchId: string, receipts: { operationId: string; serverRevision: number }[]) => database.transaction(async (sql) => {
+		acknowledgeBatch: (batchId: string, receipts: { operationId: string; serverRevision: number }[]) => database.transaction(sql => acknowledgeSyncBatch(sql, batchId, receipts)),
+	};
+}
+
+// Shared scoped acknowledgement lets the runner clear its journal atomically.
+export async function acknowledgeSyncBatch(sql: SqlExecutor, batchId: string, receipts: { operationId: string; serverRevision: number }[]) {
 			const rows = await sql.query<OutboxRow>("SELECT * FROM sync_outbox WHERE batch_id=? ORDER BY sequence;", [batchId]);
 			if (!rows.length) return false; // repeated receipt, already committed locally
 			const revisions = new Map(receipts.map((receipt) => [receipt.operationId, receipt.serverRevision]));
@@ -106,8 +111,6 @@ export function createSyncQueue(database: SqlDatabase) {
 			}
 			await sql.run("DELETE FROM sync_outbox WHERE batch_id=?;", [batchId]);
 			return true;
-		}),
-	};
 }
 
 // Transport/conflict handling is intentionally not here. A future pull processor

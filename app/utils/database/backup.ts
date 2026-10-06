@@ -118,6 +118,7 @@ async function replaceData(sql: SqlExecutor, backup: MunchlingBackup) {
 		await sql.run("INSERT INTO sync_records (uuid,entity,aggregate_entity,aggregate_uuid,deleted_at) VALUES (?,?,?,?,?);", [row.uuid, row.entity, row.aggregateEntity, row.aggregateUuid, row.deletedAt]);
 	}
 	const schema = (await sql.query<{ version: number }>("SELECT MAX(version) AS version FROM schema_migrations;"))[0]!.version;
+	if (schema >= 4) { await sql.run("DELETE FROM sync_upload;"); await sql.run("UPDATE sync_state SET draft_url=NULL WHERE id=1;"); }
 	if (schema >= 3) {
 		await sql.run("DELETE FROM sync_download;");
 		await sql.run("DELETE FROM sync_inbox;");
@@ -135,6 +136,9 @@ export function createLocalBackupService(database: SqlDatabase): LocalBackupServ
 			const backup = cloneBackup(value);
 			if (typeof savePrevious !== "function") throw new Error("A safety backup writer is required.");
 			await database.transaction(async (sql) => {
+				// A restore cannot erase the only evidence of an uncertain upload.
+				if ((await sql.query("SELECT operation_id FROM sync_outbox WHERE status='inflight' LIMIT 1;")).length) throw new Error("unconfirmedUpload");
+				if ((await sql.query("SELECT name FROM sqlite_master WHERE name='sync_upload';")).length && (await sql.query("SELECT id FROM sync_upload;")).length) throw new Error("unconfirmedUpload");
 				const previous = await snapshotBackup(sql);
 				await savePrevious(previous);
 				await replaceData(sql, backup);

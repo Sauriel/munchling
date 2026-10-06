@@ -274,9 +274,29 @@
       "title": "Profiles",
       "hint": "Manage body data, goals, and active profiles."
     },
+    "syncManual": {
+      "title": "Manual synchronization",
+      "scope": "This button sends queued phone changes and applies new server data. No automatic sync on startup, edits, or in the background.",
+      "setup": "Once: check connection → stage server snapshot → review initial reconciliation → confirm Keep both. Then Sync now becomes available.",
+      "status": "{pending} queued changes · {blocked} blocked received groups",
+      "uncertain": "An earlier upload reply is missing. Only the exact saved request is replayed; local drafts are preserved.",
+      "run": "Sync now: send and receive",
+      "retry": "Settle saved upload and synchronize",
+      "result": "{uploaded} upload groups confirmed · {received} received groups processed · {pending} changes remaining · {blocked} groups blocked",
+      "errors": {
+        "conflictsPending": "Conflicts remain. Review current conflicts below and explicitly decide; nothing is silently overwritten.",
+        "unconfirmedUpload": "An upload remains unconfirmed. Do not disconnect or restore; settle the saved upload first.",
+        "writeJournalInvalid": "The local upload journal is incomplete or changed. No new request sent; please request diagnostics.",
+        "syncBusy": "Synchronization is already running.",
+        "confirmSync": "Synchronization requires an explicit start.",
+        "moreWork": "More received data remains. Durable progress is preserved; synchronize again.",
+        "versionConflict": "The server version changed meanwhile. No automatic overwrite; review conflicts.",
+        "dependencyConflict": "A server dependency changed. No unconfirmed cascade deletion; review conflicts."
+      }
+    },
     "syncPreparation": {
-      "title": "Prepare server synchronization",
-      "scope": "Synchronization remains off. Connection checks and downloads do not change business data. Initial reconciliation and conflict decisions require separate confirmation. There is no upload or automatic synchronization yet.",
+      "title": "Connect and synchronize with server",
+      "scope": "Automatic synchronization remains off. Connection checks and downloads do not change business data. Initial reconciliation and conflict decisions require separate confirmation. Then upload and receive happen only through Sync now; automatic synchronization stays off.",
       "security": "There is no authentication yet. Only connect to a server on your secure private network. Nutrition data is transferred to the selected address.",
       "secure": "I trust this address and its network access controls.",
       "address": "Server address (HTTP/HTTPS origin)",
@@ -287,7 +307,7 @@
       "resume": "Resume / validate download",
       "discard": "Discard local staging",
       "progress": "Downloaded {done} of {total} pages",
-      "validated": "Complete dataset validated. Local business data is unchanged; synchronization remains off.",
+      "validated": "Complete dataset validated. Local business data is unchanged; automatic synchronization remains off.",
       "failed": "Preparation failed ({code}). No automatic retry or binding switch.",
       "entities": { "profiles": "Profiles", "foods": "Foods", "recipes": "Recipes", "meal_logs": "Meals", "recipe_ingredients": "Ingredients", "meal_log_profiles": "Portions" }
     },
@@ -316,9 +336,9 @@
       "fullFields": "Show all fields and UUID references",
       "dependencies": "Incompatible references, duplicate EANs and recipe cycles are not resolved automatically. Edit affected data first or choose a consistent combination; no dependency is deleted without consent.",
       "exportRecovery": "Export backup from before latest sync decision",
-      "connected": "Initial reconciliation applied. Sync remains off; nothing uploaded.",
-      "connectedBlocked": "Connection recorded. Conflicting groups remain fully retained; review them separately. Sync remains off.",
-      "resolved": "Decisions saved. Local winners wait in new operations; nothing uploaded.",
+      "connected": "Initial reconciliation applied. Sync now sends your phone changes and receives server data. Nothing uploaded yet.",
+      "connectedBlocked": "Connection recorded. Conflicting groups remain fully retained; review them separately. No automatic upload.",
+      "resolved": "Decisions saved. Local winners wait in new operations. Sync now sends them; nothing uploaded yet.",
       "errors": { "previewChanged": "Local or server data changed since the preview. Please review and decide again.", "unconfirmedUpload": "An unconfirmed upload may already have committed on the server. Its outcome must be settled before its contents can be discarded.", "eanConflict": "The selected states contain a duplicate EAN. Edit it first; records will not be silently merged.", "localDependency": "Accepting this would delete local dependencies. Edit them first or keep a consistent local state.", "serverDependency": "The local winners are incompatible with current server references. Additional dependent changes are needed.", "identityConflict": "A UUID belongs to a different owner. No automatic remapping is possible.", "recipeCycle": "This combination would create a recipe cycle." }
     },
     "syncDisconnect": {

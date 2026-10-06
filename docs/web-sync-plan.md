@@ -1,6 +1,6 @@
 # Munchling: Web, MariaDB und optionaler bidirektionaler Sync
 
-Status: SQLite/Backup/Outbox, MariaDB, HTTP-Protokoll/Transport und dauerhafter konfliktbewusster Remote-Empfang sind implementiert und geprüft. Native Einstellungen bieten ausdrücklich ausgelöste Vorbereitung; Sync bleibt aus. Gesonderte Erstabgleich-/Konfliktentscheidungen mit frischem Serverbeleg und Sicherheitsdatei sind vorhanden. Geführte lokale EAN-Import-Zuordnung und lokales Trennen mit neuem Erstabgleich sind vorhanden. Der Online-Web-Adapter ist angeschlossen und gegen Nitro/MariaDB sowie Chromium geprüft. Dockerfile, Deployment-Anleitung und isolierter Runtime-/Browser-Smoke sind vorhanden. Tatsächliches Dokploy-Deployment, Native-Runner und allgemeine Server-Merges bleiben offen. Details: [client-sync-receive.md](client-sync-receive.md).
+Status: SQLite/Backup/Outbox, MariaDB, HTTP-Protokoll/Transport und dauerhafter konfliktbewusster Remote-Empfang sind implementiert und geprüft. Native Einstellungen bieten ausdrücklich ausgelöste Vorbereitung; Sync bleibt aus. Gesonderte Erstabgleich-/Konfliktentscheidungen mit frischem Serverbeleg und Sicherheitsdatei sind vorhanden. Geführte lokale EAN-Import-Zuordnung und lokales Trennen mit neuem Erstabgleich sind vorhanden. Der Online-Web-Adapter ist angeschlossen und gegen Nitro/MariaDB sowie Chromium geprüft. Dockerfile, Deployment-Anleitung und isolierter Runtime-/Browser-Smoke sind vorhanden. Manueller Native-Single-Flight-Runner mit persistenter Adresse, Upload-Journal, Receipt-/Konfliktschutz und Hin-und-zurück-Abnahme gegen echtes Nitro/MariaDB ist angeschlossen ([Bedienung](client-sync-runner.md)). Betreiber-Deployment-Abnahme, automatische Trigger und allgemeine Server-Merges bleiben separate Schritte. Details: [client-sync-receive.md](client-sync-receive.md).
 
 ## Aktuelle Lieferreihenfolge
 
@@ -246,17 +246,17 @@ Abnahme: volle Bestandsdatenbanken lassen sich ohne ungefragten Datenverlust ver
 
 ### Phase 6 — Sync-Engine in der App
 
-Dauerhafter Empfang und native Entscheidungen: [client-sync-receive.md](client-sync-receive.md), [client-sync-decisions.md](client-sync-decisions.md). Explizite UI-Übernahme mit Sicherheitsdatei vorhanden, kein Upload/automatischer Runner. 203 lokale und 80 Server-/API-Tests; Native-Gerätelaufzeit noch offen.
+Dauerhafter Empfang und native Entscheidungen: [client-sync-receive.md](client-sync-receive.md), [client-sync-decisions.md](client-sync-decisions.md). Explizite UI-Übernahme mit Sicherheitsdatei und manueller Upload-/Pull-Runner vorhanden. Kein automatischer Runner/Trigger. Persistente Adresse und SQLite-v4-Journal ergänzen die vorhandenen Empfangs-/Konfliktregeln. Abnahme und Geräte-/iOS-Grenzen: [client-sync-runner.md](client-sync-runner.md).
 
-- [ ] Einen Single-Flight-Sync-Runner implementieren; kein paralleler automatischer und manueller Sync.
-- [ ] Änderungen pushen, Serveränderungen pullen und unbestätigte lokale Daten konfliktbewusst erhalten.
+- [x] Manuellen Single-Flight-Sync-Runner implementieren; kein paralleler Sync, automatische Trigger bleiben aus.
+- [x] Änderungen pushen, Serveränderungen pullen und unbestätigte lokale Daten konfliktbewusst erhalten.
 - [x] Pull-Änderungen oder dauerhaft zurückgehaltene Konfliktgruppen samt lokalem Cursor atomar aufnehmen; Outbox unverändert bis eindeutiger Serverbestätigung.
 - [x] Downloads als Remote-Änderungen kennzeichnen, damit keine erneute Outbox entsteht.
 - [ ] Debounce für lokale Änderungen und Backoff mit Jitter für Netzwerk-/Serverfehler ergänzen.
 - [ ] Trigger für Start, Resume und Verbindungsrückkehr ergänzen; Netzstatus allein nicht als Server-Erreichbarkeit interpretieren.
 - [ ] Änderungen der Webseite während geöffneter App durch ein begrenztes Pull-Intervall erkennen; zunächst kein WebSocket notwendig.
 - [ ] Aktive App-/UI-Daten nach Pull aktualisieren; ausgewählte gelöschte Profile oder offene veränderte Formulare sauber behandeln.
-- [ ] Sync-Einstellungen mit Aktivierung, URL, Verbindungstest und „Jetzt synchronisieren“ ergänzen.
+- [x] Persistente URL, Verbindungstest, bestätigten Erstabgleich und „Jetzt synchronisieren“ ergänzen; keine automatische Aktivierung.
 - [ ] Status anzeigen: ausgeschaltet, offline, läuft, letzter erfolgreicher Sync, wartende Änderungen, Konflikte, Fehler.
 - [ ] Timeouts, unterbrochene Requests, Serverneustart und App-Neustart zuverlässig wiederaufnehmen.
 - [ ] Bei ausgeschaltetem Sync keinerlei Sync-Requests ausführen; lokale CRUD-Funktionen bleiben uneingeschränkt.
