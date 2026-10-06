@@ -10,32 +10,32 @@ import { checkLocalContext, receiveState, stagedSnapshot, storedJson } from "./s
 import { receiveSql, removeChildren } from "./receive-sql";
 
 export type ReceiveContext = ServerBinding & { localEpoch: string; url: string; cursor: string };
-type RecordRow = { uuid: string; entity: SyncEntity; local_id: number | null; aggregate_entity: SyncAggregate; aggregate_uuid: string; local_revision: number; server_revision: number; deleted_at: string | null };
+export type RecordRow = { uuid: string; entity: SyncEntity; local_id: number | null; aggregate_entity: SyncAggregate; aggregate_uuid: string; local_revision: number; server_revision: number; deleted_at: string | null };
 type Outcome = { id: string; status: "applied" | "blocked"; reason: string | null };
 const refs: Record<string, SyncAggregate> = { food_id: "foods", recipe_id: "recipes", sub_recipe_id: "recipes", meal_log_id: "meal_logs", profile_id: "profiles" };
-const meta = async (sql: SqlExecutor, uuid: string) => (await sql.query<RecordRow>("SELECT * FROM sync_records WHERE uuid=?;", [uuid]))[0] ?? null;
+export const meta = async (sql: SqlExecutor, uuid: string) => (await sql.query<RecordRow>("SELECT * FROM sync_records WHERE uuid=?;", [uuid]))[0] ?? null;
 const rootChildren = (root: ServerAggregate): { entity: "recipe_ingredients" | "meal_log_profiles"; rows: Record<string, unknown>[] } | null => root.data && root.entity === "recipes" ? { entity: "recipe_ingredients", rows: root.data.ingredients as Record<string, unknown>[] } : root.data && root.entity === "meal_logs" ? { entity: "meal_log_profiles", rows: root.data.profiles as Record<string, unknown>[] } : null;
 async function pending(sql: SqlExecutor, uuid: string) {
 	return (await sql.query("SELECT entity_uuid FROM sync_outbox WHERE entity_uuid=? UNION SELECT uuid FROM sync_conflicts WHERE uuid=?;", [uuid, uuid])).length > 0;
 }
-async function deletionDependents(sql: SqlExecutor, root: ServerAggregate) {
+export async function deletionDependents(sql: SqlExecutor, root: ServerAggregate) {
 	if (root.entity === "foods") return sql.query<{ uuid: string }>("SELECT r.uuid FROM recipes r JOIN recipe_ingredients i ON r.id=i.recipe_id WHERE i.food_id=(SELECT local_id FROM sync_records WHERE uuid=?) UNION SELECT uuid FROM meal_logs WHERE food_id=(SELECT local_id FROM sync_records WHERE uuid=?);", [root.id, root.id]);
 	if (root.entity === "recipes") return sql.query<{ uuid: string }>("SELECT r.uuid FROM recipes r JOIN recipe_ingredients i ON r.id=i.recipe_id WHERE i.sub_recipe_id=(SELECT local_id FROM sync_records WHERE uuid=?) UNION SELECT uuid FROM meal_logs WHERE recipe_id=(SELECT local_id FROM sync_records WHERE uuid=?);", [root.id, root.id]);
 	if (root.entity === "profiles") return sql.query<{ uuid: string }>("SELECT m.uuid FROM meal_logs m JOIN meal_log_profiles p ON p.meal_log_id=m.id WHERE p.profile_id=(SELECT local_id FROM sync_records WHERE uuid=?);", [root.id]);
 	return [];
 }
-function referenceIds(payload: Record<string, unknown>): string[] {
+export function referenceIds(payload: Record<string, unknown>): string[] {
 	const result: string[] = [];
 	for (const field of Object.keys(refs)) if (typeof payload[field] === "string") result.push(payload[field]);
 	for (const child of [...(Array.isArray(payload.ingredients) ? payload.ingredients : []), ...(Array.isArray(payload.profiles) ? payload.profiles : [])]) result.push(...referenceIds(child));
 	return result;
 }
-async function preflight(sql: SqlExecutor, roots: ServerAggregate[], identities: SnapshotIdentity[]) {
+export async function preflight(sql: SqlExecutor, roots: ServerAggregate[], identities: SnapshotIdentity[], force = new Set<string>()) {
 	const changes: ServerAggregate[] = [];
 	for (const root of roots) {
 		const known = await meta(sql, root.id);
 		if (known && (known.entity !== root.entity || known.aggregate_uuid !== root.id)) return { reason: "identityConflict", changes: [] };
-		if (known && root.version <= known.server_revision) continue; // Own receipts/newer accepted local predecessors win over older feed entries.
+		if (known && root.version <= known.server_revision && !force.has(root.id)) continue; // Own receipts/newer accepted local predecessors win over older feed entries.
 		if (await pending(sql, root.id)) return { reason: "localChanges", changes: [] };
 		changes.push(root);
 	}
@@ -90,7 +90,7 @@ async function writeRow(sql: SqlExecutor, entity: SyncEntity, ownerEntity: SyncA
 		if (known) await sql.run("UPDATE sync_records SET local_revision=?,server_revision=?,aggregate_entity=?,aggregate_uuid=? WHERE uuid=?;", [known.local_revision, known.server_revision, ownerEntity, owner, uuid]);
 	}
 }
-async function writeRoots(sql: SqlExecutor, roots: ServerAggregate[], identities: SnapshotIdentity[]) {
+export async function writeRoots(sql: SqlExecutor, roots: ServerAggregate[], identities: SnapshotIdentity[]) {
 	await sql.run("UPDATE sync_state SET tracking_enabled=0 WHERE id=1;");
 	// Free unique keys before any replacement, independent of input order.
 	for (const root of roots) if (root.entity === "foods") await sql.run("UPDATE foods SET ean=NULL WHERE uuid=?;", [root.id]);
@@ -140,18 +140,19 @@ async function applyGroup(sql: SqlExecutor, context: ReceiveContext, id: string,
 	await sql.run("UPDATE sync_state SET pull_cursor=? WHERE id=1;", [cursor]);
 	return { id, status, reason: plan.reason };
 }
+export async function adoptStagedSnapshot(sql: SqlExecutor, expectedLocalEpoch: string) {
+	const staged = await stagedSnapshot(sql), state = await receiveState(sql), { first, aggregates, identities } = staged.snapshot;
+	checkLocalContext(state, expectedLocalEpoch, staged.row.server_url, first);
+	if (state.cursor !== null) throw new SyncClientError("alreadyInitialized");
+	const context = { ...first, localEpoch: expectedLocalEpoch, url: staged.row.server_url, cursor: "0" };
+	const result = await applyGroup(sql, context, `snapshot:${first.snapshotId}`, first.cursor, JSON.stringify({ aggregates, identities }), aggregates, identities);
+	await sql.run("UPDATE sync_state SET server_url=?,server_instance_id=?,server_epoch=?,enabled=0 WHERE id=1;", [context.url, context.serverInstanceId, context.serverEpoch]);
+	await sql.run("DELETE FROM sync_download WHERE id=?;", [first.snapshotId]); return result;
+}
 export function createRemoteReceiver(db: SqlDatabase) {
 	return {
 		previewSnapshot: () => db.transaction(async (sql) => { const staged = await stagedSnapshot(sql); const plan = await preflight(sql, staged.snapshot.aggregates, staged.snapshot.identities); return { roots: staged.snapshot.aggregates.length, reason: plan.reason, localEpoch: staged.row.local_epoch }; }),
-		adoptSnapshot: (expectedLocalEpoch: string) => db.transaction(async (sql) => {
-			const staged = await stagedSnapshot(sql), state = await receiveState(sql), { first, aggregates, identities } = staged.snapshot;
-			checkLocalContext(state, expectedLocalEpoch, staged.row.server_url, first);
-			if (state.cursor !== null) throw new SyncClientError("alreadyInitialized");
-			const context = { ...first, localEpoch: expectedLocalEpoch, url: staged.row.server_url, cursor: "0" };
-			const result = await applyGroup(sql, context, `snapshot:${first.snapshotId}`, first.cursor, JSON.stringify({ aggregates, identities }), aggregates, identities);
-			await sql.run("UPDATE sync_state SET server_url=?,server_instance_id=?,server_epoch=?,enabled=0 WHERE id=1;", [context.url, context.serverInstanceId, context.serverEpoch]);
-			await sql.run("DELETE FROM sync_download WHERE id=?;", [first.snapshotId]); return result;
-		}),
+		adoptSnapshot: (expectedLocalEpoch: string) => db.transaction((sql) => adoptStagedSnapshot(sql, expectedLocalEpoch)),
 		applyPage: (context: ReceiveContext, input: ChangePage) => db.transaction(async (sql) => {
 			const state = await receiveState(sql); checkLocalContext(state, context.localEpoch, context.url, context);
 			if (state.cursor === null || state.serverEpoch === "") throw new SyncClientError("notInitialized");

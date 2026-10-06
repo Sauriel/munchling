@@ -28,12 +28,12 @@
 
 Ein optionaler Resume-Frame ermöglicht das Weiterladen nach bereits erhaltenen Seiten. Der persistente Staging-Dienst prüft gespeicherte Historie sowie die vollständige Registry-/Referenzkonsistenz; der Transport allein ersetzt diese Datenbank-Abnahme nicht. Details: [client-sync-receive.md](client-sync-receive.md).
 
-**Noch offen:** explizite Erstabgleich-Entscheidungen, manuelle UI-Konfliktauflösung und Single-Flight-Trigger. Persistentes Staging und atomare konfliktbewusste Aufnahme sind als Bibliothek implementiert, nicht automatisch aktiviert. `applyRemoteTransaction()` weiterhin nicht ungeprüft verwenden. Lokale Änderungen niemals gegen den aktuellen Serverstand automatisch rebasen.
+Explizite Erstabgleich-/Konfliktentscheidungen: [client-sync-decisions.md](client-sync-decisions.md). **Noch offen:** geführte Dubletten-/EAN-Zuordnung und Single-Flight-Trigger. Persistentes Staging und atomare konfliktbewusste Aufnahme sind als Bibliothek implementiert, nicht automatisch aktiviert. `applyRemoteTransaction()` weiterhin nicht ungeprüft verwenden. Lokale Änderungen niemals gegen den aktuellen Serverstand automatisch rebasen.
 
 Nur Instanz/Epoch erscheinen in Bindungs-Querystrings; ein Snapshot-Objekt darf dort keine Payloads/Profilnamen serialisieren. Push friert seine normalisierte Anfrage vor dem Fetch ein; Caller-Retry nutzt persistierte identische IDs/Inhalte. Nach Netzwerkverlust ist ein Commit möglicherweise schon erfolgt.
 
 ## Prüfungen
 
-171 lokale Domain-/SQLite-/Client-Tests und 78 MariaDB-/Nitro-Tests bestanden, darunter der **produktive Client gegen tatsächliche Nitro-Antworten** (Info, Push/Replays, Snapshot, Pull und Freigabe). Beide Typprüfungen, Backend-/Mobile-Build und Chromium-Smoke-Test erfolgreich. Kein neuer Native-Gerätelaufzeittest; Sync bleibt aus, native Netzwerk-Vorbereitung ist nur ausdrücklich auslösbar.
+190 lokale Domain-/SQLite-/Client-Tests und 79 MariaDB-/Nitro-Tests bestanden, darunter der **produktive Client gegen tatsächliche Nitro-Antworten** (Info, Push/Replays, Snapshot, Pull und Freigabe). Beide Typprüfungen, Backend-/Mobile-Build und Chromium-Smoke-Test erfolgreich. Kein neuer Native-Gerätelaufzeittest; Sync bleibt aus, native Netzwerk-Vorbereitung ist nur ausdrücklich auslösbar.
 
 Vertrag und serverseitige Sicherheitsgrenzen: [sync-api.md](sync-api.md). Native-/lokale Grundlagen: [local-sync-foundation.md](local-sync-foundation.md).

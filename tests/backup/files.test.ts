@@ -12,7 +12,7 @@ vi.mock("@capacitor/filesystem", () => ({
 }));
 vi.mock("@capacitor/share", () => ({ Share: { share: mocks.share } }));
 
-import { exportBackupFile, hasRecoveryBackup, readRecoveryBackup, saveRecoveryBackup, saveMigrationBackup, hasMigrationBackup, readMigrationBackup } from "../../app/utils/backup/files";
+import { exportBackupFile, hasRecoveryBackup, readRecoveryBackup, saveRecoveryBackup, saveMigrationBackup, hasMigrationBackup, readMigrationBackup, saveSyncDecisionBackup, readSyncDecisionBackup, hasSyncDecisionBackup } from "../../app/utils/backup/files";
 
 const backup: MunchlingBackup = {
 	format: "munchling-backup", version: 1, schemaVersion: 1, exportedAt: "2026-10-05T12:00:00Z",
@@ -40,6 +40,11 @@ describe("native backup file boundary", () => {
 		await saveMigrationBackup(backup);
 		expect(mocks.writeFile).toHaveBeenCalledWith({ path: "backups/before-schema-v2.json", directory: "DATA", data: JSON.stringify(backup), encoding: "utf8", recursive: true });
 		expect(mocks.share).not.toHaveBeenCalled();
+	});
+	it("keeps sync decision recovery independent and exportable", async () => {
+		await saveSyncDecisionBackup(backup); expect(mocks.writeFile).toHaveBeenCalledWith({ path: "backups/before-sync-decision.json", directory: "DATA", data: JSON.stringify(backup), encoding: "utf8", recursive: true });
+		mocks.stat.mockResolvedValueOnce({ size: 100 }); expect(await hasSyncDecisionBackup()).toBe(true);
+		mocks.readFile.mockResolvedValueOnce({ data: JSON.stringify(backup) }); expect(await readSyncDecisionBackup()).toBe(JSON.stringify(backup)); expect(mocks.readFile).toHaveBeenCalledWith({ path: "backups/before-sync-decision.json", directory: "DATA", encoding: "utf8" });
 	});
 	it("propagates failed pre-migration writes", async () => {
 		mocks.writeFile.mockRejectedValueOnce(new Error("disk full"));

@@ -1,6 +1,6 @@
 # Munchling: Web, MariaDB und optionaler bidirektionaler Sync
 
-Status: SQLite/Backup/Outbox, MariaDB, HTTP-Protokoll/Transport und dauerhafter konfliktbewusster Remote-Empfang sind implementiert und geprüft. Native Einstellungen bieten ausdrücklich ausgelöste Vorbereitung; Sync bleibt aus. Vollständige Erstabgleich-/Konfliktentscheidungen, Runner, Web-HTTP-Datenadapter und Deployment fehlen. Details: [client-sync-receive.md](client-sync-receive.md).
+Status: SQLite/Backup/Outbox, MariaDB, HTTP-Protokoll/Transport und dauerhafter konfliktbewusster Remote-Empfang sind implementiert und geprüft. Native Einstellungen bieten ausdrücklich ausgelöste Vorbereitung; Sync bleibt aus. Gesonderte Erstabgleich-/Konfliktentscheidungen mit frischem Serverbeleg und Sicherheitsdatei sind vorhanden. Geführte EAN-/Dubletten-Neuzuordnung, kontrollierter Serverwechsel, Runner, Web-HTTP-Datenadapter und Deployment fehlen. Details: [client-sync-receive.md](client-sync-receive.md).
 
 ### Ursprünglicher Teilstand (Phase 0/1, historisch)
 
@@ -219,15 +219,15 @@ Abnahme: zwei unabhängig gestartete Clients können erzeugen, ändern und lösc
 
 ### Phase 5 — Ersteinrichtung, Bestandszusammenführung und Konflikte
 
-- [x] Native Vorbereitung mit Serveradresse, Verbindungstest und Hinweis „gemeinsamer Bestand, keine Authentifizierung“ erstellen; noch keine Aktivierung/Erstabgleich-Entscheidung.
+- [x] Native Vorbereitung mit Serveradresse, Verbindungstest und Hinweis „gemeinsamer Bestand, keine Authentifizierung“ erstellen; gesonderte Erstabgleich-Entscheidung vorhanden, noch keine Aktivierung.
 - [x] Lokalen und serverseitigen Bestand vor Erstverbindung zählen; klar trennen zwischen Download-Staging und späterer Zusammenführung.
-- [ ] Standard: lokale Daten hinzufügen und Serverdaten herunterladen; keine Seite ungefragt ersetzen oder löschen.
-- [ ] Bestehende Datensätze nicht allein anhand gleicher Namen als identisch ansehen.
+- [x] Standard: beide Bestände erhalten, Serverdaten übernehmen bzw. vollständig zurückhalten; lokale Ersetzung nur gesondert bestätigt und mit Sicherung.
+- [x] Bestehende Datensätze nicht allein anhand gleicher Namen als identisch ansehen.
 - [ ] EAN-Kollisionen und mutmaßliche Dubletten gesondert anzeigen; Zusammenführung mit korrekter Neuzuordnung aller Referenzen ermöglichen.
-- [ ] Abgelehnte Lebensmittel-Imports samt abhängigen Gerichten/Mahlzeiten konsistent zurückhalten; keine dangling references erzeugen.
-- [ ] Basis-, lokale und aktuelle Serverversion für Konflikte anzeigen; Zutaten/Portionen verständlich zusammenfassen.
-- [ ] Optionen „lokale Version übernehmen“ und „Serverversion übernehmen“ anbieten; Wiederherstellung bei Änderung-vs.-Löschung explizit bestätigen lassen.
-- [ ] Konfliktauflösung erneut gegen die aktuelle Serverversion prüfen: zwischen Anzeige und Entscheidung kann sich der Server verändert haben.
+- [x] Abgelehnte Imports samt abhängigen Gruppen konsistent zurückhalten; gewählte Projektionen ohne dangling references prüfen.
+- [x] Basis-, aktuelle lokale und aktuelle Serverversion für Konflikte anzeigen; Zutaten/Portionen und vollständige Felder/UUIDs einsehbar machen.
+- [x] Optionen „lokale Version übernehmen“ und „Serverversion übernehmen“ anbieten; Änderung-vs.-Löschung/Wiederanlage zusätzlich bestätigen lassen.
+- [x] Konfliktauflösung erneut gegen einen frischen Server-Snapshot prüfen; neue lokale Gewinner mit tatsächlichen Basisversionen vormerken.
 - [ ] Andere nicht betroffene Daten trotz einzelner Konflikte weiter synchronisieren; referenzabhängige Änderungen gezielt zurückhalten.
 - [ ] Serverwechsel/Neuverbinden als eigenen Ablauf behandeln, nicht bloß URL überschreiben und alten Cursor weiterverwenden.
 - [ ] Abschalten/Trennen des Sync erhält die lokale Datenbank; kein automatisches Löschen auf App oder Server.
@@ -236,7 +236,7 @@ Abnahme: volle Bestandsdatenbanken lassen sich ohne ungefragten Datenverlust ver
 
 ### Phase 6 — Sync-Engine in der App
 
-Dauerhafter Empfang und native Vorbereitungsoberfläche: [client-sync-receive.md](client-sync-receive.md). Kein Upload/automatischer Runner und keine UI-Übernahme. 171 lokale und 78 Server-/API-Tests; Native-Gerätelaufzeit noch offen.
+Dauerhafter Empfang und native Entscheidungen: [client-sync-receive.md](client-sync-receive.md), [client-sync-decisions.md](client-sync-decisions.md). Explizite UI-Übernahme mit Sicherheitsdatei vorhanden, kein Upload/automatischer Runner. 190 lokale und 79 Server-/API-Tests; Native-Gerätelaufzeit noch offen.
 
 - [ ] Einen Single-Flight-Sync-Runner implementieren; kein paralleler automatischer und manueller Sync.
 - [ ] Änderungen pushen, Serveränderungen pullen und unbestätigte lokale Daten konfliktbewusst erhalten.

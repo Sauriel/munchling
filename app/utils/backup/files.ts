@@ -5,6 +5,7 @@ import type { MunchlingBackup } from "../../../shared/domain/backup";
 
 const RECOVERY_PATH = "backups/before-restore.json";
 const MIGRATION_PATH = "backups/before-schema-v2.json";
+const SYNC_DECISION_PATH = "backups/before-sync-decision.json";
 
 // Directory.Data is app-private on native platforms. The web implementation
 // uses IndexedDB, independently of the main SQLite database.
@@ -22,6 +23,13 @@ export async function saveMigrationBackup(backup: MunchlingBackup) {
 		data: JSON.stringify(backup), encoding: Encoding.UTF8, recursive: true,
 	});
 }
+
+// Keep manual synchronization recovery separate from restore and migration.
+export async function saveSyncDecisionBackup(backup: MunchlingBackup) {
+	await Filesystem.writeFile({ path: SYNC_DECISION_PATH, directory: Directory.Data, data: JSON.stringify(backup), encoding: Encoding.UTF8, recursive: true });
+}
+export const hasSyncDecisionBackup = () => hasBackup(SYNC_DECISION_PATH);
+export const readSyncDecisionBackup = () => readBackup(SYNC_DECISION_PATH);
 
 async function hasBackup(path: string) {
 	try {

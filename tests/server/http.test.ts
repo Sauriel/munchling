@@ -12,6 +12,8 @@ import { createTestDatabase } from "../helpers/sqlite";
 import { createSnapshotStaging } from "../../app/utils/sync/staging";
 import { createRemoteReceiver } from "../../app/utils/sync/apply";
 import { createSyncQueue } from "../../app/utils/database/outbox";
+import { createSyncDecisions } from "../../app/utils/sync/decisions";
+import { fetchDecisionProof } from "../../app/utils/sync/proof";
 const profile = (name = "HTTP 🥗") => ({ id: createUuid(), name, daily_calories_target: 2000, daily_protein_target: null, daily_carbs_target: null, daily_fat_target: null, daily_sugar_target: null, daily_fiber_target: null, daily_salt_target: null, created_at: "2026-10-05T12:00:00.000Z", updated_at: null });
 
 describe("built Nitro sync HTTP API", () => {
@@ -69,6 +71,24 @@ describe("built Nitro sync HTTP API", () => {
 			expect((await b.service.profiles.listProfiles())[0]!.name).toBe("Server edit"); expect(await createSyncQueue(b.database).list()).toEqual([]);
 			reopened = await createTestDatabase({ bytes: a.exportBytes() }); expect((await reopened.service.profiles.listProfiles())[0]!.name).toBe("Offline edit"); expect(await createSyncQueue(reopened.database).list()).toEqual(pending); expect(await createRemoteReceiver(reopened.database).conflicts()).toHaveLength(1);
 		} finally { reopened?.close(); a.close(); b.close(); }
+	});
+	it("rechecks manual decisions against real server cuts and preserves optimistic concurrency after choosing local", async () => {
+		const local = await createTestDatabase();
+		try {
+			const client = createSyncHttpClient(base), p = profile(); await client.push(batch(p)); const first = await client.startSnapshot(binding), store = createSnapshotStaging(local.database), epoch = (await store.state()).localEpoch;
+			await store.begin(epoch, base, first); await client.releaseSnapshot(first);
+			const decisions = createSyncDecisions(local.database, async () => {}), initial = await decisions.initialPreview(); await decisions.initialCommit(initial.token, "combine", await fetchDecisionProof(base, binding));
+			await local.service.profiles.updateProfile((await local.service.profiles.listProfiles())[0]!.id, { name: "Offline winner" }); const before = await createSyncQueue(local.database).list();
+			await client.push(batch({ ...p, name: "Server v2" }, 1)); await createRemoteReceiver(local.database).applyPage({ ...binding, localEpoch: epoch, url: base, cursor: first.cursor }, await client.changes(binding, first.cursor));
+			const preview = await decisions.conflictPreview(await fetchDecisionProof(base, binding));
+			await client.push(batch({ ...p, name: "Server v3" }, 2)); await expect(decisions.resolve(preview.token, { [p.id]: "local" }, await fetchDecisionProof(base, binding))).rejects.toThrow("previewChanged"); expect(await createSyncQueue(local.database).list()).toEqual(before);
+			const latest = await decisions.conflictPreview(await fetchDecisionProof(base, binding)); await decisions.resolve(latest.token, { [p.id]: "local" }, await fetchDecisionProof(base, binding));
+			const queued = await createSyncQueue(local.database).list(); expect(queued[0]!.baseRevision).toBe(3); expect(queued[0]!.payload.name).toBe("Offline winner");
+			await client.push(batch({ ...p, name: "Another editor v4" }, 3));
+			const attempt: ServerWriteBatch = { ...binding, batchId: queued[0]!.batchId, operations: queued.map(op => ({ operationId: op.operationId, entity: op.entity, entityUuid: op.entityUuid, baseRevision: op.baseRevision, operation: op.operation, payload: op.payload })) };
+			await expect(client.push(attempt)).rejects.toMatchObject({ code: "versionConflict" }); expect(await createSyncQueue(local.database).list()).toEqual(queued);
+			expect((await fetchDecisionProof(base, binding))[0]!.aggregates[0]!.data!.name).toBe("Another editor v4");
+		} finally { local.close(); }
 	});
 	it("negotiates info, pushes/replays and pulls exact confirmed data without duplicate operations", async () => {
 		const infoResponse = await fetch(`${base}/api/sync/info`); expect(infoResponse.status).toBe(200); expect(infoResponse.headers.get("cache-control")).toBe("no-store"); expect(await infoResponse.json()).toMatchObject({ protocolVersion: 1, schemaVersion: 2, capabilities: { authentication: "none" } });
