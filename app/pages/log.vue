@@ -178,7 +178,7 @@ import { useMealLogs } from '~/composables/useMealLogs'
 import { useProfiles } from '~/composables/useProfiles'
 import { useRecipes } from '~/composables/useRecipes'
 import { useBundledFoodSearch, type BundledFoodSearchResult } from '~/composables/useBundledFoodSearch'
-import { mealSourceMatches } from '~/utils/meal-source-search'
+import { mealSourceMatches, mealSourceFromQuery } from '~/utils/meal-source-search'
 import { quantityGrams, displayedQuantity, type QuantityUnit } from '../../shared/domain/portions'
 import type { Food, Recipe, MealLog, NutritionValues, RecipeNutrition } from '../../shared/domain/types'
 
@@ -341,6 +341,7 @@ function resetProfilePortions() {
 }
 
 function resetForm() {
+  formError.value = ''
   quantityUnit.value = 'grams'
   form.loggedAt = nowForInput()
   form.sourceType = 'food'
@@ -413,18 +414,33 @@ async function refreshRecipeNutrition() {
   }
 }
 
+let routeReady = false
+function applyRouteSelection() {
+  if (route.query.edit != null) {
+    const editId = Number(route.query.edit)
+    const meal = mealLogs.value.find(item => item.id === editId)
+    if (meal) editMealLog(meal)
+    else formError.value = t('mealLog.search.unavailable')
+    return
+  }
+  if (route.query.food == null && route.query.recipe == null) return
+  const selection = mealSourceFromQuery(route.query)
+  const source = selection?.type === 'food' ? foods.value.find(item => item.id === selection.id) : selection ? recipes.value.find(item => item.id === selection.id) : null
+  if (!selection || !source) { resetForm(); formError.value = t('mealLog.search.unavailable'); return }
+  resetForm()
+  form.sourceType = selection.type
+  form.sourceId = source.id
+}
+watch(() => route.query, () => { if (routeReady) applyRouteSelection() })
+
 onMounted(async () => {
   await Promise.all([refreshFoods(''), refreshRecipes(), refreshProfiles()])
   resetForm()
   await refreshRecipeNutrition()
   await refreshMealLogs()
 
-  const editId = Number(route.query.edit)
-  const mealLogToEdit = mealLogs.value.find((mealLog) => mealLog.id === editId)
-
-  if (mealLogToEdit) {
-    editMealLog(mealLogToEdit)
-  }
+  routeReady = true
+  applyRouteSelection()
 })
 </script>
 

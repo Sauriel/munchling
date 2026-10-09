@@ -204,6 +204,9 @@
           </dl>
 
           <div class="grid grid-cols-2 gap-2">
+            <NuxtLink :to="{ path: '/log', query: { recipe: String(recipe.id) } }" class="col-span-2 flex min-h-11 items-center justify-center rounded-2xl bg-munchling-600 px-4 text-sm font-semibold text-white">
+              {{ $t('common.logMeal') }}
+            </NuxtLink>
             <button type="button" class="min-h-11 rounded-2xl bg-slate-100 px-4 text-sm font-semibold text-slate-700 dark:bg-slate-800 dark:text-slate-200" @click="editRecipe(recipe)">
               {{ $t('common.edit') }}
             </button>

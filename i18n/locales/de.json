@@ -20,6 +20,7 @@
     "edit": "Bearbeiten",
     "loading": "Lädt ...",
     "close": "Schließen",
+    "logMeal": "Mahlzeit eintragen",
     "portionSize": "Gramm pro Portion (optional)",
     "portionSizeHint": "Leer lassen, wenn keine Portionsgröße festgelegt ist."
   },
@@ -189,6 +190,7 @@
       "label": "Gericht oder Lebensmittel suchen",
       "placeholder": "Name, Marke oder EAN …",
       "selected": "Ausgewählt",
+      "unavailable": "Der verlinkte Eintrag ist nicht verfügbar oder der Link ist ungültig. Bitte erneut auswählen.",
       "recipes": "Gerichte",
       "foods": "Eigene Lebensmittel",
       "database": "Food-Datenbank (BLS)",

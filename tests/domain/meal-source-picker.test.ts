@@ -4,10 +4,12 @@ import * as Vue from 'vue'
 import { parse, compileScript } from 'vue/compiler-sfc'
 import { transpileModule, ModuleKind, ScriptTarget } from 'typescript'
 import { describe, it, expect, vi } from 'vitest'
-import { mealSourceMatches } from '../../app/utils/meal-source-search'
+import { mealSourceMatches, mealSourceFromQuery } from '../../app/utils/meal-source-search'
 import * as Portions from '../../shared/domain/portions'
 
-function mountPicker() {
+function mountPicker(query: Record<string, unknown> = {}) {
+  const route = Vue.reactive({ query })
+  const createMealLog = vi.fn()
   const food = { id: 7, nameDe: 'Apfel', nameEn: 'Apple', portionSizeGrams: 125 as number | null }
   const recipe = { id: 7, nameDe: 'Apfelgericht', nameEn: 'Apple recipe', portionSizeGrams: 300 }
   const catalog = { id: 7, nameDe: 'Apfel BLS', nameEn: '', caloriesPer100g: 52, fatPer100g: 0, carbsPer100g: 12, sugarPer100g: 10, fiberPer100g: 2, proteinPer100g: 1, saltPer100g: 0 }
@@ -22,23 +24,39 @@ function mountPicker() {
     '~/composables/useFoods': { useFoods: () => ({ foods, refreshFoods, createFood }) },
     '~/composables/useRecipes': { useRecipes: () => ({ recipes, refreshRecipes: async () => {}, calculateRecipeNutrition: async () => ({ per100g: {} }) }) },
     '~/composables/useProfiles': { useProfiles: () => ({ profiles: Vue.ref([{ id: 1, name: 'P' }]), refreshProfiles: async () => {} }) },
-    '~/composables/useMealLogs': { useMealLogs: () => ({ mealLogs: Vue.ref([]), refreshMealLogs, isLoading: Vue.ref(false) }) },
+    '~/composables/useMealLogs': { useMealLogs: () => ({ mealLogs: Vue.ref([]), refreshMealLogs, createMealLog, isLoading: Vue.ref(false) }) },
     '~/composables/useBundledFoodSearch': { useBundledFoodSearch: () => ({ searchBundledFoods: search, bundledFoodSearchError: searchError }) },
-    '~/utils/meal-source-search': { mealSourceMatches },
+    '~/utils/meal-source-search': { mealSourceMatches, mealSourceFromQuery },
     '../../shared/domain/validation': { validationMessage: () => 'import failed' }
   }
   const descriptor = parse(readFileSync(new URL('../../app/pages/log.vue', import.meta.url), 'utf8')).descriptor
   const source = compileScript(descriptor, { id: 'meal-picker-test', genDefaultAs: 'Picker' }).content
   const js = transpileModule(source + '\nexports.Picker = Picker;', { compilerOptions: { module: ModuleKind.CommonJS, target: ScriptTarget.ES2022 } }).outputText
   const exports: Record<string, any> = {}
-  new Script(js).runInNewContext({ exports, require: (name: string) => { if (!(name in imports)) throw new Error(`Unexpected dependency ${name}`); return imports[name] }, ...Vue, useRoute: () => ({ query: {} }), useI18n: () => ({ t: (key: string) => key }), setTimeout, clearTimeout })
+  new Script(js).runInNewContext({ exports, require: (name: string) => { if (!(name in imports)) throw new Error(`Unexpected dependency ${name}`); return imports[name] }, ...Vue, useRoute: () => route, useI18n: () => ({ t: (key: string) => key }), setTimeout, clearTimeout })
   exports.Picker.render = () => null
   const renderer = Vue.createRenderer<any, any>({ createElement: () => ({}), createText: () => ({}), createComment: () => ({}), setText: () => {}, setElementText: () => {}, parentNode: () => null, nextSibling: () => null, insert: () => {}, remove: () => {}, patchProp: () => {} })
   const app = renderer.createApp(exports.Picker); app.mount({})
-  return { app, state: app._instance!.setupState, createFood, search, refreshFoods, refreshMealLogs, food, recipe, catalog }
+  return { app, state: app._instance!.setupState, createFood, createMealLog, route, search, refreshFoods, refreshMealLogs, food, recipe, catalog }
 }
 
 describe('actual meal picker setup', () => {
+  it.each(['food', 'recipe'] as const)('preselects the linked %s after loading without creating records', async type => {
+    const p = mountPicker({ [type]: '7' })
+    try {
+      await vi.waitFor(() => expect(p.state.form.sourceId).toBe(7))
+      expect(p.state.form.sourceType).toBe(type)
+      expect(p.state.sourcePortionSize).toBe(type === 'food' ? 125 : 300)
+      expect(p.state.totalWeightGrams).toBe(0)
+      expect(p.createMealLog).not.toHaveBeenCalled(); expect(p.createFood).not.toHaveBeenCalled()
+      p.route.query = { [type]: '999' }; await Vue.nextTick()
+      expect(p.state.form.sourceId).toBeNull(); expect(p.state.formError).toBe('mealLog.search.unavailable')
+    } finally { p.app.unmount() }
+  })
+  it('rejects ambiguous or malformed links and gives meal edits precedence', () => {
+    for (const query of [{ food: '7', recipe: '7' }, { food: ['7'] }, { recipe: '-1' }, { food: '7.1' }, { food: '7', edit: '1' }, { food: '9007199254740992' }]) expect(mealSourceFromQuery(query)).toBeNull()
+    expect(mealSourceFromQuery({ food: '7' })).toEqual({ type: 'food', id: 7 })
+  })
   it('keeps recipe and food IDs separate, imports catalog IDs as household foods, and resets selection', async () => {
     const p = mountPicker()
     try {

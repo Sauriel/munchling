@@ -20,6 +20,7 @@
     "edit": "Edit",
     "loading": "Loading ...",
     "close": "Close",
+    "logMeal": "Log meal",
     "portionSize": "Grams per portion (optional)",
     "portionSizeHint": "Leave empty if no portion size is defined."
   },
@@ -189,6 +190,7 @@
       "label": "Search recipes or foods",
       "placeholder": "Name, brand or EAN …",
       "selected": "Selected",
+      "unavailable": "The linked entry is unavailable or the link is invalid. Please select again.",
       "recipes": "Recipes",
       "foods": "Your foods",
       "database": "Food database (BLS)",
