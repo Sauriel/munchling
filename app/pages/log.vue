@@ -40,24 +40,29 @@
           <input v-model="form.loggedAt" type="datetime-local" class="field-input">
         </label>
 
-        <div class="grid grid-cols-2 gap-3">
-          <label class="block space-y-1.5">
-            <span class="text-sm font-medium">{{ $t('mealLog.fields.sourceType') }}</span>
-            <select v-model="form.sourceType" class="field-input" @change="form.sourceId = null">
-              <option value="food">{{ $t('mealLog.sourceTypes.food') }}</option>
-              <option value="recipe">{{ $t('mealLog.sourceTypes.recipe') }}</option>
-            </select>
+        <section class="space-y-3" :aria-busy="searching || importing">
+          <label class="block space-y-1.5" for="meal-source-search">
+            <span class="text-sm font-medium">{{ $t('mealLog.search.label') }}</span>
+            <input id="meal-source-search" v-model="sourceQuery" type="search" autocomplete="off" class="field-input" :placeholder="$t('mealLog.search.placeholder')">
           </label>
-          <label class="block space-y-1.5">
-            <span class="text-sm font-medium">{{ $t('mealLog.fields.source') }}</span>
-            <select v-model.number="form.sourceId" required class="field-input">
-              <option :value="null" disabled>{{ $t('mealLog.placeholders.source') }}</option>
-              <option v-for="option in sourceOptions" :key="option.id" :value="option.id">
-                {{ option.name }}
-              </option>
-            </select>
-          </label>
-        </div>
+          <p v-if="selectedSource" class="rounded-2xl bg-munchling-50 p-3 text-sm dark:bg-munchling-600/10">
+            {{ $t('mealLog.search.selected') }}: {{ selectedSource }}
+            <button type="button" class="ml-2 min-h-11 px-2 font-semibold" @click="form.sourceId = null">{{ $t('common.cancel') }}</button>
+          </p>
+          <div class="max-h-80 space-y-3 overflow-y-auto rounded-2xl border border-slate-200 p-3 dark:border-slate-700">
+            <section v-for="group in sourceGroups" :key="group.type" class="space-y-1">
+              <h3 class="text-xs font-semibold uppercase text-slate-500">{{ $t(group.label) }}</h3>
+              <button v-for="item in group.items" :key="`${group.type}:${item.id}`" type="button" class="block min-h-11 w-full rounded-xl px-3 py-2 text-left hover:bg-slate-100 focus-visible:ring-2 focus-visible:ring-munchling-600 disabled:opacity-60 dark:hover:bg-slate-800" :disabled="importing || isSaving" @click="selectSource(group.type, item)">
+                {{ item.nameDe }}<span v-if="'brand' in item && item.brand"> · {{ item.brand }}</span>
+                <span v-if="group.type === 'bundled'" class="block text-xs text-slate-500">{{ $t('mealLog.search.import') }}</span>
+              </button>
+            </section>
+            <p v-if="searching" role="status" class="text-sm text-slate-500">{{ $t('common.loading') }}</p>
+            <p v-else-if="!sourceGroups.length" role="status" class="text-sm text-slate-500">{{ $t('mealLog.search.empty') }}</p>
+            <p v-if="sourceQuery.trim().length < 2" class="text-xs text-slate-500">{{ $t('mealLog.search.minimum') }}</p>
+          </div>
+          <p v-if="searchError" role="alert" class="text-sm text-red-700 dark:text-red-300">{{ $t('mealLog.search.failed') }}</p>
+        </section>
 
         <section class="space-y-3">
           <div class="flex items-center justify-between">
@@ -162,11 +167,14 @@ import { useFoods } from '~/composables/useFoods'
 import { useMealLogs } from '~/composables/useMealLogs'
 import { useProfiles } from '~/composables/useProfiles'
 import { useRecipes } from '~/composables/useRecipes'
-import type { MealLog, NutritionValues, RecipeNutrition } from '../../shared/domain/types'
+import { useBundledFoodSearch, type BundledFoodSearchResult } from '~/composables/useBundledFoodSearch'
+import { mealSourceMatches } from '~/utils/meal-source-search'
+import type { Food, Recipe, MealLog, NutritionValues, RecipeNutrition } from '../../shared/domain/types'
 
 const route = useRoute()
 const { t } = useI18n()
-const { foods, refreshFoods } = useFoods()
+const { foods, refreshFoods, createFood } = useFoods()
+const { searchBundledFoods, bundledFoodSearchError } = useBundledFoodSearch()
 const { recipes, refreshRecipes, calculateRecipeNutrition } = useRecipes()
 const { profiles, refreshProfiles } = useProfiles()
 const { mealLogs, isLoading, refreshMealLogs, createMealLog, updateMealLog, deleteMealLog } = useMealLogs()
@@ -187,13 +195,56 @@ const form = reactive({
 
 const emptyNutrition = (): NutritionValues => ({ calories: 0, fat: 0, carbs: 0, sugar: 0, fiber: 0, protein: 0, salt: 0 })
 
-const sourceOptions = computed(() => {
-  if (form.sourceType === 'food') {
-    return foods.value.map((food) => ({ id: food.id, name: `${food.nameDe}${food.brand ? ` · ${food.brand}` : ''}` }))
-  }
-
-  return recipes.value.map((recipe) => ({ id: recipe.id, name: recipe.nameDe }))
+const sourceQuery = ref('')
+const bundledResults = ref<BundledFoodSearchResult[]>([])
+const searching = ref(false)
+const searchError = ref(false)
+const importing = ref(false)
+let searchVersion = 0
+let searchTimer: ReturnType<typeof setTimeout> | undefined
+const sourceGroups = computed(() => [
+  { type: 'recipe' as const, label: 'mealLog.search.recipes', items: mealSourceMatches(recipes.value, sourceQuery.value) },
+  { type: 'food' as const, label: 'mealLog.search.foods', items: mealSourceMatches(foods.value, sourceQuery.value) },
+  { type: 'bundled' as const, label: 'mealLog.search.database', items: bundledResults.value }
+].filter(group => group.items.length))
+const selectedSource = computed(() => {
+  const source = form.sourceType === 'food' ? foods.value.find(item => item.id === form.sourceId) : recipes.value.find(item => item.id === form.sourceId)
+  return source ? `${t(`mealLog.sourceTypes.${form.sourceType}`)} · ${source.nameDe}` : ''
 })
+watch(sourceQuery, query => {
+  const version = ++searchVersion
+  clearTimeout(searchTimer)
+  bundledResults.value = []; searchError.value = false; searching.value = false
+  if (query.trim().length < 2) return
+  searching.value = true
+  searchTimer = setTimeout(async () => {
+    const results = await searchBundledFoods(query)
+    if (version !== searchVersion) return
+    bundledResults.value = results; searchError.value = Boolean(bundledFoodSearchError.value); searching.value = false
+  }, 250)
+})
+onBeforeUnmount(() => { searchVersion++; clearTimeout(searchTimer) })
+async function selectSource(type: 'food' | 'recipe' | 'bundled', item: Food | Recipe | BundledFoodSearchResult) {
+  if (importing.value || isSaving.value) return
+  formError.value = ''
+  if (type !== 'bundled') { form.sourceType = type; form.sourceId = item.id; return }
+  importing.value = true
+  try {
+    const source = item as BundledFoodSearchResult
+    // The button explicitly imports a household food. Catalog IDs are not
+    // household IDs; do not silently merge different foods by their names.
+    const food = await createFood({
+      nameDe: source.nameDe, nameEn: source.nameEn || source.nameDe, isCustom: false,
+      caloriesPer100g: source.caloriesPer100g, fatPer100g: source.fatPer100g,
+      carbsPer100g: source.carbsPer100g, sugarPer100g: source.sugarPer100g,
+      fiberPer100g: source.fiberPer100g, proteinPer100g: source.proteinPer100g, saltPer100g: source.saltPer100g
+    })
+    if (!food) throw new Error('Food import returned no record')
+    await refreshFoods('')
+    form.sourceType = 'food'; form.sourceId = food.id
+  } catch (error) { formError.value = validationMessage(error, t) }
+  finally { importing.value = false }
+}
 
 const totalWeightGrams = computed(() => {
   return Math.round(Object.values(profilePortions).reduce((sum, value) => sum + Math.max(0, Number(value) || 0), 0) * 100) / 100
@@ -221,7 +272,7 @@ const sourceNutrition = computed<NutritionValues>(() => {
 })
 
 const totalNutrition = computed(() => scaleNutrition(sourceNutrition.value, totalWeightGrams.value))
-const canSubmit = computed(() => Boolean(form.sourceId) && totalWeightGrams.value > 0)
+const canSubmit = computed(() => Boolean(selectedSource.value) && totalWeightGrams.value > 0 && !importing.value)
 
 function scaleNutrition(values: NutritionValues, grams: number): NutritionValues {
   const factor = grams / 100
@@ -271,6 +322,7 @@ function resetForm() {
   form.loggedAt = nowForInput()
   form.sourceType = 'food'
   form.sourceId = null
+  sourceQuery.value = ''
   editingMealLogId.value = null
   resetProfilePortions()
 }
@@ -338,7 +390,7 @@ async function refreshRecipeNutrition() {
 }
 
 onMounted(async () => {
-  await Promise.all([refreshFoods(), refreshRecipes(), refreshProfiles()])
+  await Promise.all([refreshFoods(''), refreshRecipes(), refreshProfiles()])
   resetForm()
   await refreshRecipeNutrition()
   await refreshMealLogs()

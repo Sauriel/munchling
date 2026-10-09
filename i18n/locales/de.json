@@ -183,6 +183,18 @@
     }
   },
   "mealLog": {
+    "search": {
+      "label": "Gericht oder Lebensmittel suchen",
+      "placeholder": "Name, Marke oder EAN …",
+      "selected": "Ausgewählt",
+      "recipes": "Gerichte",
+      "foods": "Eigene Lebensmittel",
+      "database": "Food-Datenbank (BLS)",
+      "import": "Als Lebensmittel speichern und auswählen",
+      "empty": "Keine Treffer gefunden.",
+      "minimum": "Die Food-Datenbank wird ab zwei Zeichen durchsucht.",
+      "failed": "Die Food-Datenbank konnte nicht durchsucht werden. Eigene Lebensmittel und Gerichte sind weiterhin verfügbar."
+    },
     "eyebrow": "Logbuch",
     "title": "Mahlzeit eintragen",
     "description": "Weise Lebensmittel oder Gerichte einem oder mehreren Profilen mit individuellen Portionsgrößen zu.",

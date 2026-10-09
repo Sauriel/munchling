@@ -183,6 +183,18 @@
     }
   },
   "mealLog": {
+    "search": {
+      "label": "Search recipes or foods",
+      "placeholder": "Name, brand or EAN …",
+      "selected": "Selected",
+      "recipes": "Recipes",
+      "foods": "Your foods",
+      "database": "Food database (BLS)",
+      "import": "Save as a food and select",
+      "empty": "No results found.",
+      "minimum": "Food database search starts with two characters.",
+      "failed": "The food database could not be searched. Your foods and recipes are still available."
+    },
     "eyebrow": "Meal log",
     "title": "Log meal",
     "description": "Assign foods or recipes to one or more profiles with individual portion sizes.",
