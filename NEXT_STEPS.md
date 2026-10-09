@@ -9,12 +9,17 @@
 
 ## Priorisierte Anforderungen
 
-- [ ] Bei "Mahlzeit eintragen" soll man nicht mehr Typ und Lebensmittel/Gericht als Dropdown haben, sondern es soll ein Suchfeld geben. Dieses durchsucht die Daten (sortiert nach: erst Gerichte, dann Lebensmittel, dann die Daten aus der Food Datenbank).
+- [x] Bei "Mahlzeit eintragen" soll man nicht mehr Typ und Lebensmittel/Gericht als Dropdown haben, sondern es soll ein Suchfeld geben. Dieses durchsucht die Daten (sortiert nach: erst Gerichte, dann Lebensmittel, dann die Daten aus der Food Datenbank).
   - [x] Gemeinsames Suchfeld mit gruppierten Ergebnissen; eigene Namen (DE/EN), Marke und EAN durchsuchen.
   - [x] Verzögerte BLS-Suche ab zwei Zeichen, veraltete Antworten ignorieren, expliziter Lebensmittel-Import bei Auswahl.
   - [x] Vorhandene Mahlzeitenbearbeitung, Profildaten und Nährwertvorschau beibehalten; vier gezielte Tests und Typecheck bestanden.
-  - [ ] Live-Abnahme des vollständigen Punkts auf Handy und Dokploy: Gericht/eigenes Lebensmittel/BLS auswählen, Mahlzeit speichern und bearbeiten.
+  - [x] Live-Abnahme des vollständigen Punkts auf Handy und Dokploy: Gericht/eigenes Lebensmittel/BLS auswählen, Mahlzeit speichern und bearbeiten.
 - [ ] Bei Lebensmitteln und Gerichten, die man einträgt soll man auch eine Portionsgröße in Gramm angeben können. Damit soll es möglich sein bei "Mahlzeit eintragen" zwischen Gramm und Portionen wählen zu können.
+  - [x] Optionale Gramm pro Portion in Lebensmittel-/Gerichtformularen, SQLite v5 und MariaDB v3; bestehende Daten und veröffentlichte Migrationen erhalten.
+  - [x] Sync-/Webadapter und Backup v3 (alte v1/v2 lesbar) erweitern; alte gespeicherte Uploads bleiben unverändert wiederholbar.
+  - [x] Mengenwahl Gramm/Portionen einschließlich Bruchteilen, ohne historische Grammwerte zu verändern; fehlende Portionsgröße erlaubt nur Gramm.
+  - [x] Gezielte Persistenz-/Migrations-/Vertragstests (94 lokal, 46 Nitro/MariaDB) und beide Typechecks bestanden.
+  - [ ] Live-Abnahme des vollständigen Punkts auf Handy und Dokploy: Portionsgrößen speichern/synchronisieren, 0,5 bzw. 1,5 Portionen eintragen, Einheit wechseln und alte Mahlzeiten prüfen.
 - [ ] Beim Lebensmittel und beim Gerichte Tab soll es neben "Bearbeiten" und "Löschen" auch einen Button geben um direkt von dort eine Mahlzeit einzutragen
 - [ ] Es soll einen neuen Tab "Aktivitäten" geben bei denen man aktivitäten eintragen kann. Diese bestehen aus einem Namen, einer Dauer und einer Kalorienanzahl. Im Dashboard kann man dann auch eine Aktivität hinzufügen (Man kann auswählen wie viele "Einheiten" man davon hinzufügen will) Diese Aktivitäten erhöhen das tägliche Kalorienlimit (aber nur für diesen Tag) Auch über die AKtivitätenliste sollte man sie hinzufügen können.
 - [ ] Unter Einstellungen sollte die Checkbox "Ich vertraue dieser Adresse und ..." auch persistiert werden.

@@ -31,7 +31,7 @@ function server() {
 	}
 	const fetcher = vi.fn<typeof fetch>(async (input, init) => {
 		const target = new URL(String(input));
-		if (target.pathname.endsWith("info")) return json({ ...binding, protocolVersion: 1, schemaVersion: 2, cursor: String(cursor), limits: syncLimits, capabilities: { authentication: "none", fullAggregates: true, atomicBatches: true, manualConflicts: true }, counts: syncEntities.map(entity => ({ entity, active: 0, deleted: 0 })) });
+		if (target.pathname.endsWith("info")) return json({ ...binding, protocolVersion: 1, schemaVersion: 3, cursor: String(cursor), limits: syncLimits, capabilities: { authentication: "none", fullAggregates: true, atomicBatches: true, manualConflicts: true }, counts: syncEntities.map(entity => ({ entity, active: 0, deleted: 0 })) });
 		if (target.pathname.endsWith("changes")) { const from = target.searchParams.get("cursor")!; return json({ ...binding, protocolVersion: 1, fromCursor: from, cursor: String(cursor), highWaterCursor: String(cursor), hasMore: false, batches: feed.filter(b => Number(b.firstCursor) > Number(from)) }); }
 		bodies.push(String(init!.body)); const request = JSON.parse(String(init!.body)) as ServerWriteBatch;
 		if (reject) return json({ error: { code: "versionConflict", resync: false, retryable: false, current: [] } }, 409);

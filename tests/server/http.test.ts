@@ -74,12 +74,25 @@ describe("built Nitro sync HTTP API", () => {
 		const decisions = createSyncDecisions(local.database, async () => {}), review = await decisions.initialPreview();
 		await decisions.initialCommit(review.token, "combine", await fetchDecisionProof(base, binding));
 	}
+	it("replays legacy payloads unchanged without clearing new portion metadata, then permits explicit clearing", async () => {
+		const client = createSyncHttpClient(base), root = wireFood(); root.data!.portion_size_grams = 125;
+		const command = (payload: Record<string, unknown>, baseRevision: number) => ({ ...binding, batchId: createUuid(), operations: [{ operationId: createUuid(), entity: 'foods' as const, entityUuid: root.id, baseRevision, operation: 'upsert' as const, payload }] });
+		await client.push(command(root.data!, 0));
+		const legacy = { ...root.data!, name_de: 'Legacy edit' }; delete legacy.portion_size_grams;
+		const request = command(legacy, 1), before = JSON.stringify(request);
+		const receipt = await client.push(request); expect(await client.push(request)).toEqual(receipt); expect(JSON.stringify(request)).toBe(before);
+		let current = (await fetchDecisionProof(base, binding)).flatMap(page => page.aggregates).find(row => row.id === root.id)!;
+		expect(current.data!.portion_size_grams).toBe(125);
+		await client.push(command({ ...current.data!, portion_size_grams: null }, current.version));
+		current = (await fetchDecisionProof(base, binding)).flatMap(page => page.aggregates).find(row => row.id === root.id)!;
+		expect(current.data!.portion_size_grams).toBeNull();
+	});
 	it("manually round-trips all six business tables between two phones and editable web across restart", async () => {
 		let a = await createTestDatabase(); const b = await createTestDatabase();
 		try {
 			const p = (await a.service.profiles.createProfile({ name: "Phone household", dailyCaloriesTarget: 2000 }))!;
-			const f = (await a.service.foods.createFood({ nameDe: "Phone food", nameEn: "Phone food", ean: "9123456789012", caloriesPer100g: 100, fatPer100g: 2, carbsPer100g: 10, sugarPer100g: 1, fiberPer100g: 2, proteinPer100g: 10, saltPer100g: 0.5 }))!;
-			const r = (await a.service.recipes.createRecipe({ nameDe: "Phone recipe", nameEn: "Phone recipe", ingredients: [{ foodId: f.id, amountGrams: 150 }] }))!;
+			const f = (await a.service.foods.createFood({ nameDe: "Phone food", nameEn: "Phone food", portionSizeGrams: 125, ean: "9123456789012", caloriesPer100g: 100, fatPer100g: 2, carbsPer100g: 10, sugarPer100g: 1, fiberPer100g: 2, proteinPer100g: 10, saltPer100g: 0.5 }))!;
+			const r = (await a.service.recipes.createRecipe({ nameDe: "Phone recipe", nameEn: "Phone recipe", portionSizeGrams: 300, ingredients: [{ foodId: f.id, amountGrams: 150 }] }))!;
 			const m = (await a.service.mealLogs.createMealLog({ loggedAt: "2019-02-03 12:30", recipeId: r.id, profiles: [{ profileId: p.id, portionGrams: 33.125 }] }))!;
 			await createSyncAddressSettings(a.database).remember(base); await prepareNative(a);
 			const identities = (await a.service.backups!.exportBackup());
@@ -88,8 +101,9 @@ describe("built Nitro sync HTTP API", () => {
 			const web = createHttpDataService(base, journalStore(), { lock: webLock });
 			const wp = (await web.profiles.listProfiles())[0]!, wf = (await web.foods.listFoods())[0]!, wr = (await web.recipes.listRecipes())[0]!, wm = (await web.mealLogs.listMealLogs())[0]!;
 			await web.profiles.updateProfile(wp.id, { name: "Edited online" }, wp.revision);
-			await web.foods.updateFood(wf.id, { proteinPer100g: 20 }, wf.revision);
-			await web.recipes.updateRecipe(wr.id, { nameDe: "Web recipe", ingredients: [{ foodId: wf.id, amountGrams: 200 }] }, wr.revision);
+			expect(wf.portionSizeGrams).toBe(125); expect(wr.portionSizeGrams).toBe(300);
+			await web.foods.updateFood(wf.id, { proteinPer100g: 20, portionSizeGrams: 150 }, wf.revision);
+			await web.recipes.updateRecipe(wr.id, { nameDe: "Web recipe", portionSizeGrams: 250, ingredients: [{ foodId: wf.id, amountGrams: 200 }] }, wr.revision);
 			await web.mealLogs.updateMealLog(wm.id, { recipeId: wr.id, loggedAt: "2019-02-03 12:30", profiles: [{ profileId: wp.id, portionGrams: 88.125 }] }, wm.revision);
 			const newProfile = (await web.profiles.createProfile({ name: "Created online", dailyCaloriesTarget: 2100 }))!;
 			const newFood = (await web.foods.createFood({ nameDe: "New online food", nameEn: "New online food", caloriesPer100g: 200, fatPer100g: 1, carbsPer100g: 20, sugarPer100g: 1, fiberPer100g: 2, proteinPer100g: 5, saltPer100g: 0.1 }))!;
@@ -101,6 +115,8 @@ describe("built Nitro sync HTTP API", () => {
 			await createManualSyncRunner(b.database).sync(true);
 			expect((await a.service.profiles.getProfileById(p.id))!.name).toBe("Edited online");
 			expect((await a.service.foods.getFoodById(f.id))!.proteinPer100g).toBe(20);
+			expect((await a.service.foods.getFoodById(f.id))!.portionSizeGrams).toBe(150);
+			expect((await a.service.recipes.getRecipeById(r.id))!.portionSizeGrams).toBe(250);
 			expect((await a.service.recipes.listRecipeIngredients(r.id))[0]!.amountGrams).toBe(200);
 			expect((await a.service.mealLogs.getMealLogById(m.id))!.loggedAt).toBe("2019-02-03 12:30");
 			expect((await a.service.mealLogs.getMealLogById(m.id))!.totalWeightGrams).toBe(88.13);
@@ -108,7 +124,7 @@ describe("built Nitro sync HTTP API", () => {
 			expect(await a.service.foods.listFoods()).toHaveLength(2); expect(await a.service.recipes.listRecipes()).toHaveLength(2); expect(await a.service.mealLogs.listMealLogs()).toHaveLength(2);
 			expect((await a.service.mealLogs.listMealLogs()).some(meal => meal.loggedAt === "2026-10-06T13:14:15+02:00")).toBe(true);
 			expect(technicalTimes((await a.service.backups!.exportBackup()).data)).toEqual(technicalTimes((await b.service.backups!.exportBackup()).data));
-			if (identities.version === 2) { const next = await a.service.backups!.exportBackup(); if (next.version !== 2) throw new Error("v2 backup expected"); expect(next.identities.filter(row => ["profiles", "foods", "recipes", "meal_logs"].includes(row.entity))).toEqual(expect.arrayContaining(identities.identities.filter(row => ["profiles", "foods", "recipes", "meal_logs"].includes(row.entity)))); }
+			if (identities.version !== 1) { const next = await a.service.backups!.exportBackup(); if (next.version === 1) throw new Error("identity backup expected"); expect(next.identities.filter(row => ["profiles", "foods", "recipes", "meal_logs"].includes(row.entity))).toEqual(expect.arrayContaining(identities.identities.filter(row => ["profiles", "foods", "recipes", "meal_logs"].includes(row.entity)))); }
 			const before = (await createSyncHttpClient(base).info()).cursor; await createManualSyncRunner(a.database).sync(true); await createManualSyncRunner(b.database).sync(true);
 			expect((await createSyncHttpClient(base).info()).cursor).toBe(before); expect(await createSyncQueue(a.database).list()).toEqual([]);
 		} finally { a.close(); b.close(); }
@@ -230,7 +246,7 @@ describe("built Nitro sync HTTP API", () => {
 		} finally { local.close(); }
 	});
 	it("negotiates info, pushes/replays and pulls exact confirmed data without duplicate operations", async () => {
-		const infoResponse = await fetch(`${base}/api/sync/info`); expect(infoResponse.status).toBe(200); expect(infoResponse.headers.get("cache-control")).toBe("no-store"); expect(await infoResponse.json()).toMatchObject({ protocolVersion: 1, schemaVersion: 2, capabilities: { authentication: "none" } });
+		const infoResponse = await fetch(`${base}/api/sync/info`); expect(infoResponse.status).toBe(200); expect(infoResponse.headers.get("cache-control")).toBe("no-store"); expect(await infoResponse.json()).toMatchObject({ protocolVersion: 1, schemaVersion: 3, capabilities: { authentication: "none" } });
 		const command = batch(); const first = await post("push", command); expect(first.status).toBe(200); const receipt = await first.json(); expect(await (await post("push", command)).json()).toEqual(receipt);
 		const delta: ChangePage = await (await fetch(`${base}/api/sync/changes?${query({ cursor: "0" })}`, { headers })).json(); expect(delta).toMatchObject({ cursor: "1", hasMore: false }); expect(delta.batches[0]!.changes[0]!.aggregate.data).toEqual(command.operations[0]!.payload);
 		expect(await db.withConnection((sql) => sql.query("SELECT COUNT(*) AS n FROM write_operations"))).toEqual([{ n: 1 }]);

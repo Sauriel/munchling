@@ -19,7 +19,9 @@
     "delete": "Löschen",
     "edit": "Bearbeiten",
     "loading": "Lädt ...",
-    "close": "Schließen"
+    "close": "Schließen",
+    "portionSize": "Gramm pro Portion (optional)",
+    "portionSizeHint": "Leer lassen, wenn keine Portionsgröße festgelegt ist."
   },
   "nav": {
     "dashboard": "Dashboard",
@@ -219,6 +221,10 @@
       "source": "Bitte auswählen"
     },
     "portions": {
+      "unit": "Mengen eingeben in",
+      "count": "Portionen",
+      "size": "1 Portion = {grams} g. Gespeichert wird immer die tatsächliche Grammmenge.",
+      "noSize": "Für Portionen zuerst eine Portionsgröße beim Lebensmittel oder Gericht hinterlegen.",
       "title": "Portionen pro Profil",
       "grams": "Gramm",
       "noProfiles": "Lege zuerst ein Profil an, um Mahlzeiten zuzuweisen."

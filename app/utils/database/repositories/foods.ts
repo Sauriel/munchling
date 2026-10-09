@@ -18,6 +18,7 @@ type FoodRow = {
 	protein_per_100g: number;
 	salt_per_100g: number;
 	is_custom: number;
+	portion_size_grams: number | null;
 	created_at: string;
 	updated_at: string | null;
 };
@@ -37,6 +38,7 @@ function mapFood(row: FoodRow): Food {
 		proteinPer100g: row.protein_per_100g,
 		saltPer100g: row.salt_per_100g,
 		isCustom: fromSqlBoolean(row.is_custom),
+		portionSizeGrams: row.portion_size_grams ?? null,
 		createdAt: row.created_at,
 		updatedAt: row.updated_at,
 	};
@@ -121,9 +123,9 @@ async function createFood(input: CreateFoodInput) {
         fiber_per_100g,
         protein_per_100g,
         salt_per_100g,
-        is_custom
+        is_custom, portion_size_grams
       )
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
     `,
 		[
 			input.nameDe.trim(),
@@ -137,7 +139,7 @@ async function createFood(input: CreateFoodInput) {
 			input.fiberPer100g,
 			input.proteinPer100g,
 			input.saltPer100g,
-			toSqlBoolean(input.isCustom ?? true),
+			toSqlBoolean(input.isCustom ?? true), input.portionSizeGrams ?? null,
 		],
 	);
 
@@ -166,6 +168,7 @@ async function updateFood(id: number, input: UpdateFoodInput) {
 		 protein_per_100g = CASE WHEN ? THEN ? ELSE protein_per_100g END,
 		 salt_per_100g = CASE WHEN ? THEN ? ELSE salt_per_100g END,
 		 is_custom = CASE WHEN ? THEN ? ELSE is_custom END,
+		 portion_size_grams = CASE WHEN ? THEN ? ELSE portion_size_grams END,
 		 updated_at = CURRENT_TIMESTAMP WHERE id = ?;`,
 		[
 			input.nameDe !== undefined, input.nameDe?.trim() ?? null,
@@ -179,7 +182,8 @@ async function updateFood(id: number, input: UpdateFoodInput) {
 			input.fiberPer100g !== undefined, input.fiberPer100g ?? null,
 			input.proteinPer100g !== undefined, input.proteinPer100g ?? null,
 			input.saltPer100g !== undefined, input.saltPer100g ?? null,
-			input.isCustom !== undefined, toSqlBoolean(input.isCustom ?? false), id,
+			input.isCustom !== undefined, toSqlBoolean(input.isCustom ?? false),
+			input.portionSizeGrams !== undefined, input.portionSizeGrams ?? null, id,
 		],
 	);
 	return getFoodById(id, sql);

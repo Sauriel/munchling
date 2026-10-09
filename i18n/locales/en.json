@@ -19,7 +19,9 @@
     "delete": "Delete",
     "edit": "Edit",
     "loading": "Loading ...",
-    "close": "Close"
+    "close": "Close",
+    "portionSize": "Grams per portion (optional)",
+    "portionSizeHint": "Leave empty if no portion size is defined."
   },
   "nav": {
     "dashboard": "Dashboard",
@@ -219,6 +221,10 @@
       "source": "Please select"
     },
     "portions": {
+      "unit": "Enter quantities in",
+      "count": "Portions",
+      "size": "1 portion = {grams} g. The actual weight in grams is always stored.",
+      "noSize": "To use portions, first set a portion size for the food or recipe.",
       "title": "Portions per profile",
       "grams": "Grams",
       "noProfiles": "Create a profile first to assign meals."

@@ -5,21 +5,23 @@ import { parse, compileScript } from 'vue/compiler-sfc'
 import { transpileModule, ModuleKind, ScriptTarget } from 'typescript'
 import { describe, it, expect, vi } from 'vitest'
 import { mealSourceMatches } from '../../app/utils/meal-source-search'
+import * as Portions from '../../shared/domain/portions'
 
 function mountPicker() {
-  const food = { id: 7, nameDe: 'Apfel', nameEn: 'Apple' }
-  const recipe = { id: 7, nameDe: 'Apfelgericht', nameEn: 'Apple recipe' }
+  const food = { id: 7, nameDe: 'Apfel', nameEn: 'Apple', portionSizeGrams: 125 as number | null }
+  const recipe = { id: 7, nameDe: 'Apfelgericht', nameEn: 'Apple recipe', portionSizeGrams: 300 }
   const catalog = { id: 7, nameDe: 'Apfel BLS', nameEn: '', caloriesPer100g: 52, fatPer100g: 0, carbsPer100g: 12, sugarPer100g: 10, fiberPer100g: 2, proteinPer100g: 1, saltPer100g: 0 }
   const foods = Vue.ref([food]), recipes = Vue.ref([recipe]), searchError = Vue.ref(null)
   const createFood = vi.fn(async (_input: unknown) => ({ ...catalog, id: 99 }))
-  const refreshFoods = vi.fn(async () => { if (createFood.mock.calls.length) foods.value.push({ ...catalog, id: 99 }) })
+  const refreshFoods = vi.fn(async () => { if (createFood.mock.calls.length) foods.value.push({ ...catalog, id: 99, portionSizeGrams: null }) })
   const search = vi.fn(async (_query: string) => [catalog])
   const refreshMealLogs = vi.fn(async () => {})
   const imports: Record<string, unknown> = {
     vue: Vue,
+    '../../shared/domain/portions': Portions,
     '~/composables/useFoods': { useFoods: () => ({ foods, refreshFoods, createFood }) },
     '~/composables/useRecipes': { useRecipes: () => ({ recipes, refreshRecipes: async () => {}, calculateRecipeNutrition: async () => ({ per100g: {} }) }) },
-    '~/composables/useProfiles': { useProfiles: () => ({ profiles: Vue.ref([]), refreshProfiles: async () => {} }) },
+    '~/composables/useProfiles': { useProfiles: () => ({ profiles: Vue.ref([{ id: 1, name: 'P' }]), refreshProfiles: async () => {} }) },
     '~/composables/useMealLogs': { useMealLogs: () => ({ mealLogs: Vue.ref([]), refreshMealLogs, isLoading: Vue.ref(false) }) },
     '~/composables/useBundledFoodSearch': { useBundledFoodSearch: () => ({ searchBundledFoods: search, bundledFoodSearchError: searchError }) },
     '~/utils/meal-source-search': { mealSourceMatches },
@@ -49,6 +51,20 @@ describe('actual meal picker setup', () => {
       expect(p.createFood.mock.calls[0]?.[0]).not.toHaveProperty('id')
       expect(p.state.form.sourceType).toBe('food'); expect(p.state.form.sourceId).toBe(99)
       p.state.resetForm(); expect(p.state.form.sourceId).toBeNull(); expect(p.state.sourceQuery).toBe('')
+    } finally { p.app.unmount() }
+  })
+  it('uses portion counts but retains canonical grams across units and sources', async () => {
+    const p = mountPicker()
+    try {
+      await vi.waitFor(() => expect(p.refreshMealLogs).toHaveBeenCalledOnce())
+      await p.state.selectSource('food', p.food)
+      p.state.quantityUnit = 'portions'; p.state.setProfileQuantity(1, '0.5')
+      expect(p.state.mealLogInput().profiles[0].portionGrams).toBe(62.5)
+      p.state.quantityUnit = 'grams'; expect(p.state.profilePortions[1]).toBe(62.5)
+      p.state.quantityUnit = 'portions'; await p.state.selectSource('recipe', p.recipe)
+      expect(p.state.profilePortions[1]).toBe(62.5)
+      p.state.setProfileQuantity(1, '1.5'); expect(p.state.totalWeightGrams).toBe(450)
+      p.state.form.sourceId = null; expect(p.state.quantityUnit).toBe('grams')
     } finally { p.app.unmount() }
   })
   it('ignores stale database replies when the query changes', async () => {

@@ -19,7 +19,7 @@ export type {
 
 type RecipeRow = {
 	id: number; name_de: string; name_en: string; description: string | null;
-	is_sub_recipe: number; created_at: string; updated_at: string | null;
+	is_sub_recipe: number; portion_size_grams: number | null; created_at: string; updated_at: string | null;
 };
 type RecipeIngredientRow = {
 	id: number; recipe_id: number; food_id: number | null;
@@ -29,7 +29,7 @@ type RecipeIngredientRow = {
 function mapRecipe(row: RecipeRow): Recipe {
 	return {
 		id: row.id, nameDe: row.name_de, nameEn: row.name_en,
-		description: row.description, isSubRecipe: fromSqlBoolean(row.is_sub_recipe),
+		description: row.description, isSubRecipe: fromSqlBoolean(row.is_sub_recipe), portionSizeGrams: row.portion_size_grams ?? null,
 		createdAt: row.created_at, updatedAt: row.updated_at,
 	};
 }
@@ -88,8 +88,8 @@ export function createRecipesRepository(database: SqlDatabase) {
 		validateRecipeInput(input);
 		return database.transaction(async (sql) => {
 			const result = await sql.run(
-				"INSERT INTO recipes (name_de, name_en, description, is_sub_recipe) VALUES (?, ?, ?, ?);",
-				[input.nameDe.trim(), input.nameEn.trim(), normalizeOptionalText(input.description), toSqlBoolean(input.isSubRecipe ?? false)],
+				"INSERT INTO recipes (name_de, name_en, description, is_sub_recipe, portion_size_grams) VALUES (?, ?, ?, ?, ?);",
+				[input.nameDe.trim(), input.nameEn.trim(), normalizeOptionalText(input.description), toSqlBoolean(input.isSubRecipe ?? false), input.portionSizeGrams ?? null],
 			);
 			const recipeId = lastInsertId(result);
 			for (const ingredient of input.ingredients ?? []) await insertIngredient(sql, recipeId, ingredient);
@@ -102,19 +102,21 @@ export function createRecipesRepository(database: SqlDatabase) {
 		validateRecipeInput(input, true);
 		return database.transaction(async (sql) => {
 			if (!await getRecipeById(id, sql)) return null;
-			if (input.nameDe !== undefined || input.nameEn !== undefined || input.description !== undefined || input.isSubRecipe !== undefined || input.ingredients !== undefined) {
+			if (input.nameDe !== undefined || input.nameEn !== undefined || input.description !== undefined || input.isSubRecipe !== undefined || input.portionSizeGrams !== undefined || input.ingredients !== undefined) {
 				await sql.run(
 					`UPDATE recipes SET
 					 name_de = CASE WHEN ? THEN ? ELSE name_de END,
 					 name_en = CASE WHEN ? THEN ? ELSE name_en END,
 					 description = CASE WHEN ? THEN ? ELSE description END,
 					 is_sub_recipe = CASE WHEN ? THEN ? ELSE is_sub_recipe END,
+					 portion_size_grams = CASE WHEN ? THEN ? ELSE portion_size_grams END,
 					 updated_at = CURRENT_TIMESTAMP WHERE id = ?;`,
 					[
 						input.nameDe !== undefined, input.nameDe?.trim() ?? null,
 						input.nameEn !== undefined, input.nameEn?.trim() ?? null,
 						input.description !== undefined, normalizeOptionalText(input.description),
-						input.isSubRecipe !== undefined, toSqlBoolean(input.isSubRecipe ?? false), id,
+						input.isSubRecipe !== undefined, toSqlBoolean(input.isSubRecipe ?? false),
+						input.portionSizeGrams !== undefined, input.portionSizeGrams ?? null, id,
 					],
 				);
 			}

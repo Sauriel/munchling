@@ -22,8 +22,8 @@ describe("durable receive staging", () => {
 		const db = await open({ version: 2 }); await db.service.profiles.createProfile({ name: "Local", dailyCaloriesTarget: 2000 });
 		const before = await db.service.backups!.exportBackup(), outbox = await createSyncQueue(db.database).list();
 		await runLocalMigrations(createSqlDatabase(db.driver), vi.fn());
-		expect((await db.service.backups!.exportBackup()).data).toEqual(before.data); expect((await db.service.backups!.exportBackup()).version).toBe(2); expect(await createSyncQueue(db.database).list()).toEqual(outbox);
-		expect(await db.database.query("SELECT version FROM schema_migrations ORDER BY version")).toEqual([{ version: 1 }, { version: 2 }, { version: 3 }, { version: 4 }]);
+		expect((await db.service.backups!.exportBackup()).data).toEqual(before.data); expect((await db.service.backups!.exportBackup()).version).toBe(3); expect(await createSyncQueue(db.database).list()).toEqual(outbox);
+		expect(await db.database.query("SELECT version FROM schema_migrations ORDER BY version")).toEqual([{ version: 1 }, { version: 2 }, { version: 3 }, { version: 4 }, { version: 5 }]);
 	});
 	it("rolls back failed v3 DDL and permits a clean retry", async () => {
 		const db = await open({ version: 2 }); const execute = db.driver.execute;

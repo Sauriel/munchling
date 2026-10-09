@@ -19,7 +19,8 @@ export type BackupData = {
 type BackupBase = { format: "munchling-backup"; exportedAt: string; data: BackupData };
 export type LegacyBackup = BackupBase & { version: 1; schemaVersion: 1 };
 export type IdentityBackup = BackupBase & { version: 2; schemaVersion: 2; identities: SyncIdentity[]; tombstones: SyncTombstone[] };
-export type MunchlingBackup = LegacyBackup | IdentityBackup;
+export type PortionBackup = Omit<IdentityBackup, "version" | "schemaVersion"> & { version: 3; schemaVersion: 3 };
+export type MunchlingBackup = LegacyBackup | IdentityBackup | PortionBackup;
 
 function nullableText(value: unknown, field: string) { if (value !== null) assertText(value, field); }
 function nullableDate(value: unknown, field: string) { if (value !== null) assertDateTime(value, field); }
@@ -43,7 +44,7 @@ function reference(value: unknown, allowed: Set<number>, field: string) {
 
 export function validateBackup(value: unknown): asserts value is MunchlingBackup {
 	assertRecord(value, "backup");
-	if (value.format !== "munchling-backup" || !((value.version === 1 && value.schemaVersion === 1) || (value.version === 2 && value.schemaVersion === 2))) fail("backupFormat", "backup");
+	if (value.format !== "munchling-backup" || !((value.version === 1 && value.schemaVersion === 1) || (value.version === 2 && value.schemaVersion === 2) || (value.version === 3 && value.schemaVersion === 3))) fail("backupFormat", "backup");
 	assertDateTime(value.exportedAt, "exportedAt");
 	assertRecord(value.data, "data");
 	const tables = ["profiles", "foods", "recipes", "recipeIngredients", "mealLogs", "mealLogProfiles"] as const;
@@ -114,7 +115,7 @@ export function validateBackup(value: unknown): asserts value is MunchlingBackup
 		pairs.add(pair);
 		timestamps(row, false);
 	}
-	if (value.version === 2) validateIdentities(value, rows, count);
+	if (value.version !== 1) validateIdentities(value, rows, count);
 	// Existing profile deletion can leave a meal with zero/fewer profile links.
 	// Backups preserve that stored state; they do not recalculate portions.
 }

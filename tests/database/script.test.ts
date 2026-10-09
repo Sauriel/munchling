@@ -28,13 +28,16 @@ END;`;
 	it("applies published v1/v2/v3 and additive v4 without rewriting DDL and preserves legacy rows through a native-like bridge", async () => {
 		const db = await createTestDatabase({ version: 1 }); opened.push(db);
 		const p = await db.service.profiles.createProfile({ name: "Legacy", dailyCaloriesTarget: 2100 });
-		const f = await db.service.foods.createFood({ nameDe: "Food", nameEn: "Food", caloriesPer100g: 100, fatPer100g: 0, carbsPer100g: 10, sugarPer100g: 0, proteinPer100g: 0, fiberPer100g: 0, saltPer100g: 0 });
-		const r = await db.service.recipes.createRecipe({ nameDe: "Recipe", nameEn: "Recipe", ingredients: [{ foodId: f!.id, amountGrams: 12.5 }] });
+		// Published legacy schema fixtures must not use today's v5 write adapter.
+		await db.database.run("INSERT INTO foods(name_de,name_en,calories_per_100g,fat_per_100g,carbs_per_100g,sugar_per_100g,protein_per_100g,fiber_per_100g,salt_per_100g,is_custom) VALUES ('Food','Food',100,0,10,0,0,0,0,1);");
+		await db.database.run("INSERT INTO recipes(name_de,name_en) VALUES ('Recipe','Recipe');");
+		await db.database.run("INSERT INTO recipe_ingredients(recipe_id,food_id,amount_grams) VALUES (1,1,12.5);");
+		const f = await db.service.foods.getFoodById(1), r = await db.service.recipes.getRecipeById(1);
 		await db.service.mealLogs.createMealLog({ loggedAt: "2019-01-02 03:04", recipeId: r!.id, profiles: [{ profileId: p!.id, portionGrams: 33.3 }] });
 		const before = (await db.service.backups!.exportBackup()).data, save = vi.fn(async () => {}), run = vi.fn(db.driver.run), native = { ...db.driver, run, execute: createSqlScriptExecutor({ ...db.driver, run }) };
 		await runLocalMigrations(createSqlDatabase(native), save); expect(save).toHaveBeenCalledOnce();
 		const after = createLocalDataService(createSqlDatabase(native, flushOutbox)); expect((await after.backups!.exportBackup()).data).toEqual(before);
-		expect((await db.database.query<{ version: number }>("SELECT version FROM schema_migrations ORDER BY version;"))).toEqual([{ version: 1 }, { version: 2 }, { version: 3 }, { version: 4 }]);
+		expect((await db.database.query<{ version: number }>("SELECT version FROM schema_migrations ORDER BY version;"))).toEqual([{ version: 1 }, { version: 2 }, { version: 3 }, { version: 4 }, { version: 5 }]);
 		const triggers = run.mock.calls.map(call => call[0]).filter(sql => /CREATE TRIGGER/.test(sql)); expect(triggers.length).toBeGreaterThan(20); expect(triggers.every(sql => /END;\s*$/.test(sql))).toBe(true);
 		await after.foods.updateFood(f!.id, { brand: "Updated" }); expect((await db.database.query<{ count: number }>("SELECT COUNT(*) AS count FROM sync_outbox;"))[0]!.count).toBeGreaterThan(0);
 		await expect(db.database.run("UPDATE foods SET uuid=? WHERE id=?;", ["other", f!.id])).rejects.toThrow("UUID is immutable");

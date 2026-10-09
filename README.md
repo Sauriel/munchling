@@ -59,7 +59,7 @@ Für Dokploy: Dockerfile im Projektroot bauen, MariaDB separat mit persistentem 
 
 Unter **Einstellungen → Lokale Datensicherung** lassen sich alle Fachdaten als JSON exportieren und nach Bestätigung wiederherstellen. Eine Wiederherstellung ersetzt den lokalen Bestand, statt ihn zusammenzuführen, und speichert vorher automatisch eine separate Sicherheitssicherung. Diese kann ebenfalls exportiert werden.
 
-Sicherungen sind unverschlüsselt. Eine externe Kopie schützt auch vor App-Deinstallation oder gelöschten Browserdaten. V2 bewahrt UUIDs und Löschmarker; alte v1-Dateien werden mit neuen UUIDs importiert. Wiederherstellen trennt die Sync-Bindung und setzt einen neuen lokalen Abgleich auf. Importgrenzen: 25 MiB und insgesamt 100.000 Fachzeilen/Löschmarker. Geräteinstellungen und der BLS-Katalog sind nicht enthalten.
+Sicherungen sind unverschlüsselt. Eine externe Kopie schützt auch vor App-Deinstallation oder gelöschten Browserdaten. V3 bewahrt zusätzlich Portionsgrößen für Lebensmittel und Gerichte; v2-Sicherungen mit UUIDs/Löschmarkern bleiben lesbar, alte v1-Dateien werden mit neuen UUIDs importiert. Neue v3-Sicherungen benötigen die aktuelle App. Wiederherstellen trennt die Sync-Bindung und setzt einen neuen lokalen Abgleich auf. Importgrenzen: 25 MiB und insgesamt 100.000 Fachzeilen/Löschmarker. Geräteinstellungen und der BLS-Katalog sind nicht enthalten.
 
 Vor dem Upgrade eines gefüllten v1-Bestands wird separat `backups/before-schema-v2.json` gespeichert; ohne erfolgreiche Speicherung findet keine Migration statt. Diese Sicherung ist nach dem Upgrade ebenfalls in den Einstellungen exportierbar. Vor App-Updates zusätzlich extern sichern.
 

@@ -64,6 +64,7 @@ export function validateFoodInput(input: unknown, partial = false): asserts inpu
 	optionalText(input.brand, "brand");
 	optionalText(input.ean, "ean"); // Blank optional strings are normalized to NULL by the adapter.
 	optionalBoolean(input.isCustom, "isCustom");
+	if (input.portionSizeGrams != null) assertNumber(input.portionSizeGrams, "portionSizeGrams", true);
 	for (const key of ["caloriesPer100g", "fatPer100g", "carbsPer100g", "sugarPer100g", "fiberPer100g", "proteinPer100g", "saltPer100g"]) {
 		if (!partial || input[key] !== undefined) assertNumber(input[key], key);
 	}
@@ -85,6 +86,7 @@ export function validateRecipeInput(input: unknown, partial = false): asserts in
 	names(input, partial);
 	optionalText(input.description, "description");
 	optionalBoolean(input.isSubRecipe, "isSubRecipe");
+	if (input.portionSizeGrams != null) assertNumber(input.portionSizeGrams, "portionSizeGrams", true);
 	if (input.ingredients !== undefined) validateIngredients(input.ingredients);
 }
 export function validateMealInput(input: unknown): asserts input is CreateMealLogInput {

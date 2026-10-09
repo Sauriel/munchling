@@ -6,7 +6,7 @@ import { createWebView } from "../../app/utils/data/web-view";
 import { createHttpDataService, type WebWriteLock } from "../../app/utils/data/http";
 import { SyncClientError } from "../../shared/domain/replies";
 const lock: WebWriteLock = { run: async (_key, action) => action() };
-const info = { ...binding, protocolVersion: 1, schemaVersion: 2, cursor: "0", counts: [], capabilities: { authentication: "none", fullAggregates: true, manualConflicts: true, atomicBatches: true }, limits: syncLimits };
+const info = { ...binding, protocolVersion: 1, schemaVersion: 3, cursor: "0", counts: [], capabilities: { authentication: "none", fullAggregates: true, manualConflicts: true, atomicBatches: true }, limits: syncLimits };
 const response = (value: unknown) => new Response(JSON.stringify(value), { headers: { "Content-Type": "application/json" } });
 function store() { const values = new Map<string,string>(); return { getItem: (key: string) => values.get(key) ?? null, setItem: (key: string, value: string) => { values.set(key,value); }, removeItem: (key: string) => { values.delete(key); } }; }
 function fixture(): WebState { const p = profile(); return { snapshot: snapshot([p]), viewIds: [{ entity: "profiles", uuid: p.id, id: 7 }] }; }

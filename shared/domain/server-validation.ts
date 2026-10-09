@@ -37,6 +37,9 @@ function source(value: Record<string, unknown>, first: string, second: string) {
 }
 export function validatePayload(entity: SyncAggregate, value: Record<string, unknown>, ids: Set<string>): number {
 	row(value, entity, ids);
+	// Older persisted requests/history omit this additive field. Do not mutate
+	// their payloads: immutable request hashes and receipts must still replay.
+	if ((entity === "foods" || entity === "recipes") && value.portion_size_grams != null) assertNumber(value.portion_size_grams, "portion_size_grams", true);
 	if (entity === "profiles") {
 		validateProfileInput({ name: value.name, dailyCaloriesTarget: value.daily_calories_target, dailyProteinTarget: value.daily_protein_target, dailyCarbsTarget: value.daily_carbs_target, dailyFatTarget: value.daily_fat_target, dailySugarTarget: value.daily_sugar_target, dailyFiberTarget: value.daily_fiber_target, dailySaltTarget: value.daily_salt_target });
 		for (const key of ["daily_protein_target", "daily_carbs_target", "daily_fat_target", "daily_sugar_target", "daily_fiber_target", "daily_salt_target"]) if (value[key] !== null) assertNumber(value[key], key);

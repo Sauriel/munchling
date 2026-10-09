@@ -132,6 +132,12 @@
           </label>
         </div>
 
+        <label class="block space-y-1.5">
+          <span class="text-sm font-medium">{{ $t('common.portionSize') }}</span>
+          <input v-model.number="form.portionSizeGrams" min="0.01" step="0.01" type="number" inputmode="decimal" class="field-input" :placeholder="$t('common.portionSizeHint')">
+          <span class="block text-xs text-slate-500">{{ $t('common.portionSizeHint') }}</span>
+        </label>
+
         <div class="grid grid-cols-2 gap-3">
           <label v-for="field in nutrientFields" :key="field.key" class="block space-y-1.5">
             <span class="text-sm font-medium">{{ $t(field.label) }}</span>
@@ -251,6 +257,7 @@ import { useOpenFoodFacts } from '~/composables/useOpenFoodFacts'
 import type { Food } from '../../shared/domain/types'
 
 type FoodForm = {
+  portionSizeGrams: number | ''
   name: string
   brand: string
   ean: string
@@ -263,7 +270,7 @@ type FoodForm = {
   saltPer100g: number
 }
 
-type NutrientKey = Exclude<keyof FoodForm, 'name' | 'brand' | 'ean'>
+type NutrientKey = Exclude<keyof FoodForm, 'name' | 'brand' | 'ean' | 'portionSizeGrams'>
 
 const { t } = useI18n()
 const { foods, searchTerm, isLoading, refreshFoods, createFood, updateFood, deleteFood, getFoodByEan, getFoodByNameDe } = useFoods()
@@ -288,6 +295,7 @@ const scannerButtonLabel = computed(() => {
 })
 
 const emptyForm = (): FoodForm => ({
+  portionSizeGrams: '',
   name: '',
   brand: '',
   ean: '',
@@ -337,6 +345,7 @@ function editFood(food: Food) {
   editingRevision.value = food.revision
   Object.assign(form, {
     name: food.nameDe,
+    portionSizeGrams: food.portionSizeGrams ?? '',
     brand: food.brand ?? '',
     ean: food.ean ?? '',
     caloriesPer100g: food.caloriesPer100g,
@@ -399,6 +408,7 @@ async function submitForm() {
     const input = {
       nameDe: form.name,
       nameEn: form.name,
+      portionSizeGrams: form.portionSizeGrams === '' ? null : Number(form.portionSizeGrams),
       brand: optionalText(form.brand),
       ean: optionalText(form.ean),
       caloriesPer100g: form.caloriesPer100g,

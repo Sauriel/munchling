@@ -27,7 +27,7 @@ describe("consistent MariaDB sync downloads", () => {
 		expect((await createServerSnapshot(db, binding)).aggregates[0]!.data).toEqual(p);
 	});
 	it("returns a resumable empty snapshot and negotiable info", async () => {
-		expect(await serverInfo(db)).toMatchObject({ protocolVersion: 1, schemaVersion: 2, cursor: "0", capabilities: { authentication: "none" } });
+		expect(await serverInfo(db)).toMatchObject({ protocolVersion: 1, schemaVersion: 3, cursor: "0", capabilities: { authentication: "none" } });
 		const page = await createServerSnapshot(db, binding); expect(page).toMatchObject({ aggregates: [], identities: [], cursor: "0", pageCount: 1, nextPage: null });
 		expect(await getSnapshotPage(db, binding, page.snapshotId, 0)).toEqual(page);
 	});

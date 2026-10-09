@@ -13,8 +13,14 @@ async function open(options: Parameters<typeof createTestDatabase>[0] = {}) { co
 afterEach(() => { for (const test of opened.splice(0)) test.close(); });
 async function populate(test: TestDb) {
 	const profile = (await test.service.profiles.createProfile({ name: "A", dailyCaloriesTarget: 2000 }))!;
-	const food = (await test.service.foods.createFood(foodInput))!;
-	const recipe = (await test.service.recipes.createRecipe({ nameDe: "Gericht", nameEn: "Dish", ingredients: [{ foodId: food.id, amountGrams: 150 }] }))!;
+	const legacy = !(await test.database.query<{ name: string }>("PRAGMA table_info(foods);")).some(c => c.name === "portion_size_grams");
+	if (legacy) {
+		await test.database.run("INSERT INTO foods(name_de,name_en,calories_per_100g,fat_per_100g,carbs_per_100g,sugar_per_100g,fiber_per_100g,protein_per_100g,salt_per_100g,is_custom) VALUES ('Nudeln','Pasta',200,2,30,3,4,10,0.5,1);");
+		await test.database.run("INSERT INTO recipes(name_de,name_en) VALUES ('Gericht','Dish');");
+		await test.database.run("INSERT INTO recipe_ingredients(recipe_id,food_id,amount_grams) VALUES (1,1,150);");
+	}
+	const food = legacy ? (await test.service.foods.getFoodById(1))! : (await test.service.foods.createFood(foodInput))!;
+	const recipe = legacy ? (await test.service.recipes.getRecipeById(1))! : (await test.service.recipes.createRecipe({ nameDe: "Gericht", nameEn: "Dish", ingredients: [{ foodId: food.id, amountGrams: 150 }] }))!;
 	const meal = (await test.service.mealLogs.createMealLog({ loggedAt: "2026-10-05 12:00:00", recipeId: recipe.id, profiles: [{ profileId: profile.id, portionGrams: 100.125 }] }))!;
 	return { profile, food, recipe, meal };
 }
@@ -36,8 +42,8 @@ describe("safe schema v2 migration", () => {
 		await migrate(test, save);
 		const backup = parseBackupJson(JSON.stringify(await test.service.backups!.exportBackup()));
 		expect(backup.data).toEqual(previous.data);
-		expect(backup.version).toBe(2);
-		if (backup.version !== 2) throw new Error("expected v2");
+		expect(backup.version).toBe(3);
+		if (backup.version === 1) throw new Error("expected identities");
 		expect(backup.identities).toHaveLength(6);
 		expect(backup.identities.every((identity) => isUuid(identity.uuid))).toBe(true);
 		expect(new Set(backup.identities.map((identity) => identity.uuid)).size).toBe(6);
@@ -126,7 +132,7 @@ describe("transactional aggregate outbox", () => {
 		expect(new Set(changes.map((op) => op.batchId)).size).toBe(1);
 		expect(changes.find((op) => op.entity === "recipes")!.payload.ingredients).toEqual([]);
 		const backup = parseBackupJson(JSON.stringify(await test.service.backups!.exportBackup()));
-		if (backup.version !== 2) throw new Error("expected v2");
+		if (backup.version === 1) throw new Error("expected identities");
 		expect(backup.tombstones.map((row) => row.entity).sort()).toEqual(["foods", "meal_log_profiles", "meal_logs", "recipe_ingredients"]);
 	});
 

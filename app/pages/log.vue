@@ -70,6 +70,15 @@
             <span class="text-sm font-semibold text-slate-500">{{ totalWeightGrams }}g</span>
           </div>
 
+          <label class="block space-y-1.5">
+            <span class="text-sm font-medium">{{ $t('mealLog.portions.unit') }}</span>
+            <select v-model="quantityUnit" class="field-input">
+              <option value="grams">{{ $t('mealLog.portions.grams') }}</option>
+              <option value="portions" :disabled="!sourcePortionSize">{{ $t('mealLog.portions.count') }}</option>
+            </select>
+          </label>
+          <p class="text-xs text-slate-500">{{ sourcePortionSize ? $t('mealLog.portions.size', { grams: sourcePortionSize }) : $t('mealLog.portions.noSize') }}</p>
+
           <div v-if="profiles.length === 0" class="rounded-2xl border border-dashed border-slate-300 p-4 text-center text-sm text-slate-500 dark:border-slate-700">
             {{ $t('mealLog.portions.noProfiles') }}
           </div>
@@ -80,13 +89,14 @@
               <span class="text-xs text-slate-500">{{ profile.dailyCaloriesTarget }} kcal</span>
             </span>
             <input
-              v-model.number="profilePortions[profile.id]"
+              :value="displayedQuantity(profilePortions[profile.id] ?? 0, quantityUnit, sourcePortionSize)"
+              @input="setProfileQuantity(profile.id, ($event.target as HTMLInputElement).value)"
               min="0"
-              step="1"
+              step="any"
               inputmode="decimal"
               type="number"
               class="field-input text-right"
-              :placeholder="$t('mealLog.portions.grams')"
+              :placeholder="$t(quantityUnit === 'grams' ? 'mealLog.portions.grams' : 'mealLog.portions.count')"
             >
           </label>
         </section>
@@ -169,6 +179,7 @@ import { useProfiles } from '~/composables/useProfiles'
 import { useRecipes } from '~/composables/useRecipes'
 import { useBundledFoodSearch, type BundledFoodSearchResult } from '~/composables/useBundledFoodSearch'
 import { mealSourceMatches } from '~/utils/meal-source-search'
+import { quantityGrams, displayedQuantity, type QuantityUnit } from '../../shared/domain/portions'
 import type { Food, Recipe, MealLog, NutritionValues, RecipeNutrition } from '../../shared/domain/types'
 
 const route = useRoute()
@@ -246,6 +257,17 @@ async function selectSource(type: 'food' | 'recipe' | 'bundled', item: Food | Re
   finally { importing.value = false }
 }
 
+const quantityUnit = ref<QuantityUnit>('grams')
+const sourcePortionSize = computed(() => {
+  const source = form.sourceType === 'food' ? foods.value.find(item => item.id === form.sourceId) : recipes.value.find(item => item.id === form.sourceId)
+  return source?.portionSizeGrams ?? null
+})
+watch(sourcePortionSize, size => { if (!size) quantityUnit.value = 'grams' }, { flush: 'sync' })
+function setProfileQuantity(profileId: number, value: string) {
+  try { profilePortions[profileId] = quantityGrams(Number(value), quantityUnit.value, sourcePortionSize.value) }
+  catch (error) { formError.value = validationMessage(error, t) }
+}
+
 const totalWeightGrams = computed(() => {
   return Math.round(Object.values(profilePortions).reduce((sum, value) => sum + Math.max(0, Number(value) || 0), 0) * 100) / 100
 })
@@ -319,6 +341,7 @@ function resetProfilePortions() {
 }
 
 function resetForm() {
+  quantityUnit.value = 'grams'
   form.loggedAt = nowForInput()
   form.sourceType = 'food'
   form.sourceId = null
@@ -359,6 +382,7 @@ async function submitForm() {
 }
 
 function editMealLog(mealLog: MealLog) {
+  quantityUnit.value = 'grams'
   editingMealLogId.value = mealLog.id
   editingRevision.value = mealLog.revision
   form.loggedAt = toInputDateTime(mealLog.loggedAt)

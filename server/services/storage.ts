@@ -32,10 +32,16 @@ export async function aggregateSnapshot(sql: ServerSql, entity: SyncAggregate, u
 export const readServerAggregate = (database: ServerDatabase, entity: SyncAggregate, uuid: string) => database.transaction((sql) => aggregateSnapshot(sql, entity, uuid));
 
 export async function upsertRow(sql: ServerSql, table: ServerTable, data: Record<string, unknown>) {
-	const values = serverTables[table].columns.map((field) => data[field] !== null && field !== "logged_at" && field.endsWith("_at") ? sqlTimestamp(String(data[field])) : data[field]);
+	const previous = (await sql.query<Record<string, unknown>>(tableStatements[table].select, [data.id]))[0];
+	const values = serverTables[table].columns.map((field) => {
+		// Replay older immutable requests without clearing a subsequently added
+		// field. Explicit null still deliberately removes the portion size.
+		const value = field === "portion_size_grams" && data[field] === undefined ? previous?.[field] ?? null : data[field];
+		return value !== null && field !== "logged_at" && field.endsWith("_at") ? sqlTimestamp(String(value)) : value;
+	});
 	// ON DUPLICATE KEY UPDATE would also match another row's unique EAN
 	// or portion key. Target ONLY this UUID; let other uniqueness collisions fail.
-	const exists = (await sql.query(tableStatements[table].select, [data.id])).length > 0;
+	const exists = !!previous;
 	await sql.write(exists ? tableStatements[table].update : tableStatements[table].insert, exists ? [...values, null, data.id] : [data.id, ...values, null]);
 	await sql.write("UPDATE sync_identities SET deleted_at=NULL WHERE uuid=?", [data.id]);
 }

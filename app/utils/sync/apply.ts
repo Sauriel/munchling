@@ -75,7 +75,7 @@ async function writeRow(sql: SqlExecutor, entity: SyncEntity, ownerEntity: SyncA
 	for (const field of wireColumns[entity]) {
 		const value = data[field];
 		if (value != null && refs[field]) { const record = await meta(sql, String(value)); if (!record || record.entity !== refs[field] || record.deleted_at !== null || record.local_id === null) throw new SyncClientError("missingReference"); values.push(record.local_id); }
-		else values.push(value as SqlValue);
+		else values.push((value ?? null) as SqlValue);
 	}
 	// Identifiers come only from validated entity enums and immutable wire lists.
 	const statements = receiveSql[entity];

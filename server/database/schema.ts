@@ -6,7 +6,7 @@ name LONGTEXT NOT NULL, daily_calories_target BIGINT NOT NULL CHECK (daily_calor
 daily_protein_target DOUBLE CHECK (daily_protein_target>=0), daily_carbs_target DOUBLE CHECK (daily_carbs_target>=0),
 daily_fat_target DOUBLE CHECK (daily_fat_target>=0), daily_sugar_target DOUBLE CHECK (daily_sugar_target>=0),
 daily_fiber_target DOUBLE CHECK (daily_fiber_target>=0), daily_salt_target DOUBLE CHECK (daily_salt_target>=0)` },
-	foods: { columns: ["name_de", "name_en", "brand", "ean", "calories_per_100g", "fat_per_100g", "carbs_per_100g", "sugar_per_100g", "fiber_per_100g", "protein_per_100g", "salt_per_100g", "is_custom", "created_at", "updated_at"], definitions: `
+	foods: { columns: ["name_de", "name_en", "brand", "ean", "calories_per_100g", "fat_per_100g", "carbs_per_100g", "sugar_per_100g", "fiber_per_100g", "protein_per_100g", "salt_per_100g", "is_custom", "portion_size_grams", "created_at", "updated_at"], definitions: `
 name_de LONGTEXT NOT NULL, name_en LONGTEXT NOT NULL, brand LONGTEXT,
 ean VARCHAR(255) COLLATE utf8mb4_bin,
 active_ean VARCHAR(255) COLLATE utf8mb4_bin GENERATED ALWAYS AS (CASE WHEN deleted_at IS NULL THEN ean ELSE NULL END) PERSISTENT,
@@ -15,7 +15,7 @@ calories_per_100g DOUBLE NOT NULL CHECK (calories_per_100g>=0), fat_per_100g DOU
 carbs_per_100g DOUBLE NOT NULL CHECK (carbs_per_100g>=0), sugar_per_100g DOUBLE NOT NULL CHECK (sugar_per_100g>=0),
 fiber_per_100g DOUBLE NOT NULL CHECK (fiber_per_100g>=0), protein_per_100g DOUBLE NOT NULL CHECK (protein_per_100g>=0),
 salt_per_100g DOUBLE NOT NULL CHECK (salt_per_100g>=0), is_custom TINYINT NOT NULL CHECK (is_custom IN (0,1))` },
-	recipes: { columns: ["name_de", "name_en", "description", "is_sub_recipe", "created_at", "updated_at"], definitions: `
+	recipes: { columns: ["name_de", "name_en", "description", "is_sub_recipe", "portion_size_grams", "created_at", "updated_at"], definitions: `
 name_de LONGTEXT NOT NULL, name_en LONGTEXT NOT NULL, description LONGTEXT,
 is_sub_recipe TINYINT NOT NULL CHECK (is_sub_recipe IN (0,1))` },
 	meal_logs: { columns: ["logged_at", "food_id", "recipe_id", "total_weight_grams", "created_at", "updated_at"], definitions: `
@@ -85,6 +85,10 @@ const snapshotStatements = [
 export const serverMigrations = [
 	{ version: 1, name: "household_data_and_versioned_changes", statements: initialStatements },
 	{ version: 2, name: "durable_consistent_download_snapshots", statements: snapshotStatements },
+	{ version: 3, name: "food_and_recipe_portion_sizes", statements: [
+		"ALTER TABLE foods ADD COLUMN portion_size_grams DOUBLE NULL CHECK(portion_size_grams IS NULL OR portion_size_grams > 0)",
+		"ALTER TABLE recipes ADD COLUMN portion_size_grams DOUBLE NULL CHECK(portion_size_grams IS NULL OR portion_size_grams > 0)",
+	] },
 ];
 
 export const tableStatements = Object.fromEntries(Object.entries(serverTables).map(([name, table]) => [name, {

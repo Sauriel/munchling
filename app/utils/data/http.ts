@@ -65,8 +65,8 @@ export function createHttpDataService(address: string, storage: JournalStore, op
 	}
 	const fields = {
 		profiles: { name: "name", dailyCaloriesTarget: "daily_calories_target", dailyProteinTarget: "daily_protein_target", dailyCarbsTarget: "daily_carbs_target", dailyFatTarget: "daily_fat_target", dailySugarTarget: "daily_sugar_target", dailyFiberTarget: "daily_fiber_target", dailySaltTarget: "daily_salt_target" },
-		foods: { nameDe: "name_de", nameEn: "name_en", brand: "brand", ean: "ean", caloriesPer100g: "calories_per_100g", fatPer100g: "fat_per_100g", carbsPer100g: "carbs_per_100g", sugarPer100g: "sugar_per_100g", fiberPer100g: "fiber_per_100g", proteinPer100g: "protein_per_100g", saltPer100g: "salt_per_100g", isCustom: "is_custom" },
-		recipes: { nameDe: "name_de", nameEn: "name_en", description: "description", isSubRecipe: "is_sub_recipe" },
+		foods: { nameDe: "name_de", nameEn: "name_en", brand: "brand", ean: "ean", caloriesPer100g: "calories_per_100g", fatPer100g: "fat_per_100g", carbsPer100g: "carbs_per_100g", sugarPer100g: "sugar_per_100g", fiberPer100g: "fiber_per_100g", proteinPer100g: "protein_per_100g", saltPer100g: "salt_per_100g", isCustom: "is_custom", portionSizeGrams: "portion_size_grams" },
+		recipes: { nameDe: "name_de", nameEn: "name_en", description: "description", isSubRecipe: "is_sub_recipe", portionSizeGrams: "portion_size_grams" },
 	};
 	function mapped(entity: keyof typeof fields, input: SimpleInput, old?: Record<string, unknown>) {
 		const timestamp = new Date().toISOString(), data: Record<string, unknown> = old ? { ...old, updated_at: timestamp } : { id: createUuid(), created_at: timestamp, updated_at: null };

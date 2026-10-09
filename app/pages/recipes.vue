@@ -51,6 +51,12 @@
         </label>
 
 
+        <label class="block space-y-1.5">
+          <span class="text-sm font-medium">{{ $t('common.portionSize') }}</span>
+          <input v-model.number="form.portionSizeGrams" min="0.01" step="0.01" type="number" inputmode="decimal" class="field-input" :placeholder="$t('common.portionSizeHint')">
+          <span class="block text-xs text-slate-500">{{ $t('common.portionSizeHint') }}</span>
+        </label>
+
         <section class="space-y-3">
           <div class="flex items-center justify-between gap-3">
             <h3 class="font-semibold">{{ $t('recipes.ingredients.title') }}</h3>
@@ -243,6 +249,7 @@ type IngredientSearchResult = {
 }
 
 type RecipeForm = {
+  portionSizeGrams: number | ''
   name: string
   description: string
   ingredients: IngredientRow[]
@@ -266,7 +273,7 @@ const expandedRecipeId = ref<number | null>(null)
 const emptyNutrition = (): NutritionValues => ({ calories: 0, fat: 0, carbs: 0, sugar: 0, fiber: 0, protein: 0, salt: 0 })
 const emptyRecipeNutrition = (): RecipeNutrition => ({ totalWeightGrams: 0, total: emptyNutrition(), per100g: emptyNutrition() })
 
-const emptyForm = (): RecipeForm => ({ name: '', description: '', ingredients: [] })
+const emptyForm = (): RecipeForm => ({ portionSizeGrams: '', name: '', description: '', ingredients: [] })
 const form = reactive<RecipeForm>(emptyForm())
 
 function nextClientId() {
@@ -474,6 +481,7 @@ async function editRecipe(recipe: Recipe) {
   editingRevision.value = recipeWithIngredients.revision
   Object.assign(form, {
     name: recipeWithIngredients.nameDe,
+    portionSizeGrams: recipeWithIngredients.portionSizeGrams ?? '',
     description: recipeWithIngredients.description ?? '',
     ingredients: recipeWithIngredients.ingredients.map((ingredient) => ({
       clientId: nextClientId(),
@@ -508,6 +516,7 @@ async function submitForm() {
     const input = {
       nameDe: form.name,
       nameEn: form.name,
+      portionSizeGrams: form.portionSizeGrams === '' ? null : Number(form.portionSizeGrams),
       description: optionalText(form.description),
       isSubRecipe: false,
       ingredients: toIngredientInputs()

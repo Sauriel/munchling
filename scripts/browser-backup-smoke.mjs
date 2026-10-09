@@ -114,7 +114,7 @@ try {
 	await navigate("/settings");
 	await wait(() => evaluate('Boolean(document.querySelector("#backup-file"))'), "backup controls");
 	const empty = await download("Export backup");
-	if (empty.data.version !== 2 || empty.data.schemaVersion !== 2 || empty.data.identities.length !== 0 || empty.data.data.profiles.length !== 0) throw new Error("Expected an empty v2 database.");
+	if (empty.data.version !== 3 || empty.data.schemaVersion !== 3 || empty.data.identities.length !== 0 || empty.data.data.profiles.length !== 0) throw new Error("Expected an empty v3 backup.");
 	console.log("PASS: browser exports the empty local database");
 
 	await navigate("/profiles");
@@ -153,15 +153,15 @@ try {
 	console.log("PASS: safety backup contains previous data and survives reload");
 	await restoreFile(recovery.file);
 	const restored = await download("Export backup");
-	if (restored.data.identities[0]?.uuid !== originalUuid) throw new Error("V2 restore changed the profile UUID.");
-	console.log("PASS: v2 restore preserves UUIDs");
+	if (restored.data.identities[0]?.uuid !== originalUuid) throw new Error("Identity-preserving restore changed the profile UUID.");
+	console.log("PASS: v3 restore preserves UUIDs");
 	const legacyFile = path.join(downloads, "legacy-v1.json");
 	fs.writeFileSync(legacyFile, JSON.stringify({ format: "munchling-backup", version: 1, schemaVersion: 1, exportedAt: populated.data.exportedAt, data: populated.data.data }));
 	await restoreFile(legacyFile);
 	await cdp("Page.reload");
 	await wait(() => evaluate('Boolean(document.querySelector("#backup-file"))'), "settings after legacy restore");
 	const legacyRestored = await download("Export backup");
-	if (legacyRestored.data.version !== 2 || legacyRestored.data.data.profiles[0]?.name !== "Browser Smoke" || !legacyRestored.data.identities[0]?.uuid || legacyRestored.data.identities[0].uuid === originalUuid) throw new Error("Legacy restore did not create a new persistent identity.");
+	if (legacyRestored.data.version !== 3 || legacyRestored.data.data.profiles[0]?.name !== "Browser Smoke" || !legacyRestored.data.identities[0]?.uuid || legacyRestored.data.identities[0].uuid === originalUuid) throw new Error("Legacy restore did not create a new persistent identity.");
 	console.log("PASS: legacy v1 restore creates persistent new UUIDs");
 	if (exceptions.length) throw new Error("Uncaught browser exceptions: " + exceptions.join("; "));
 	console.log("PASS: no uncaught browser exceptions");

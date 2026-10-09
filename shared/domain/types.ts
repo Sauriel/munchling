@@ -42,6 +42,7 @@ export type Food = {
 	proteinPer100g: number;
 	saltPer100g: number;
 	isCustom: boolean;
+	portionSizeGrams?: number | null;
 	createdAt: string;
 	updatedAt: string | null;
 };
@@ -59,6 +60,7 @@ export type Recipe = {
 	nameEn: string;
 	description: string | null;
 	isSubRecipe: boolean;
+	portionSizeGrams?: number | null;
 	createdAt: string;
 	updatedAt: string | null;
 };
@@ -79,6 +81,7 @@ export type CreateRecipeInput = {
 	nameEn: string;
 	description?: string | null;
 	isSubRecipe?: boolean;
+	portionSizeGrams?: number | null;
 	ingredients?: RecipeIngredientInput[];
 };
 export type UpdateRecipeInput = Partial<CreateRecipeInput>;

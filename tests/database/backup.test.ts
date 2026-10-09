@@ -125,10 +125,10 @@ describe("local JSON backups", () => {
 	it("preserves v2 UUIDs and all relationship tombstones", async () => {
 		await source.service.foods.deleteFood(1);
 		const deleted = await source.service.backups!.exportBackup();
-		expect(deleted.version).toBe(2);
+		expect(deleted.version).toBe(3);
 		await target.service.backups!.restoreBackup(deleted, async () => {});
 		const restored = await target.service.backups!.exportBackup();
-		if (deleted.version !== 2 || restored.version !== 2) throw new Error("expected v2");
+		if (deleted.version === 1 || restored.version === 1) throw new Error("expected identities");
 		expect(restored.identities).toEqual(deleted.identities);
 		expect(restored.tombstones).toEqual(deleted.tombstones);
 		expect(restored.data).toEqual(deleted.data);
@@ -140,7 +140,7 @@ describe("local JSON backups", () => {
 		const first = await target.service.backups!.exportBackup();
 		await target.service.backups!.restoreBackup(legacy, async () => {});
 		const second = await target.service.backups!.exportBackup();
-		if (first.version !== 2 || second.version !== 2) throw new Error("expected v2");
+		if (first.version === 1 || second.version === 1) throw new Error("expected identities");
 		expect(second.data).toEqual(legacy.data);
 		expect(second.identities.map((row) => row.uuid)).not.toEqual(first.identities.map((row) => row.uuid));
 		expect(second.tombstones).toEqual([]);
@@ -185,7 +185,7 @@ describe("local JSON backups", () => {
 
 	it.each(["missing identity", "wrong local ID", "duplicate UUID", "invalid UUID", "overlapping tombstone", "unresolved aggregate"])("rejects %s before the safety writer or any SQL mutation", async (failure) => {
 		const bad = structuredClone(backup);
-		if (bad.version !== 2) throw new Error("expected v2");
+		if (bad.version === 1) throw new Error("expected identities");
 		if (failure === "missing identity") bad.identities.pop();
 		if (failure === "wrong local ID") bad.identities[0]!.localId = 9999;
 		if (failure === "duplicate UUID") bad.identities[1]!.uuid = bad.identities[0]!.uuid;

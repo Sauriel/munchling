@@ -145,4 +145,8 @@ export const schemaMigrations: DatabaseMigration[] = [
 	{ version: 2, name: "global_identities_and_sync_outbox", statements: syncSchemaStatements },
 	{ version: 3, name: "durable_sync_receive_control", statements: receiveSchemaStatements },
 	{ version: 4, name: "manual_sync_upload_journal", statements: runnerSchemaStatements },
+	{ version: 5, name: "food_and_recipe_portion_sizes", statements: `
+		ALTER TABLE foods ADD COLUMN portion_size_grams REAL CHECK(portion_size_grams IS NULL OR portion_size_grams > 0);
+		ALTER TABLE recipes ADD COLUMN portion_size_grams REAL CHECK(portion_size_grams IS NULL OR portion_size_grams > 0);
+	` },
 ];
