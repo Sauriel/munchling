@@ -18,10 +18,16 @@
         </div>
       </div>
 
+      <div class="grid gap-3 sm:grid-cols-2">
       <NuxtLink to="/log" class="flex min-h-12 items-center justify-center gap-2 rounded-2xl bg-munchling-600 px-5 font-semibold text-white shadow-lg shadow-munchling-600/20 transition active:scale-[0.98]">
         <Icon name="ph:plus-circle-duotone" class="size-5" />
         {{ $t('mealLog.actions.create') }}
       </NuxtLink>
+      <NuxtLink v-if="profile" :to="{ path: '/activity-log', query: { profile: String(profile.id) } }" class="flex min-h-12 items-center justify-center gap-2 rounded-2xl bg-munchling-600 px-5 font-semibold text-white shadow-lg shadow-munchling-600/20 transition active:scale-[0.98]">
+        <Icon name="ph:plus-circle-duotone" class="size-5" />
+        {{ $t('activities.add') }}
+      </NuxtLink>
+      </div>
     </header>
 
     <section v-if="!profile" class="rounded-3xl border border-dashed border-slate-300 p-6 text-center dark:border-slate-700">
@@ -68,12 +74,9 @@
             <p class="mt-1 text-right text-xs font-semibold text-slate-500">{{ target.percent }}%</p>
           </article>
         </div>
+        <p v-if="todayActivityBonus" class="mt-4 text-sm text-slate-500">{{ $t('activities.bonus', { calories: todayActivityBonus }) }}</p>
       </section>
 
-      <div class="panel-stack">
-        <ActivityEntry :profile-id="profile.id" />
-        <p v-if="todayActivityBonus" class="text-sm text-slate-500">{{ $t('activities.bonus', { calories: todayActivityBonus }) }}</p>
-      </div>
       <section class="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
         <div class="mb-4 flex items-center justify-between">
           <div>
@@ -165,7 +168,7 @@ const history = ref<Array<{ date: string; label: string; calories: number }>>([]
 const profile = computed(() => profiles.value.find((item) => item.id === profileId.value) ?? null)
 const todayDate = computed(() => dateKey(new Date()))
 const formattedToday = computed(() => new Date().toLocaleDateString())
-const { activityLogs } = useActivities()
+const { activityLogs, refreshActivities } = useActivities()
 const todayActivityBonus = computed(() => activityBonus(activityLogs.value, profileId.value, todayDate.value))
 const todayCalorieTarget = computed(() => (profile.value?.dailyCaloriesTarget ?? 0) + todayActivityBonus.value)
 
@@ -297,7 +300,7 @@ watch(profile, async () => {
 })
 
 onMounted(async () => {
-  await refreshProfiles()
+  await Promise.all([refreshProfiles(), refreshActivities()])
   await refreshDashboard()
 })
 </script>

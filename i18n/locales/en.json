@@ -19,6 +19,7 @@
     "name": "Name", "duration": "Duration per unit (minutes)", "calories": "Calories per unit (kcal)",
     "perUnit": "1 unit: {minutes} minutes · {calories} kcal", "preview": "{durationMinutes} minutes · +{calories} kcal",
     "added": "Activity logged.", "templates": "Activity templates", "logs": "Logged activities", "empty": "No activity templates yet.", "noProfiles": "Create a profile first.",
+    "profileUnavailable": "The selected profile is unavailable. Please return to the dashboard.",
     "confirmTemplateDelete": "Delete template {name}? Previously logged activities are kept.", "confirmLogDelete": "Delete entry {name}? Its calorie bonus for that day is removed.", "bonus": "+{calories} kcal from activities today."
   },
   "common": {

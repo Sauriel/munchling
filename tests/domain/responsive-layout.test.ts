@@ -3,7 +3,7 @@ import { describe, it, expect } from 'vitest'
 import { parse, compileTemplate } from 'vue/compiler-sfc'
 import { navigationItems, isNavigationActive } from '../../app/utils/navigation'
 
-const pages = ['index', 'dashboard/[id]', 'foods', 'recipes', 'log', 'activities', 'profiles', 'settings']
+const pages = ['index', 'dashboard/[id]', 'foods', 'recipes', 'log', 'activity-log', 'activities', 'profiles', 'settings']
 describe('single responsive shell and navigation', () => {
   it.each(pages)('keeps %s as one compilable main without a second navigation or a viewport-controlled form', (page) => {
     const filename = new URL(`../../app/pages/${page}.vue`, import.meta.url)
@@ -27,7 +27,7 @@ describe('single responsive shell and navigation', () => {
     expect(navigationItems.map(item => item.to)).toEqual(['/','/foods','/recipes','/activities','/settings'])
   })
   it.each([
-    ['/', '/'], ['/log', '/'], ['/dashboard/7', '/'], ['/foods', '/foods'], ['/foods/7', '/foods'],
+    ['/', '/'], ['/log', '/'], ['/activity-log', '/'], ['/dashboard/7', '/'], ['/foods', '/foods'], ['/foods/7', '/foods'],
     ['/recipes', '/recipes'], ['/activities', '/activities'], ['/profiles', '/settings'], ['/settings', '/settings'],
   ])('selects exactly one navigation destination for %s', (path,destination) => {
     expect(navigationItems.filter(item => isNavigationActive(path,item.to)).map(item => item.to)).toEqual([destination])

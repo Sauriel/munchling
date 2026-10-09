@@ -18,7 +18,7 @@ const fixture = { format: 'munchling-backup', version: 1, schemaVersion: 1, expo
   activityLogs: [{ id: 1,profileId: 1,date: today,name: 'Activity '+long,durationMinutes: 30,calories: 200,units: 1.5,createdAt: stamp,updatedAt: null }],
 } };
 const click = text => evaluate(`(() => { const b = [...document.querySelectorAll('button')].find(b => b.textContent.trim() === ${JSON.stringify(text)}); if (!b || b.disabled) throw new Error('Button missing: '+${JSON.stringify(text)}); b.click(); })()`);
-const routes = ['/', '/dashboard/1', '/foods', '/recipes', '/log', '/activities', '/profiles', '/settings'];
+const routes = ['/', '/dashboard/1', '/foods', '/recipes', '/log', '/activity-log', '/activity-log?profile=1', '/activities', '/profiles', '/settings'];
 const widths = [320,390,767,768,1023,1024,1440,1920];
 let cases = 0;
 try {
@@ -58,12 +58,27 @@ try {
     console.log('PASS: '+route+' at '+widths.length+' widths with long populated data');
   }
 
+  for (const [route,href,count] of [['/','/activity-log',4],['/dashboard/1','/activity-log?profile=1',1]]) {
+    await navigate(route);
+    await wait(() => evaluate(`Boolean(document.querySelector(${JSON.stringify(`main a[href="${href}"]`)}))`),'activity button '+route);
+    await wait(() => evaluate('document.querySelector("main").textContent.match(/2300\\s*kcal/) !== null'),'cold dashboard activity bonus '+route);
+    if (await evaluate('Boolean(document.querySelector("main form"))')) throw new Error('Dashboard still mounts an entry form');
+    await evaluate(`document.querySelector(${JSON.stringify(`main a[href="${href}"]`)}).click()`);
+    await wait(() => evaluate('location.pathname === "/activity-log" && document.querySelectorAll("main input[type=number]").length === '+count),'activity route profile scope '+route);
+    if (await evaluate('document.querySelector("main header a").getAttribute("href")') !== route) throw new Error('Activity back link loses dashboard context');
+  }
+  await navigate('/activity-log?profile=999'); await wait(() => evaluate('Boolean(document.querySelector("main [role=alert]"))'),'missing selected profile');
+  if (await evaluate('Boolean(document.querySelector("main form"))')) throw new Error('Missing profile fell back to household entry');
+  console.log('PASS: dashboard buttons navigate with correct profile scope, back link and preserved cold-start activity bonus');
+
   // CSS changes must not remount or write forms. Keep actual DOM identities.
-  for (const route of ['/profiles','/foods','/recipes','/activities','/log?food=1']) {
+  for (const route of ['/profiles','/foods','/recipes','/activities','/log?food=1','/activity-log','/activity-log?profile=1']) {
     await navigate(route); await wait(() => evaluate('Boolean(document.querySelector("form input"))'),'draft '+route);
     if (route.startsWith('/log')) {
       await wait(() => evaluate('document.querySelector("form select")?.options[1]?.disabled === false'),'source portion size');
       await evaluate(`(() => { const s=document.querySelector('form select'); s.value='portions'; s.dispatchEvent(new Event('change',{bubbles:true})); const n=document.querySelector('form input[type=number]'); n.value='1.5'; n.dispatchEvent(new Event('input',{bubbles:true})); })()`);
+    } else if (route.startsWith('/activity-log')) {
+      await evaluate(`(() => { const s=document.querySelector('form select'); s.value=s.options[1].value; s.dispatchEvent(new Event('change',{bubbles:true})); const n=document.querySelector('form input[type=number]'); n.value='1.5'; n.dispatchEvent(new Event('input',{bubbles:true})); })()`);
     } else await evaluate(`(() => { const e=document.querySelector('form input'); e.value='Unsaved draft '+${JSON.stringify(route)}; e.dispatchEvent(new Event('input',{bubbles:true})); })()`);
     await settle();
     await evaluate('window.__draft = [...document.querySelectorAll("form input,form select,form textarea")].map(node => ({node,value:node.value}))');

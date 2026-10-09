@@ -19,6 +19,7 @@
     "name": "Name", "duration": "Dauer pro Einheit (Minuten)", "calories": "Kalorien pro Einheit (kcal)",
     "perUnit": "1 Einheit: {minutes} Minuten · {calories} kcal", "preview": "{durationMinutes} Minuten · +{calories} kcal",
     "added": "Aktivität eingetragen.", "templates": "Aktivitätsvorlagen", "logs": "Eingetragene Aktivitäten", "empty": "Noch keine Aktivitätsvorlagen.", "noProfiles": "Bitte zuerst ein Profil anlegen.",
+    "profileUnavailable": "Das gewählte Profil ist nicht verfügbar. Bitte gehe zurück zum Dashboard.",
     "confirmTemplateDelete": "Vorlage {name} löschen? Bereits eingetragene Aktivitäten bleiben erhalten.", "confirmLogDelete": "Eintrag {name} löschen? Der Kalorienbonus für diesen Tag wird entfernt.", "bonus": "Heute +{calories} kcal durch Aktivitäten."
   },
   "common": {

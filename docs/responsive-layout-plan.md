@@ -1,6 +1,6 @@
 # Responsive Layout — freigegebener Plan
 
-**Status: ausdrücklich freigegeben, umgesetzt und lokal geprüft. Live-Abnahme auf Handy/Dokploy noch offen.**
+**Status: ausdrücklich freigegeben, umgesetzt, lokal geprüft und durch Nutzer auf Webseite und Handy live abgenommen.**
 
 Die zentrale Hülle ist `app/app.vue` mit `AppShell` und `AppNavigation`: Nuxt 4 verwendet hier `app/` als Quellverzeichnis. Die frühere `app.vue` im Repository-Wurzelverzeichnis wurde nicht als App-Komponente geladen; der Web-Schreibstatus sitzt nun ebenfalls im tatsächlich verwendeten Rahmen.
 
@@ -83,8 +83,10 @@ Keine Änderungen an Datenmodellen, Migrationen, Backups, Sync-/Journal-Logik, a
 
 ## Überprüfung
 
-`pnpm generate && pnpm test:responsive` prüft alle acht Seiten mit gefüllten Testdaten und langen Namen/EANs bei 320/390/767/768/1023/1024/1440/1920 px. Dazu kommen zoomgroße CSS-Viewports, Querformat, verringerte Höhe für Bildschirmtastaturen, Dark Mode und die Position des Web-Schreibhinweises. Größenwechsel müssen dieselben Formular-DOM-Knoten und ungespeicherten Werte erhalten. Ein abschließender Backup-Export vergleicht die gespeicherten Fachdaten vollständig mit dem importierten Testbestand. Das läuft in einer isolierten Browserdatenbank, nicht auf den Haushaltsdaten.
+`pnpm generate && pnpm test:responsive` prüft die Seiten einschließlich der separaten Aktivitätseingabe mit gefüllten Testdaten und langen Namen/EANs bei 320/390/767/768/1023/1024/1440/1920 px. Dazu kommen zoomgroße CSS-Viewports, Querformat, verringerte Höhe für Bildschirmtastaturen, Dark Mode und die Position des Web-Schreibhinweises. Größenwechsel müssen dieselben Formular-DOM-Knoten und ungespeicherten Werte erhalten. Ein abschließender Backup-Export vergleicht die gespeicherten Fachdaten vollständig mit dem importierten Testbestand. Das läuft in einer isolierten Browserdatenbank, nicht auf den Haushaltsdaten.
 
-38 gezielte UI-/Navigationsprüfungen, Typecheck, Server-/Static-/Android-Build, 69 responsive Browserfälle und der bestehende Browser-Backup-Smoke bestanden. Die Fachskripte aller acht Seiten sind unverändert; Logo und Kalorienanzeige bleiben auch mit langen Namen lesbar.
+Zur ursprünglichen Layoutabnahme: 38 gezielte UI-/Navigationsprüfungen, Typecheck, Server-/Static-/Android-Build, 69 responsive Browserfälle und der bestehende Browser-Backup-Smoke bestanden. Die Fachskripte aller acht Seiten sind unverändert; Logo und Kalorienanzeige bleiben auch mit langen Namen lesbar.
+
+Die Dashboard-Aktivitätseingabe liegt nun auf `/activity-log`, optional mit `?profile=<id>` für genau ein Profil. Beide Dashboard-Ansichten laden ihren Aktivitätsbonus unabhängig vom Eingabeformular. Die erweiterte Browsermatrix prüft auch die Links, Profilbegrenzung, ungültige Profile und Formularentwürfe dieser Seite.
 
 Die Browserprüfung ist keine iOS-Abnahme und ersetzt nicht den echten Handy-/Dokploy-Test. Optionale Bildschirmbilder bleiben unter `MUNCHLING_RESPONSIVE_ARTIFACT_DIR`; ohne diese Variable liegen sie beim temporären Browserprofil. Automatischer Sync bleibt aus.

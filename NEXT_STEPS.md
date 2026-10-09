@@ -37,12 +37,17 @@
   - [x] 47 gezielte Persistenz-/Migrations-/UI-/Restore-/Runner-Prüfungen und Typecheck bestanden; Backend und APK gebaut, unabhängige Handy-Sicherung und Installation ohne Zurücksetzen.
   - [x] Passenden Dokploy-Rollout durch Nutzer-Live-Abnahme bestätigt.
   - [x] Live-Abnahme des vollständigen Punkts: Checkbox setzen, Einstellungen/App neu öffnen, widerrufen und erneut öffnen; Sync bleibt eine bewusste Aktion.
-- [ ] Die Webseiten Ansicht sollte Responsive auf die Volle Bildschirmbreite ausgelegt sein (Das Layout darf dafür angepasst werden) Wir brauchen am Ende eine Mobile ( und App) Ansicht und eine Desktop / Tablet Ansicht. Wir verfolgen dabei dem Mobile-First Ansatz.
+- [x] Die Webseiten Ansicht sollte Responsive auf die Volle Bildschirmbreite ausgelegt sein (Das Layout darf dafür angepasst werden) Wir brauchen am Ende eine Mobile ( und App) Ansicht und eine Desktop / Tablet Ansicht. Wir verfolgen dabei dem Mobile-First Ansatz.
   - [x] Bestehende Seitenstruktur prüfen und Mobile-first-Plan vorlegen: [Layoutplan](docs/responsive-layout-plan.md).
   - [x] Navigation und Mehrspaltenaufteilungen ausdrücklich durch Nutzer freigegeben.
   - [x] Gemeinsame App-Hülle und Navigation unten/oben/links, volle Arbeitsbreite und seitenbezogene Raster für alle acht Seiten; keine doppelten Formulare oder größenabhängigen Mounts.
   - [x] Abschlussprüfung: 38 gezielte UI-/Navigationsprüfungen, Typecheck, 69 gefüllte responsive Browserfälle, stabile Formularentwürfe/Portionen, unveränderte gespeicherte Fachdaten und Browser-Backup-Smoke; Server-/Static-/Android-Build bestanden.
-  - [ ] Live-Abnahme des vollständigen Layoutpunkts auf Handy und Dokploy; Größenwechsel, lange Inhalte, Tastatur/Safe Areas und sichtbare Schreib-/Sync-Hinweise prüfen.
+  - [x] Live-Abnahme des vollständigen Layoutpunkts auf Handy und Dokploy durch Nutzer bestätigt: funktioniert auf Webseite und Handy perfekt.
+- [ ] Im Dashboard „Aktivität hinzufügen“ als Button analog „Mahlzeit eintragen“ auf eine eigene Eingabeseite verlagern.
+  - [x] Allgemeines Dashboard: mehrere Profile mit eigenen Einheiten; Profil-Dashboard: nur das gewählte Profil. Eigene Seite `/activity-log` mit profilbezogenem Zurück-Link; ungültige/fehlende gewählte Profile führen nie zur Buchung für andere Profile.
+  - [x] Bestehende Buchungslogik wiederverwendet; Dashboards laden den Tagesbonus auch ohne Inline-Formular selbst.
+  - [x] 45 gezielte UI-/Routingprüfungen, Typecheck und 85 responsive Browserfälle bestanden; Server-/Static-/Android-Build und Handy-Update ohne Zurücksetzen mit frischer Sicherung.
+  - [ ] Live-Abnahme des vollständigen Punkts auf Webseite und Handy: beide Dashboard-Einstiege, Profilauswahl, Bruchteile, Zurück-Link und Tagesbonus prüfen.
 - [ ] Es muss möglich sein automatisches synchronisieren anschalten zu können (Beim App Start und beim wechseln in die App zurück, falls sie im Hintergrund lief) Dies sollte granular konfigurierbar sein.
   - Bestehenden manuellen Runner und dessen Single-Flight-, Journal- und Konfliktschutz wiederverwenden; Start und Rückkehr aus dem Hintergrund getrennt schaltbar, standardmäßig aus.
 

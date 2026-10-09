@@ -7,7 +7,7 @@ export const navigationItems = [
 ] as const
 
 export function isNavigationActive(path: string, destination: string) {
-  if (destination === '/') return path === '/' || path === '/log' || path.startsWith('/dashboard/')
+  if (destination === '/') return path === '/' || path === '/log' || path === '/activity-log' || path.startsWith('/dashboard/')
   if (destination === '/settings' && path === '/profiles') return true
   return path === destination || path.startsWith(`${destination}/`)
 }

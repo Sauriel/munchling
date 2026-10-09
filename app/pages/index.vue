@@ -13,10 +13,16 @@
         </div>
       </div>
 
-      <NuxtLink to="/log" class="page-action flex min-h-12 items-center justify-center gap-2 rounded-2xl bg-munchling-600 px-5 font-semibold text-white shadow-lg shadow-munchling-600/20 transition active:scale-[0.98]">
+      <div class="page-action grid gap-3 sm:grid-cols-2">
+      <NuxtLink to="/log" class="flex min-h-12 items-center justify-center gap-2 rounded-2xl bg-munchling-600 px-5 font-semibold text-white shadow-lg shadow-munchling-600/20 transition active:scale-[0.98]">
         <Icon name="ph:plus-circle-duotone" class="size-5" />
         {{ $t('mealLog.actions.create') }}
       </NuxtLink>
+      <NuxtLink to="/activity-log" class="flex min-h-12 items-center justify-center gap-2 rounded-2xl bg-munchling-600 px-5 font-semibold text-white shadow-lg shadow-munchling-600/20 transition active:scale-[0.98]">
+        <Icon name="ph:plus-circle-duotone" class="size-5" />
+        {{ $t('activities.add') }}
+      </NuxtLink>
+      </div>
     </header>
 
     <section v-if="profiles.length === 0" class="rounded-3xl border border-dashed border-slate-300 p-6 text-center dark:border-slate-700">
@@ -62,7 +68,6 @@
       </NuxtLink>
     </section>
 
-    <ActivityEntry class="entry-panel" />
   </main>
 </template>
 
@@ -75,7 +80,7 @@ import type { Profile } from '../../shared/domain/types'
 
 const { listMealLogs } = useMunchlingData().mealLogs
 const { profiles, refreshProfiles } = useProfiles()
-const { activityLogs } = useActivities()
+const { activityLogs, refreshActivities } = useActivities()
 const todayCaloriesByProfile = reactive<Record<number, number>>({})
 
 const todayDate = computed(() => dateKey(new Date()))
@@ -108,7 +113,7 @@ async function refreshProfileCards() {
 }
 
 onMounted(async () => {
-  await refreshProfiles()
+  await Promise.all([refreshProfiles(), refreshActivities()])
   await refreshProfileCards()
 })
 </script>
