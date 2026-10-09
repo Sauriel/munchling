@@ -59,7 +59,7 @@ Für Dokploy: Dockerfile im Projektroot bauen, MariaDB separat mit persistentem 
 
 Gemeinsame Aktivitätsvorlagen enthalten Name, Dauer und Kalorien pro Einheit. Aktivitätenliste und Dashboard ohne Profilauswahl erlauben mehrere Profile mit eigenen Einheiten (auch Bruchteilen); das Profil-Dashboard ausschließlich das gewählte Profil. Tagesbuchungen speichern historische Vorlagenwerte und erhöhen nur das Kalorienlimit dieses Tages, ohne das dauerhafte Profilziel zu verändern. [Vertrag und Prüfungen](docs/activities.md).
 
-Aktuell: SQLite v6, MariaDB v4, Backup v4 und HTTP-Protokoll 1. Server und APK gemeinsam aktualisieren; der Client verlangt Serverschema v4. Automatischer Sync bleibt deaktiviert.
+Aktuell: SQLite v7, MariaDB v4, Backup v4 und HTTP-Protokoll 1. Server und APK gemeinsam aktualisieren; der Client verlangt Serverschema v4. Automatischer Sync bleibt deaktiviert. Die ausdrücklich gesetzte Vertrauenscheckbox bleibt adress- und lokal-epochgebunden gespeichert, nicht als Teil von Fachbackups; neue Adressen und Wiederherstellungen erhalten keine stillschweigende Zustimmung.
 
 ## Lokale Datensicherung
 

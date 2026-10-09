@@ -3,9 +3,9 @@
     <h2 class="font-semibold">{{ $t('settings.syncPreparation.title') }}</h2>
     <p class="text-sm">{{ $t('settings.syncPreparation.scope') }}</p>
     <p class="rounded-xl bg-amber-50 p-3 text-sm text-amber-900 dark:bg-amber-950/40 dark:text-amber-200">{{ $t('settings.syncPreparation.security') }}</p>
-    <label class="flex min-h-11 items-center gap-3 text-sm"><input v-model="secure" type="checkbox" :disabled="occupied" class="size-5">{{ $t('settings.syncPreparation.secure') }}</label>
     <label for="sync-server" class="block text-sm font-semibold">{{ $t('settings.syncPreparation.address') }}</label>
     <input id="sync-server" v-model="address" type="url" inputmode="url" placeholder="https://munchling.example.org" :disabled="occupied || !!progress || !!boundUrl" @blur="rememberAddress" class="min-h-11 w-full rounded-xl border border-slate-300 bg-transparent px-3 dark:border-slate-700">
+    <label class="flex min-h-11 items-center gap-3 text-sm"><input :checked="secure" type="checkbox" @change="setConsent(($event.target as HTMLInputElement).checked)" :disabled="occupied" class="size-5">{{ $t('settings.syncPreparation.secure') }}</label>
     <button type="button" :disabled="occupied || !secure || !!progress" class="min-h-11 w-full rounded-xl bg-munchling-600 px-3 font-semibold text-white disabled:opacity-50" @click="inspect">{{ $t('settings.syncPreparation.inspect') }}</button>
     <div v-if="info" class="space-y-2 rounded-xl bg-slate-50 p-3 text-sm dark:bg-slate-950">
       <h3 class="font-semibold">{{ $t('settings.syncPreparation.inventory') }}</h3>
@@ -36,7 +36,7 @@
 import { Capacitor } from '@capacitor/core'
 import { databaseSql } from '~/utils/database/sql'
 import { createSnapshotStaging } from '~/utils/sync/staging'
-import { createSyncHttpClient } from '~/utils/sync/http'
+import { syncServerUrl, createSyncHttpClient } from '~/utils/sync/http'
 import { createSyncAddressSettings } from '~/utils/sync/address'
 import { createManualSyncRunner, type SyncRunResult } from '~/utils/sync/runner'
 import { SyncClientError } from '../../shared/domain/replies'
@@ -47,19 +47,30 @@ const decisionBusy = ref(false), decisionRevision = ref(0), occupied = computed(
 const progress = shallowRef<Awaited<ReturnType<typeof stage.progress>>>(null), localCounts = ref<Record<string, number>>({})
 const addresses = createSyncAddressSettings(databaseSql), boundUrl = ref<string | null>(null)
 const runner = createManualSyncRunner(databaseSql), manual = shallowRef<Awaited<ReturnType<typeof runner.status>> | null>(null), result = shallowRef<SyncRunResult | null>(null)
+const consentReady = ref(false)
 const controller = new AbortController()
 onBeforeUnmount(() => controller.abort())
 const { refreshActivities } = useActivities()
 const { refreshProfiles } = useProfiles(), { refreshFoods } = useFoods(), { refreshRecipes, selectedRecipe } = useRecipes(), { refreshMealLogs } = useMealLogs(), { initializeCurrentProfile } = useCurrentProfile()
 async function synchronize() {
   await action(async () => {
-    if (!secure.value) return
+    await requireConsent()
     result.value = null
     try { result.value = await runner.sync(true, controller.signal) }
     finally {
       manual.value = await runner.status(); decisionRevision.value++; selectedRecipe.value = null
       await Promise.all([refreshProfiles(), refreshFoods(), refreshRecipes(), refreshMealLogs(), refreshActivities()]); await initializeCurrentProfile()
     }
+  })
+}
+async function requireConsent() {
+  if (!secure.value || !await addresses.isTrusted(address.value)) { secure.value = false; throw new SyncClientError('confirmSync') }
+}
+async function setConsent(approved: boolean) {
+  await action(async () => {
+    secure.value = false
+    if (approved) { address.value = await addresses.trust(address.value); secure.value = await addresses.isTrusted(address.value) }
+    else await addresses.revoke()
   })
 }
 async function rememberAddress() {
@@ -78,7 +89,7 @@ async function action(run: () => Promise<void>) {
 }
 async function inspect() {
   await action(async () => {
-    if (!secure.value) return
+    await requireConsent()
     address.value = await addresses.remember(address.value)
     info.value = null
     if ((await stage.state()).seeded) throw new SyncClientError('developmentSeeded')
@@ -89,7 +100,7 @@ async function inspect() {
 }
 async function download() {
   await action(async () => {
-    if (!secure.value) return
+    await requireConsent()
     validated.value = false
     let stored = await stage.audit()
     if (!stored) {
@@ -115,8 +126,15 @@ async function download() {
   })
 }
 async function discard() { await action(async () => { await stage.discard(); progress.value = null; validated.value = false; info.value = null; decisionRevision.value++ }) }
-async function onDecision() { manual.value = await runner.status(); result.value = null; progress.value = await stage.progress(); boundUrl.value = (await stage.state()).url; address.value = await addresses.read(); if (!boundUrl.value) secure.value = false; validated.value = false; info.value = null; decisionRevision.value++ }
-watch(address, () => { info.value = null })
+async function onDecision() { manual.value = await runner.status(); result.value = null; progress.value = await stage.progress(); boundUrl.value = (await stage.state()).url; address.value = await addresses.read(); secure.value = await addresses.isTrusted(address.value); validated.value = false; info.value = null; decisionRevision.value++ }
+function normalizedAddress(value: string) { try { return syncServerUrl(value.trim()) } catch { return null } }
+watch(address, (value, previous) => {
+  info.value = null
+  if (normalizedAddress(value) !== normalizedAddress(previous)) {
+    const wasApproved = secure.value; secure.value = false
+    if (consentReady.value && wasApproved) void addresses.revoke().catch(() => { error.value = t('settings.syncPreparation.failed', { code: 'localOrNetworkError' }) })
+  }
+}, { flush: 'sync' })
 onMounted(async () => {
   if (!native) return
   // Child mounted hooks run first. SyncDecisions may already report busy;
@@ -124,7 +142,7 @@ onMounted(async () => {
   busy.value = true
   try {
     progress.value = await stage.progress(); boundUrl.value = (await stage.state()).url
-    address.value = await addresses.read(); manual.value = await runner.status()
+    address.value = await addresses.read(); secure.value = await addresses.isTrusted(address.value); consentReady.value = true; manual.value = await runner.status()
   } catch (cause) {
     error.value = t('settings.syncPreparation.failed', { code: cause instanceof SyncClientError ? cause.code : 'localOrNetworkError' })
   } finally { busy.value = false }

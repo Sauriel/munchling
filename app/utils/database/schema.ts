@@ -151,4 +151,8 @@ export const schemaMigrations: DatabaseMigration[] = [
 		ALTER TABLE recipes ADD COLUMN portion_size_grams REAL CHECK(portion_size_grams IS NULL OR portion_size_grams > 0);
 	` },
 	{ version: 6, name: 'activities_and_daily_activity_logs', statements: activitySchemaStatements },
+	{ version: 7, name: 'address_scoped_sync_consent', statements: `
+		ALTER TABLE sync_state ADD COLUMN trusted_url TEXT;
+		ALTER TABLE sync_state ADD COLUMN trusted_epoch TEXT;
+	` },
 ];
