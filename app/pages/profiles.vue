@@ -1,5 +1,5 @@
 <template>
-  <main class="mx-auto flex min-h-dvh max-w-md flex-col gap-6 px-5 pb-32 pt-6">
+  <main id="main-content" tabindex="-1" class="page-shell">
     <header class="space-y-4">
       <NuxtLink to="/" class="inline-flex min-h-11 items-center gap-2 rounded-full px-1 text-sm font-medium text-slate-600 dark:text-slate-300">
         <Icon name="ph:arrow-left" class="size-5" />
@@ -19,6 +19,7 @@
       </div>
     </header>
 
+    <div class="editor-layout">
     <section class="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
       <div class="mb-4 flex items-center justify-between gap-3">
         <div>
@@ -98,6 +99,7 @@
         </span>
       </div>
 
+      <div class="card-grid">
       <div v-if="isLoading" class="rounded-3xl border border-slate-200 bg-white p-6 text-center text-sm text-slate-500 dark:border-slate-800 dark:bg-slate-900">
         {{ $t('common.loading') }}
       </div>
@@ -157,8 +159,9 @@
           </button>
         </div>
       </article>
+      </div>
     </section>
-    <AppBottomNav />
+    </div>
   </main>
 </template>
 

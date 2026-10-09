@@ -22,6 +22,7 @@
     "confirmTemplateDelete": "Delete template {name}? Previously logged activities are kept.", "confirmLogDelete": "Delete entry {name}? Its calorie bonus for that day is removed.", "bonus": "+{calories} kcal from activities today."
   },
   "common": {
+    "skipToContent": "Skip to content",
     "save": "Save",
     "back": "Back",
     "cancel": "Cancel",
@@ -34,6 +35,7 @@
     "portionSizeHint": "Leave empty if no portion size is defined."
   },
   "nav": {
+    "label": "Main navigation",
     "dashboard": "Dashboard",
     "foods": "Foods",
     "profiles": "Profiles",

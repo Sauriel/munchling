@@ -1,6 +1,8 @@
 <template>
-  <main class="mx-auto flex min-h-dvh max-w-md flex-col gap-6 px-5 pb-32 pt-6">
+  <main id="main-content" tabindex="-1" class="page-shell">
     <header><h1 class="text-3xl font-bold">{{ $t('activities.title') }}</h1><p class="mt-2 text-sm text-slate-500">{{ $t('activities.description') }}</p></header>
+    <div class="editor-layout">
+      <div class="panel-stack">
     <section class="rounded-3xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
       <h2 class="mb-4 font-semibold">{{ editing ? $t('common.edit') : $t('activities.create') }}</h2>
       <form class="space-y-4" @submit.prevent="save">
@@ -12,8 +14,12 @@
       </form>
       <p v-if="error" role="alert" class="mt-3 text-sm text-red-700 dark:text-red-300">{{ error }}</p>
     </section>
+    <div id="activity-entry"><ActivityEntry ref="entry" /></div>
+      </div>
+      <div class="panel-stack">
     <section class="space-y-3">
       <h2 class="text-lg font-semibold">{{ $t('activities.templates') }}</h2>
+      <div class="card-grid">
       <article v-for="activity in activities" :key="activity.id" class="rounded-3xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
         <h3 class="font-semibold">{{ activity.name }}</h3><p class="mt-1 text-sm text-slate-500">{{ $t('activities.perUnit', { minutes: activity.durationMinutes, calories: activity.calories }) }}</p>
         <div class="mt-3 grid grid-cols-2 gap-2">
@@ -23,18 +29,21 @@
         </div>
       </article>
       <p v-if="!activities.length" class="text-sm text-slate-500">{{ $t('activities.empty') }}</p>
+      </div>
     </section>
-    <div id="activity-entry"><ActivityEntry ref="entry" /></div>
     <section class="space-y-3">
       <h2 class="text-lg font-semibold">{{ $t('activities.logs') }}</h2>
+      <div class="card-grid">
       <article v-for="log in activityLogs" :key="log.id" class="rounded-3xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
         <h3 class="font-semibold">{{ log.name }} · {{ profiles.find(p => p.id === log.profileId)?.name }}</h3>
         <p class="text-sm text-slate-500">{{ log.date }} · {{ log.units }} {{ $t('activities.units') }}</p>
         <p class="mt-1 text-sm">{{ $t('activities.preview', activityTotals(log, log.units)) }}</p>
         <button type="button" class="mt-2 min-h-11 rounded-2xl bg-red-50 px-3 text-sm text-red-700 dark:bg-red-950/40 dark:text-red-300" :disabled="busy" @click="removeLog(log)">{{ $t('common.delete') }}</button>
       </article>
+      </div>
     </section>
-    <AppBottomNav />
+      </div>
+    </div>
   </main>
 </template>
 <script setup lang="ts">

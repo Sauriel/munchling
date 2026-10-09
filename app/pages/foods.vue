@@ -1,5 +1,5 @@
 <template>
-  <main class="mx-auto flex min-h-dvh max-w-md flex-col gap-6 px-5 pb-32 pt-6">
+  <main id="main-content" tabindex="-1" class="page-shell">
     <header class="space-y-4">
       <NuxtLink to="/" class="inline-flex min-h-11 items-center gap-2 rounded-full px-1 text-sm font-medium text-slate-600 dark:text-slate-300">
         <Icon name="ph:arrow-left" class="size-5" />
@@ -18,7 +18,7 @@
         </p>
       </div>
 
-      <label class="block space-y-1.5">
+      <label class="search-field block space-y-1.5">
         <span class="sr-only">{{ $t('foods.search') }}</span>
         <div class="relative">
           <Icon name="ph:magnifying-glass" class="pointer-events-none absolute left-4 top-1/2 size-5 -translate-y-1/2 text-slate-400" />
@@ -77,6 +77,8 @@
       </section>
     </header>
 
+    <div class="editor-layout">
+      <div class="panel-stack">
     <section class="space-y-3">
       <button
         type="button"
@@ -167,7 +169,7 @@
         </button>
       </form>
     </section>
-
+      </div>
     <section class="space-y-3">
       <div class="flex items-center justify-between">
         <h2 class="text-lg font-semibold">
@@ -178,6 +180,7 @@
         </span>
       </div>
 
+      <div class="card-grid">
       <div v-if="isLoading" class="rounded-3xl border border-slate-200 bg-white p-6 text-center text-sm text-slate-500 dark:border-slate-800 dark:bg-slate-900">
         {{ $t('common.loading') }}
       </div>
@@ -212,7 +215,7 @@
                 EAN {{ food.ean }}
               </p>
             </div>
-            <div class="rounded-2xl bg-slate-50 px-3 py-2 text-right dark:bg-slate-950">
+            <div class="nutrition-badge rounded-2xl bg-slate-50 px-3 py-2 text-right dark:bg-slate-950">
               <p class="text-lg font-bold">{{ food.caloriesPer100g }}</p>
               <p class="text-xs text-slate-500">kcal/100g</p>
             </div>
@@ -246,8 +249,9 @@
           </div>
         </div>
       </article>
+      </div>
     </section>
-    <AppBottomNav />
+    </div>
   </main>
 </template>
 

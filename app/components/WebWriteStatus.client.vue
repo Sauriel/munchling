@@ -1,7 +1,7 @@
 <template>
-  <aside v-if="pending || readFailed" role="alert" class="mx-auto max-w-2xl space-y-2 rounded-xl border border-amber-400 bg-amber-50 p-4 text-amber-950">
+  <aside v-if="pending || readFailed" role="alert" class="app-alert space-y-2 rounded-xl border border-amber-400 bg-amber-50 p-4 text-amber-950">
     <p>{{ $t(pending ? 'web.pendingWrite' : 'web.readFailed') }}</p>
-    <button v-if="pending" :disabled="busy" class="rounded-lg border border-amber-700 px-3 py-2 disabled:opacity-50" @click="retry">{{ $t('web.retryWrite') }}</button>
+    <button v-if="pending" :disabled="busy" class="min-h-11 rounded-lg border border-amber-700 px-3 py-2 disabled:opacity-50" @click="retry">{{ $t('web.retryWrite') }}</button>
     <p v-if="error">{{ error }}</p>
   </aside>
 </template>

@@ -1,5 +1,5 @@
 <template>
-  <main class="mx-auto flex min-h-dvh max-w-md flex-col gap-6 px-5 pb-32 pt-6">
+  <main id="main-content" tabindex="-1" class="page-shell">
     <header class="space-y-4">
       <NuxtLink to="/" class="inline-flex min-h-11 items-center gap-2 rounded-full px-1 text-sm font-medium text-slate-600 dark:text-slate-300">
         <Icon name="ph:arrow-left" class="size-5" />
@@ -19,6 +19,7 @@
       </div>
     </header>
 
+    <div class="settings-grid">
     <section class="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
       <NuxtLink to="/profiles" class="flex min-h-14 items-center justify-between rounded-2xl bg-slate-50 px-4 transition active:scale-[0.99] dark:bg-slate-950">
         <span class="flex items-center gap-3">
@@ -88,7 +89,7 @@
       <p v-if="success" role="status" class="text-sm text-munchling-700 dark:text-munchling-500">{{ success }}</p>
     </section>
     <SyncPreparation />
-    <AppBottomNav />
+    </div>
   </main>
 </template>
 

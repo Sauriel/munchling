@@ -1,8 +1,8 @@
 <template>
-  <main class="mx-auto flex min-h-dvh max-w-md flex-col gap-6 px-5 pb-32 pt-12">
-    <header class="space-y-5">
+  <main id="main-content" tabindex="-1" class="page-shell">
+    <header class="page-header">
       <div class="flex items-center gap-3">
-        <img src="/munchling_768.png" alt="" class="size-14 rounded-2xl shadow-lg shadow-munchling-600/25">
+        <img src="/munchling_768.png" alt="" class="size-14 shrink-0 rounded-2xl shadow-lg shadow-munchling-600/25">
         <div>
           <p class="text-sm font-semibold uppercase tracking-[0.25em] text-munchling-600 dark:text-munchling-500">
             {{ $t('app.name') }}
@@ -13,7 +13,7 @@
         </div>
       </div>
 
-      <NuxtLink to="/log" class="flex min-h-12 items-center justify-center gap-2 rounded-2xl bg-munchling-600 px-5 font-semibold text-white shadow-lg shadow-munchling-600/20 transition active:scale-[0.98]">
+      <NuxtLink to="/log" class="page-action flex min-h-12 items-center justify-center gap-2 rounded-2xl bg-munchling-600 px-5 font-semibold text-white shadow-lg shadow-munchling-600/20 transition active:scale-[0.98]">
         <Icon name="ph:plus-circle-duotone" class="size-5" />
         {{ $t('mealLog.actions.create') }}
       </NuxtLink>
@@ -26,7 +26,7 @@
       </NuxtLink>
     </section>
 
-    <section v-else class="space-y-3">
+    <section v-else class="card-grid">
       <NuxtLink
         v-for="profile in profiles"
         :key="profile.id"
@@ -62,8 +62,7 @@
       </NuxtLink>
     </section>
 
-    <ActivityEntry />
-    <AppBottomNav />
+    <ActivityEntry class="entry-panel" />
   </main>
 </template>
 

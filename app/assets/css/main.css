@@ -3,32 +3,71 @@
 @tailwind utilities;
 
 @layer base {
-  html {
-    color-scheme: light dark;
-  }
-
-  body {
-    @apply min-h-dvh bg-slate-50 text-slate-950 antialiased dark:bg-slate-950 dark:text-slate-50;
-    -webkit-tap-highlight-color: transparent;
-  }
-
-  button,
-  a,
-  input,
-  select,
-  textarea {
-    touch-action: manipulation;
-  }
-
-  input,
-  select,
-  textarea {
-    font-size: 16px;
-  }
+  html { color-scheme: light dark; --app-header-height: 0px; scroll-padding-top: calc(var(--app-header-height) + env(safe-area-inset-top) + 1rem); scroll-padding-bottom: calc(6rem + env(safe-area-inset-bottom)); }
+  body { @apply min-h-dvh bg-slate-50 text-slate-950 antialiased dark:bg-slate-950 dark:text-slate-50; -webkit-tap-highlight-color: transparent; }
+  button, a, input, select, textarea { touch-action: manipulation; }
+  input, select, textarea { font-size: 16px; min-width: 0; max-width: 100%; }
+  :focus-visible { outline: 2px solid #65a30d; outline-offset: 3px; }
+  [id] { scroll-margin-top: calc(var(--app-header-height) + env(safe-area-inset-top) + 1.5rem); }
 }
 
 @layer components {
-  .page-shell {
-    @apply mx-auto flex min-h-dvh max-w-md flex-col gap-6 px-5 pb-32 pt-6;
-  }
+  .app-shell { min-height: 100dvh; }
+  .app-workspace { min-width: 0; padding: max(1.5rem, env(safe-area-inset-top)) max(1.25rem, env(safe-area-inset-right)) calc(6.5rem + env(safe-area-inset-bottom)) max(1.25rem, env(safe-area-inset-left)); }
+  .page-shell { display: flex; width: 100%; min-width: 0; flex-direction: column; gap: 1.5rem; }
+  .page-shell :where(p, h1, h2, h3, dt, dd, span, label, button, a) { overflow-wrap: anywhere; }
+  .page-shell :where(.flex, .grid) > * { min-width: 0; }
+  .page-shell button { min-height: 2.75rem; min-width: 2.75rem; }
+  .page-shell > header p { max-width: 70ch; }
+  .page-header { display: flex; flex-direction: column; gap: 1.25rem; }
+  .nutrition-badge { flex-shrink: 0; max-width: 45%; }
+  .page-action { width: 100%; }
+  .search-field { max-width: 64rem; }
+  .panel-stack { display: flex; min-width: 0; flex-direction: column; gap: 1.5rem; }
+  .editor-layout, .dashboard-grid { display: grid; min-width: 0; gap: 1.5rem; align-items: start; grid-template-columns: minmax(0, 1fr); }
+  .editor-layout > *, .dashboard-grid > * { min-width: 0; }
+  .card-grid { display: grid; gap: 1rem; align-items: start; grid-template-columns: repeat(auto-fit, minmax(min(100%, 20rem), 1fr)); }
+  .card-grid > * { min-width: 0; }
+  .card-grid > :where([role=status], .list-empty) { grid-column: 1 / -1; }
+  .settings-grid { display: grid; gap: 1.5rem; align-items: start; grid-template-columns: repeat(auto-fit, minmax(min(100%, 20rem), 1fr)); }
+  .settings-grid > * { min-width: 0; }
+  .entry-panel { width: 100%; max-width: 40rem; }
+  .nutrient-grid { display: grid; gap: .75rem; grid-template-columns: repeat(auto-fit, minmax(min(100%, 9rem), 1fr)); }
+  .calorie-chart { display: block; width: 100%; height: auto; max-height: 24rem; aspect-ratio: 2 / 1; }
+  .app-alert { position: sticky; top: calc(var(--app-header-height) + env(safe-area-inset-top) + .5rem); z-index: 30; min-width: 0; margin-bottom: 1.5rem; overflow-wrap: anywhere; }
+  .skip-link { position: fixed; top: .5rem; left: .5rem; z-index: 60; transform: translateY(-200%); }
+  .skip-link:focus { transform: translateY(0); }
+
+  .app-navigation { position: fixed; inset: auto 0 0; z-index: 40; border-top-width: 1px; padding: .5rem max(.5rem, env(safe-area-inset-right)) calc(.5rem + env(safe-area-inset-bottom)) max(.5rem, env(safe-area-inset-left)); }
+  .app-navigation-inner { min-width: 0; }
+  .app-brand { display: none; min-height: 3rem; align-items: center; gap: .5rem; text-decoration: none; }
+  .app-navigation-links { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: .25rem; }
+  .app-navigation-link { display: flex; min-width: 0; min-height: 3.5rem; flex-direction: column; align-items: center; justify-content: center; gap: .25rem; padding: .25rem; text-align: center; font-size: clamp(.625rem, 2.8vw, .75rem); line-height: 1rem; }
+}
+
+@media (min-width: 768px) {
+  html { --app-header-height: 4.5rem; scroll-padding-bottom: 1.5rem; }
+  .app-workspace { padding: calc(6rem + env(safe-area-inset-top)) max(1.5rem, env(safe-area-inset-right)) max(1.5rem, env(safe-area-inset-bottom)) max(1.5rem, env(safe-area-inset-left)); }
+  .app-navigation { inset: 0 0 auto; border-top-width: 0; border-bottom-width: 1px; padding: calc(.75rem + env(safe-area-inset-top)) max(1.5rem, env(safe-area-inset-right)) .75rem max(1.5rem, env(safe-area-inset-left)); }
+  .app-navigation-inner { display: flex; align-items: center; gap: 1rem; }
+  .app-brand { display: flex; flex-shrink: 0; }
+  .app-navigation-links { flex: 1; min-width: 0; }
+  .app-navigation-link { min-height: 3rem; flex-direction: row; gap: .5rem; font-size: .75rem; line-height: 1.125rem; }
+  .page-header { flex-direction: row; align-items: center; justify-content: space-between; }
+  .page-action { width: auto; flex-shrink: 0; }
+  .dashboard-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (min-width: 1024px) {
+  html { --app-header-height: 0px; }
+  .app-workspace { margin-left: 13rem; padding: max(2rem, env(safe-area-inset-top)) max(2rem, env(safe-area-inset-right)) max(2rem, env(safe-area-inset-bottom)) 2rem; }
+  .app-navigation { inset: 0 auto 0 0; width: 13rem; border-bottom-width: 0; border-right-width: 1px; padding: max(1.5rem, env(safe-area-inset-top)) .75rem max(1.5rem, env(safe-area-inset-bottom)) max(.75rem, env(safe-area-inset-left)); overflow-y: auto; }
+  .app-navigation-inner { flex-direction: column; align-items: stretch; gap: 1.5rem; }
+  .app-navigation-links { display: flex; flex-direction: column; gap: .5rem; }
+  .app-navigation-link { justify-content: flex-start; padding: .75rem; font-size: .875rem; }
+}
+
+@media (min-width: 1280px) {
+  .editor-layout { grid-template-columns: minmax(0, 28rem) minmax(0, 1fr); }
+  .editor-layout--wide { grid-template-columns: minmax(0, 36rem) minmax(0, 1fr); }
 }

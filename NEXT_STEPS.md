@@ -31,13 +31,18 @@
   - [x] 141 gezielte lokale/UI-/Backup-/Receive-/Runner-Prüfungen und 85 MariaDB-/API-Tests, beide Typechecks und Browser-Backup-Smoke bestanden; Android ohne Zurücksetzen aktualisiert.
   - [x] Dokploy-Rollout durch Nutzer-Live-Abnahme bestätigt.
   - [x] Live-Abnahme des vollständigen Punkts auf Handy und Dokploy: mehrere Profile, Bruchteile, Datumswechsel, Vorlagenänderung/-löschung und Sync prüfen.
-- [ ] Unter Einstellungen sollte die Checkbox "Ich vertraue dieser Adresse und ..." auch persistiert werden.
+- [x] Unter Einstellungen sollte die Checkbox "Ich vertraue dieser Adresse und ..." auch persistiert werden.
   - [x] Adress- und lokal-epochgebundene Zustimmung in SQLite v7; kein automatisches Vertrauen für bestehende Verbindungen, andere Adressen oder nach Restore/Trennen.
   - [x] Einstellungen stellen die Zustimmung ohne Netzwerkzugriff wieder her; explizites Setzen/Widerrufen und sofortiges Zurücknehmen bei Adresswechsel.
   - [x] 47 gezielte Persistenz-/Migrations-/UI-/Restore-/Runner-Prüfungen und Typecheck bestanden; Backend und APK gebaut, unabhängige Handy-Sicherung und Installation ohne Zurücksetzen.
-  - [ ] Passenden Dokploy-Rollout bestätigen.
-  - [ ] Live-Abnahme des vollständigen Punkts: Checkbox setzen, Einstellungen/App neu öffnen, widerrufen und erneut öffnen; Sync bleibt eine bewusste Aktion.
+  - [x] Passenden Dokploy-Rollout durch Nutzer-Live-Abnahme bestätigt.
+  - [x] Live-Abnahme des vollständigen Punkts: Checkbox setzen, Einstellungen/App neu öffnen, widerrufen und erneut öffnen; Sync bleibt eine bewusste Aktion.
 - [ ] Die Webseiten Ansicht sollte Responsive auf die Volle Bildschirmbreite ausgelegt sein (Das Layout darf dafür angepasst werden) Wir brauchen am Ende eine Mobile ( und App) Ansicht und eine Desktop / Tablet Ansicht. Wir verfolgen dabei dem Mobile-First Ansatz.
+  - [x] Bestehende Seitenstruktur prüfen und Mobile-first-Plan vorlegen: [Layoutplan](docs/responsive-layout-plan.md).
+  - [x] Navigation und Mehrspaltenaufteilungen ausdrücklich durch Nutzer freigegeben.
+  - [x] Gemeinsame App-Hülle und Navigation unten/oben/links, volle Arbeitsbreite und seitenbezogene Raster für alle acht Seiten; keine doppelten Formulare oder größenabhängigen Mounts.
+  - [x] Abschlussprüfung: 38 gezielte UI-/Navigationsprüfungen, Typecheck, 69 gefüllte responsive Browserfälle, stabile Formularentwürfe/Portionen, unveränderte gespeicherte Fachdaten und Browser-Backup-Smoke; Server-/Static-/Android-Build bestanden.
+  - [ ] Live-Abnahme des vollständigen Layoutpunkts auf Handy und Dokploy; Größenwechsel, lange Inhalte, Tastatur/Safe Areas und sichtbare Schreib-/Sync-Hinweise prüfen.
 - [ ] Es muss möglich sein automatisches synchronisieren anschalten zu können (Beim App Start und beim wechseln in die App zurück, falls sie im Hintergrund lief) Dies sollte granular konfigurierbar sein.
   - Bestehenden manuellen Runner und dessen Single-Flight-, Journal- und Konfliktschutz wiederverwenden; Start und Rückkehr aus dem Hintergrund getrennt schaltbar, standardmäßig aus.
 
