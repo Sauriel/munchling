@@ -1,3 +1,4 @@
+import { validateActivity, validateActivityDate, activityTotals, type Activity, type ActivityLog } from './activities';
 import type { Food, Profile, Recipe, RecipeIngredient } from "./types";
 import { isUuid, syncEntities, type SyncIdentity, type SyncTombstone } from "./sync";
 import { assertDateTime, assertId, assertNumber, assertRecord, assertText, fail, validateFoodInput, validateIngredientInput, validateProfileInput, validateRecipeGraph, validateRecipeInput } from "./validation";
@@ -13,6 +14,7 @@ export type StoredMealLogProfile = {
 	id: number; mealLogId: number; profileId: number; portionFactor: number; createdAt: string;
 };
 export type BackupData = {
+	activities?: Activity[]; activityLogs?: ActivityLog[];
 	profiles: Profile[]; foods: Food[]; recipes: Recipe[];
 	recipeIngredients: RecipeIngredient[]; mealLogs: StoredMealLog[]; mealLogProfiles: StoredMealLogProfile[];
 };
@@ -20,7 +22,8 @@ type BackupBase = { format: "munchling-backup"; exportedAt: string; data: Backup
 export type LegacyBackup = BackupBase & { version: 1; schemaVersion: 1 };
 export type IdentityBackup = BackupBase & { version: 2; schemaVersion: 2; identities: SyncIdentity[]; tombstones: SyncTombstone[] };
 export type PortionBackup = Omit<IdentityBackup, "version" | "schemaVersion"> & { version: 3; schemaVersion: 3 };
-export type MunchlingBackup = LegacyBackup | IdentityBackup | PortionBackup;
+export type ActivityBackup = Omit<IdentityBackup, 'version' | 'schemaVersion'> & { version: 4; schemaVersion: 4 };
+export type MunchlingBackup = LegacyBackup | IdentityBackup | PortionBackup | ActivityBackup;
 
 function nullableText(value: unknown, field: string) { if (value !== null) assertText(value, field); }
 function nullableDate(value: unknown, field: string) { if (value !== null) assertDateTime(value, field); }
@@ -44,14 +47,14 @@ function reference(value: unknown, allowed: Set<number>, field: string) {
 
 export function validateBackup(value: unknown): asserts value is MunchlingBackup {
 	assertRecord(value, "backup");
-	if (value.format !== "munchling-backup" || !((value.version === 1 && value.schemaVersion === 1) || (value.version === 2 && value.schemaVersion === 2) || (value.version === 3 && value.schemaVersion === 3))) fail("backupFormat", "backup");
+	if (value.format !== "munchling-backup" || !((value.version === 1 && value.schemaVersion === 1) || (value.version === 2 && value.schemaVersion === 2) || (value.version === 3 && value.schemaVersion === 3) || (value.version === 4 && value.schemaVersion === 4))) fail("backupFormat", "backup");
 	assertDateTime(value.exportedAt, "exportedAt");
 	assertRecord(value.data, "data");
-	const tables = ["profiles", "foods", "recipes", "recipeIngredients", "mealLogs", "mealLogProfiles"] as const;
+	const tables = ["profiles", "foods", "recipes", "recipeIngredients", "mealLogs", "mealLogProfiles", "activities", "activityLogs"] as const;
 	const rows = {} as Record<typeof tables[number], Record<string, unknown>[]>;
 	let count = 0;
 	for (const table of tables) {
-		const entries = value.data[table];
+		const entries = value.data[table] ?? (value.version !== 4 && (table === 'activities' || table === 'activityLogs') ? [] : undefined);
 		if (!Array.isArray(entries)) fail("invalidType", table);
 		count += entries.length;
 		if (count > MAX_BACKUP_ROWS) fail("backupLimit", "backup");
@@ -115,6 +118,13 @@ export function validateBackup(value: unknown): asserts value is MunchlingBackup
 		pairs.add(pair);
 		timestamps(row, false);
 	}
+	ids(rows.activities, 'activities'); ids(rows.activityLogs, 'activityLogs');
+	for (const row of rows.activities) { validateActivity(row); timestamps(row); }
+	for (const row of rows.activityLogs) {
+		const { date, profileId, units } = row;
+		validateActivityDate(date); reference(profileId, profiles, 'profileId'); assertNumber(units, 'units', true);
+		validateActivity(row); activityTotals(row, units); timestamps(row);
+	}
 	if (value.version !== 1) validateIdentities(value, rows, count);
 	// Existing profile deletion can leave a meal with zero/fewer profile links.
 	// Backups preserve that stored state; they do not recalculate portions.
@@ -124,7 +134,7 @@ function validateIdentities(value: Record<string, unknown>, rows: Record<string,
 	if (!Array.isArray(value.identities) || !Array.isArray(value.tombstones)) fail("backupFormat", "identities");
 	if (value.identities.length !== count) fail("backupFormat", "identities");
 	if (count + value.tombstones.length > MAX_BACKUP_ROWS) fail("backupLimit", "tombstones");
-	const tableNames = { profiles: "profiles", foods: "foods", recipes: "recipes", recipe_ingredients: "recipeIngredients", meal_logs: "mealLogs", meal_log_profiles: "mealLogProfiles" };
+	const tableNames = { profiles: "profiles", foods: "foods", recipes: "recipes", recipe_ingredients: "recipeIngredients", meal_logs: "mealLogs", meal_log_profiles: "mealLogProfiles", activities: 'activities', activity_logs: 'activityLogs' };
 	const expected = new Set<string>();
 	for (const entity of syncEntities) for (const row of rows[tableNames[entity]]!) expected.add(`${entity}:${row.id}`);
 	const seen = new Map<string, string>();

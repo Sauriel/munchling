@@ -1,3 +1,4 @@
+import type { Activity, ActivityLog } from '../../../shared/domain/activities';
 import type { LocalBackupService, MunchlingBackup, StoredMealLog, StoredMealLogProfile } from "../../../shared/domain/backup";
 import { cloneBackup } from "../../../shared/domain/backup";
 import { fail } from "../../../shared/domain/validation";
@@ -43,17 +44,20 @@ export async function snapshotBackup(sql: SqlExecutor): Promise<MunchlingBackup>
 		`SELECT id, meal_log_id AS mealLogId, profile_id AS profileId, portion_factor AS portionFactor,
 		 created_at AS createdAt FROM meal_log_profiles ORDER BY id;`,
 	);
+	const activities = version >= 6 ? await sql.query<Activity>('SELECT id,name,duration_minutes AS durationMinutes,calories,created_at AS createdAt,updated_at AS updatedAt FROM activities ORDER BY id;') : [];
+	const activityLogs = version >= 6 ? await sql.query<ActivityLog>('SELECT id,profile_id AS profileId,date,name,duration_minutes AS durationMinutes,calories,units,created_at AS createdAt,updated_at AS updatedAt FROM activity_logs ORDER BY id;') : [];
 	const base = {
 		format: "munchling-backup" as const, exportedAt: new Date().toISOString(),
 		data: {
 			profiles, foods: foods.map((row) => ({ ...row, isCustom: fromSqlBoolean(row.isCustom) })),
 			recipes: recipes.map((row) => ({ ...row, isSubRecipe: fromSqlBoolean(row.isSubRecipe) })),
-			recipeIngredients, mealLogs, mealLogProfiles,
+			recipeIngredients, mealLogs, mealLogProfiles, activities, activityLogs,
 		},
 	};
 	if (version < 2) return { ...base, version: 1, schemaVersion: 1 };
 	const identities = await sql.query<SyncIdentity>("SELECT entity,local_id AS localId,uuid FROM sync_records WHERE deleted_at IS NULL ORDER BY entity,local_id;");
 	const tombstones = await sql.query<SyncTombstone>("SELECT entity,uuid,aggregate_entity AS aggregateEntity,aggregate_uuid AS aggregateUuid,deleted_at AS deletedAt FROM sync_records WHERE deleted_at IS NOT NULL ORDER BY entity,uuid;");
+	if (version >= 6) return { ...base, version: 4, schemaVersion: 4, identities, tombstones };
 	if (version >= 5) return { ...base, version: 3, schemaVersion: 3, identities, tombstones };
 	return { ...base, version: 2, schemaVersion: 2, identities, tombstones };
 }
@@ -63,6 +67,7 @@ async function replaceData(sql: SqlExecutor, backup: MunchlingBackup) {
 	const uuid = (entity: SyncEntity, id: number) => identities.get(`${entity}:${id}`) ?? null;
 	await sql.run("UPDATE sync_state SET tracking_enabled=0 WHERE id=1;");
 	// Children first; never disable foreign keys and never execute imported SQL.
+	await sql.run('DELETE FROM activity_logs;'); await sql.run('DELETE FROM activities;');
 	await sql.run("DELETE FROM meal_log_profiles;");
 	await sql.run("DELETE FROM meal_logs;");
 	await sql.run("DELETE FROM recipe_ingredients;");
@@ -116,6 +121,8 @@ async function replaceData(sql: SqlExecutor, backup: MunchlingBackup) {
 			[row.id, row.mealLogId, row.profileId, row.portionFactor, row.createdAt, uuid("meal_log_profiles", row.id)],
 		);
 	}
+	for (const row of backup.data.activities ?? []) await sql.run('INSERT INTO activities(id,uuid,name,duration_minutes,calories,created_at,updated_at) VALUES(?,?,?,?,?,?,?);', [row.id, uuid('activities',row.id), row.name,row.durationMinutes,row.calories,row.createdAt,row.updatedAt]);
+	for (const row of backup.data.activityLogs ?? []) await sql.run('INSERT INTO activity_logs(id,uuid,profile_id,date,name,duration_minutes,calories,units,created_at,updated_at) VALUES(?,?,?,?,?,?,?,?,?,?);', [row.id,uuid('activity_logs',row.id),row.profileId,row.date,row.name,row.durationMinutes,row.calories,row.units,row.createdAt,row.updatedAt]);
 	if (backup.version !== 1) for (const row of backup.tombstones) {
 		await sql.run("INSERT INTO sync_records (uuid,entity,aggregate_entity,aggregate_uuid,deleted_at) VALUES (?,?,?,?,?);", [row.uuid, row.entity, row.aggregateEntity, row.aggregateUuid, row.deletedAt]);
 	}

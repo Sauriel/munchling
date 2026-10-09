@@ -49,6 +49,7 @@ const addresses = createSyncAddressSettings(databaseSql), boundUrl = ref<string 
 const runner = createManualSyncRunner(databaseSql), manual = shallowRef<Awaited<ReturnType<typeof runner.status>> | null>(null), result = shallowRef<SyncRunResult | null>(null)
 const controller = new AbortController()
 onBeforeUnmount(() => controller.abort())
+const { refreshActivities } = useActivities()
 const { refreshProfiles } = useProfiles(), { refreshFoods } = useFoods(), { refreshRecipes, selectedRecipe } = useRecipes(), { refreshMealLogs } = useMealLogs(), { initializeCurrentProfile } = useCurrentProfile()
 async function synchronize() {
   await action(async () => {
@@ -57,7 +58,7 @@ async function synchronize() {
     try { result.value = await runner.sync(true, controller.signal) }
     finally {
       manual.value = await runner.status(); decisionRevision.value++; selectedRecipe.value = null
-      await Promise.all([refreshProfiles(), refreshFoods(), refreshRecipes(), refreshMealLogs()]); await initializeCurrentProfile()
+      await Promise.all([refreshProfiles(), refreshFoods(), refreshRecipes(), refreshMealLogs(), refreshActivities()]); await initializeCurrentProfile()
     }
   })
 }
@@ -81,7 +82,7 @@ async function inspect() {
     address.value = await addresses.remember(address.value)
     info.value = null
     if ((await stage.state()).seeded) throw new SyncClientError('developmentSeeded')
-    const counts = await databaseSql.query<{ entity: string; active: number }>("SELECT 'profiles' AS entity,COUNT(*) AS active FROM profiles UNION ALL SELECT 'foods',COUNT(*) FROM foods UNION ALL SELECT 'recipes',COUNT(*) FROM recipes UNION ALL SELECT 'meal_logs',COUNT(*) FROM meal_logs UNION ALL SELECT 'recipe_ingredients',COUNT(*) FROM recipe_ingredients UNION ALL SELECT 'meal_log_profiles',COUNT(*) FROM meal_log_profiles;")
+    const counts = await databaseSql.query<{ entity: string; active: number }>("SELECT 'profiles' AS entity,COUNT(*) AS active FROM profiles UNION ALL SELECT 'foods',COUNT(*) FROM foods UNION ALL SELECT 'recipes',COUNT(*) FROM recipes UNION ALL SELECT 'meal_logs',COUNT(*) FROM meal_logs UNION ALL SELECT 'recipe_ingredients',COUNT(*) FROM recipe_ingredients UNION ALL SELECT 'meal_log_profiles',COUNT(*) FROM meal_log_profiles UNION ALL SELECT 'activities',COUNT(*) FROM activities UNION ALL SELECT 'activity_logs',COUNT(*) FROM activity_logs;")
     localCounts.value = Object.fromEntries(counts.map(row => [row.entity, row.active]))
     info.value = await createSyncHttpClient(address.value).info()
   })

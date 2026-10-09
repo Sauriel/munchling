@@ -30,7 +30,7 @@ export function replyAggregate(value: unknown, ids = new Set<string>()): ServerA
 }
 export function replyInfo(input: unknown): ServerInfo {
 	return validated(() => {
-		envelope(input); check(input.schemaVersion === 3); wireCursor(input.cursor);
+		envelope(input); check(input.schemaVersion === 4); wireCursor(input.cursor);
 		assertRecord(input.capabilities); check(input.capabilities.authentication === "none" && input.capabilities.fullAggregates === true && input.capabilities.atomicBatches === true && input.capabilities.manualConflicts === true);
 		assertRecord(input.limits); for (const [key, limit] of Object.entries(syncLimits)) check(input.limits[key] === limit);
 		check(Array.isArray(input.counts)); const names = new Set();

@@ -1,6 +1,6 @@
-export const syncEntities = ["profiles", "foods", "recipes", "recipe_ingredients", "meal_logs", "meal_log_profiles"] as const;
+export const syncEntities = ["profiles", "foods", "recipes", "recipe_ingredients", "meal_logs", "meal_log_profiles", "activities", "activity_logs"] as const;
 export type SyncEntity = typeof syncEntities[number];
-export type SyncAggregate = "profiles" | "foods" | "recipes" | "meal_logs";
+export type SyncAggregate = "profiles" | "foods" | "recipes" | "meal_logs" | "activities" | "activity_logs";
 export type SyncIdentity = { entity: SyncEntity; localId: number; uuid: string };
 export type SyncTombstone = { entity: SyncEntity; uuid: string; aggregateEntity: SyncAggregate; aggregateUuid: string; deletedAt: string };
 export type OutboxOperation = {

@@ -13,7 +13,16 @@
     "name": "Munchling",
     "tagline": "Local calorie & nutrition tracker"
   },
+  "activities": {
+    "title": "Activities", "description": "Shared templates; logged units increase only the selected profile's calorie allowance for that day.",
+    "create": "Create activity", "add": "Add activity", "template": "Activity", "select": "Please select", "date": "Day", "units": "Units",
+    "name": "Name", "duration": "Duration per unit (minutes)", "calories": "Calories per unit (kcal)",
+    "perUnit": "1 unit: {minutes} minutes · {calories} kcal", "preview": "{durationMinutes} minutes · +{calories} kcal",
+    "added": "Activity logged.", "templates": "Activity templates", "logs": "Logged activities", "empty": "No activity templates yet.", "noProfiles": "Create a profile first.",
+    "confirmTemplateDelete": "Delete template {name}? Previously logged activities are kept.", "confirmLogDelete": "Delete entry {name}? Its calorie bonus for that day is removed.", "bonus": "+{calories} kcal from activities today."
+  },
   "common": {
+    "save": "Save",
     "back": "Back",
     "cancel": "Cancel",
     "delete": "Delete",
@@ -29,7 +38,8 @@
     "foods": "Foods",
     "profiles": "Profiles",
     "settings": "Settings",
-    "recipes": "Recipes"
+    "recipes": "Recipes",
+    "activities": "Activities"
   },
   "home": {
     "title": "Welcome to Munchling",

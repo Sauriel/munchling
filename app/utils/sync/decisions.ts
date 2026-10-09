@@ -124,6 +124,7 @@ function checkServerProjection(snapshot: CompleteSnapshot, entries: DecisionEntr
 			if (child.food_id !== null) checkReference(child.food_id, "foods"); if (child.sub_recipe_id !== null) checkReference(child.sub_recipe_id, "recipes");
 			edges.push({ recipeId: root.id, subRecipeId: child.sub_recipe_id as string | null });
 		}
+		if (root.entity === 'activity_logs') checkReference(root.data.profile_id, 'profiles');
 		if (root.entity === "meal_logs") {
 			if (root.data.food_id !== null) checkReference(root.data.food_id, "foods"); if (root.data.recipe_id !== null) checkReference(root.data.recipe_id, "recipes");
 			for (const portion of root.data.profiles as Record<string, unknown>[]) checkReference(portion.profile_id, "profiles");
@@ -152,7 +153,7 @@ export function createSyncDecisions(db: SqlDatabase, saveSafety: (backup: Munchl
 			if (mode !== "server") return adoptStagedSnapshot(sql, review.localEpoch);
 			// Explicit local replacement only. Never send a household restore/delete.
 			await sql.run("UPDATE sync_state SET tracking_enabled=0 WHERE id=1;");
-			for (const statement of ["DELETE FROM meal_log_profiles;", "DELETE FROM meal_logs;", "DELETE FROM recipe_ingredients;", "DELETE FROM recipes;", "DELETE FROM foods;", "DELETE FROM profiles;", "DELETE FROM sync_outbox;", "DELETE FROM sync_dirty;", "DELETE FROM sync_baselines;", "DELETE FROM sync_conflicts;", "DELETE FROM sync_records;", "DELETE FROM sync_inbox;"]) await sql.run(statement);
+			for (const statement of ["DELETE FROM activity_logs;", "DELETE FROM activities;", "DELETE FROM meal_log_profiles;", "DELETE FROM meal_logs;", "DELETE FROM recipe_ingredients;", "DELETE FROM recipes;", "DELETE FROM foods;", "DELETE FROM profiles;", "DELETE FROM sync_outbox;", "DELETE FROM sync_dirty;", "DELETE FROM sync_baselines;", "DELETE FROM sync_conflicts;", "DELETE FROM sync_records;", "DELETE FROM sync_inbox;"]) await sql.run(statement);
 			await writeRoots(sql, fresh.aggregates, fresh.identities);
 			await sql.run("UPDATE sync_state SET local_epoch=?,server_url=?,server_instance_id=?,server_epoch=?,pull_cursor=?,enabled=0 WHERE id=1;", [createUuid(), review.url, fresh.first.serverInstanceId, fresh.first.serverEpoch, fresh.first.cursor]);
 			await sql.run("DELETE FROM sync_download;");

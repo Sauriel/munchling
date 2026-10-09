@@ -1,3 +1,4 @@
+import { activitySchemaStatements } from './activity-schema';
 import { receiveSchemaStatements } from "./receive-schema";
 import { runnerSchemaStatements } from "./runner-schema";
 import { syncSchemaStatements } from "./sync-schema";
@@ -149,4 +150,5 @@ export const schemaMigrations: DatabaseMigration[] = [
 		ALTER TABLE foods ADD COLUMN portion_size_grams REAL CHECK(portion_size_grams IS NULL OR portion_size_grams > 0);
 		ALTER TABLE recipes ADD COLUMN portion_size_grams REAL CHECK(portion_size_grams IS NULL OR portion_size_grams > 0);
 	` },
+	{ version: 6, name: 'activities_and_daily_activity_logs', statements: activitySchemaStatements },
 ];

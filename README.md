@@ -55,11 +55,17 @@ Für Dokploy: Dockerfile im Projektroot bauen, MariaDB separat mit persistentem 
 
 `dev`, `build` und `generate` bereiten die WASM-Assets automatisch vor. Die BLS-Suche nutzt `public/sql-wasm.wasm`; Browser-SQLite verwendet separat `public/assets/sql-wasm.wasm`. `jeep-sqlite` 2.8.0 bündelt einen älteren sql.js-Runtime-Code und benötigt die dazu passende, über `sql.js-jeep` bereitgestellte WASM-Version. Bei Updates müssen Runtime und WASM zusammen überprüft werden.
 
+## Aktivitäten
+
+Gemeinsame Aktivitätsvorlagen enthalten Name, Dauer und Kalorien pro Einheit. Aktivitätenliste und Dashboard ohne Profilauswahl erlauben mehrere Profile mit eigenen Einheiten (auch Bruchteilen); das Profil-Dashboard ausschließlich das gewählte Profil. Tagesbuchungen speichern historische Vorlagenwerte und erhöhen nur das Kalorienlimit dieses Tages, ohne das dauerhafte Profilziel zu verändern. [Vertrag und Prüfungen](docs/activities.md).
+
+Aktuell: SQLite v6, MariaDB v4, Backup v4 und HTTP-Protokoll 1. Server und APK gemeinsam aktualisieren; der Client verlangt Serverschema v4. Automatischer Sync bleibt deaktiviert.
+
 ## Lokale Datensicherung
 
 Unter **Einstellungen → Lokale Datensicherung** lassen sich alle Fachdaten als JSON exportieren und nach Bestätigung wiederherstellen. Eine Wiederherstellung ersetzt den lokalen Bestand, statt ihn zusammenzuführen, und speichert vorher automatisch eine separate Sicherheitssicherung. Diese kann ebenfalls exportiert werden.
 
-Sicherungen sind unverschlüsselt. Eine externe Kopie schützt auch vor App-Deinstallation oder gelöschten Browserdaten. V3 bewahrt zusätzlich Portionsgrößen für Lebensmittel und Gerichte; v2-Sicherungen mit UUIDs/Löschmarkern bleiben lesbar, alte v1-Dateien werden mit neuen UUIDs importiert. Neue v3-Sicherungen benötigen die aktuelle App. Wiederherstellen trennt die Sync-Bindung und setzt einen neuen lokalen Abgleich auf. Importgrenzen: 25 MiB und insgesamt 100.000 Fachzeilen/Löschmarker. Geräteinstellungen und der BLS-Katalog sind nicht enthalten.
+Sicherungen sind unverschlüsselt. Eine externe Kopie schützt auch vor App-Deinstallation oder gelöschten Browserdaten. V4 bewahrt zusätzlich Aktivitätsvorlagen und historische Tagesbuchungen; V3 enthält Portionsgrößen für Lebensmittel und Gerichte. V2/V3 mit UUIDs/Löschmarkern bleiben lesbar, alte v1-Dateien werden mit neuen UUIDs importiert. Neue v4-Sicherungen benötigen die aktuelle App. Wiederherstellen trennt die Sync-Bindung und setzt einen neuen lokalen Abgleich auf. Importgrenzen: 25 MiB und insgesamt 100.000 Fachzeilen/Löschmarker. Geräteinstellungen und der BLS-Katalog sind nicht enthalten.
 
 Vor dem Upgrade eines gefüllten v1-Bestands wird separat `backups/before-schema-v2.json` gespeichert; ohne erfolgreiche Speicherung findet keine Migration statt. Diese Sicherung ist nach dem Upgrade ebenfalls in den Einstellungen exportierbar. Vor App-Updates zusätzlich extern sichern.
 

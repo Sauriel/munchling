@@ -246,7 +246,7 @@ describe("built Nitro sync HTTP API", () => {
 		} finally { local.close(); }
 	});
 	it("negotiates info, pushes/replays and pulls exact confirmed data without duplicate operations", async () => {
-		const infoResponse = await fetch(`${base}/api/sync/info`); expect(infoResponse.status).toBe(200); expect(infoResponse.headers.get("cache-control")).toBe("no-store"); expect(await infoResponse.json()).toMatchObject({ protocolVersion: 1, schemaVersion: 3, capabilities: { authentication: "none" } });
+		const infoResponse = await fetch(`${base}/api/sync/info`); expect(infoResponse.status).toBe(200); expect(infoResponse.headers.get("cache-control")).toBe("no-store"); expect(await infoResponse.json()).toMatchObject({ protocolVersion: 1, schemaVersion: 4, capabilities: { authentication: "none" } });
 		const command = batch(); const first = await post("push", command); expect(first.status).toBe(200); const receipt = await first.json(); expect(await (await post("push", command)).json()).toEqual(receipt);
 		const delta: ChangePage = await (await fetch(`${base}/api/sync/changes?${query({ cursor: "0" })}`, { headers })).json(); expect(delta).toMatchObject({ cursor: "1", hasMore: false }); expect(delta.batches[0]!.changes[0]!.aggregate.data).toEqual(command.operations[0]!.payload);
 		expect(await db.withConnection((sql) => sql.query("SELECT COUNT(*) AS n FROM write_operations"))).toEqual([{ n: 1 }]);

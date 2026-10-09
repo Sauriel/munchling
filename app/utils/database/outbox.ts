@@ -4,6 +4,7 @@ import type { SqlDatabase, SqlExecutor } from "./executor";
 type Row = Record<string, unknown> & { id: number; uuid: string };
 async function findRow(sql: SqlExecutor, entity: SyncEntity, uuid: string): Promise<Row | null> {
 	const statements: Record<SyncEntity, string> = {
+		activities: "SELECT * FROM activities WHERE uuid=?;", activity_logs: "SELECT * FROM activity_logs WHERE uuid=?;",
 		profiles: "SELECT * FROM profiles WHERE uuid=?;", foods: "SELECT * FROM foods WHERE uuid=?;",
 		recipes: "SELECT * FROM recipes WHERE uuid=?;", recipe_ingredients: "SELECT * FROM recipe_ingredients WHERE uuid=?;",
 		meal_logs: "SELECT * FROM meal_logs WHERE uuid=?;", meal_log_profiles: "SELECT * FROM meal_log_profiles WHERE uuid=?;",

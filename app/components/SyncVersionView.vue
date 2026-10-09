@@ -4,6 +4,8 @@
     <p v-else-if="value.deleted_at || value.deletedAt">{{ $t('settings.syncDecision.deleted') }}</p>
     <template v-else>
       <p class="break-words font-semibold">{{ value.name ?? value.name_de ?? value.name_en ?? value.logged_at ?? value.id }}</p>
+      <p v-if="value.duration_minutes != null">{{ $t('activities.perUnit', { minutes: value.duration_minutes, calories: value.calories }) }}</p>
+      <p v-if="value.date">{{ value.date }} · {{ value.units }} {{ $t('activities.units') }} · {{ value.profile_id }}</p>
       <p v-if="value.ean">EAN: {{ value.ean }}</p>
       <p v-if="value.daily_calories_target != null">{{ value.daily_calories_target }} kcal</p>
       <p v-if="value.calories_per_100g != null">{{ value.calories_per_100g }} kcal / 100 g</p>

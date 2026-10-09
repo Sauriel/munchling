@@ -125,7 +125,7 @@ describe("local JSON backups", () => {
 	it("preserves v2 UUIDs and all relationship tombstones", async () => {
 		await source.service.foods.deleteFood(1);
 		const deleted = await source.service.backups!.exportBackup();
-		expect(deleted.version).toBe(3);
+		expect(deleted.version).toBe(4);
 		await target.service.backups!.restoreBackup(deleted, async () => {});
 		const restored = await target.service.backups!.exportBackup();
 		if (deleted.version === 1 || restored.version === 1) throw new Error("expected identities");

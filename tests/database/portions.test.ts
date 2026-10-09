@@ -25,7 +25,7 @@ describe('optional portion sizes end to end in SQLite', () => {
       expect((await db.service.mealLogs.getMealLogById(m.id))!.totalWeightGrams).toBe(450)
       const queue = await createSyncQueue(db.database).list()
       expect(queue.filter(o => o.entity === 'recipes').at(-1)!.payload.portion_size_grams).toBe(250)
-      const backup = await db.service.backups!.exportBackup(); expect(backup.version).toBe(3)
+      const backup = await db.service.backups!.exportBackup(); expect(backup.version).toBe(4)
       await db.service.backups!.restoreBackup(backup, async () => {})
       expect((await db.service.recipes.getRecipeById(r.id))!.portionSizeGrams).toBe(250)
       // v2 backups remain readable; omitted sizes become unknown, never 100g.

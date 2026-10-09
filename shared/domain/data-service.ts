@@ -1,3 +1,4 @@
+import type { Activity, ActivityInput, ActivityLog, ActivityLogInput } from './activities';
 import type { LocalBackupService } from "./backup";
 import type {
 	CreateFoodInput, CreateMealLogInput, CreateProfileInput, CreateRecipeInput,
@@ -12,6 +13,18 @@ export interface MunchlingDataService {
 	// Optional local capability; an online server adapter must not expose a
 	// browser-side destructive restore against the shared server database.
 	backups?: LocalBackupService;
+	activities: {
+		listActivities(): Promise<Activity[]>;
+		getActivityById(id: number): Promise<Activity | null>;
+		createActivity(input: ActivityInput): Promise<Activity | null>;
+		updateActivity(id: number, input: ActivityInput, revision?: number): Promise<Activity | null>;
+		deleteActivity(id: number, revision?: number): Promise<number>;
+	};
+	activityLogs: {
+		listActivityLogs(): Promise<ActivityLog[]>;
+		createActivityLogs(input: ActivityLogInput): Promise<ActivityLog[]>;
+		deleteActivityLog(id: number, revision?: number): Promise<number>;
+	};
 	profiles: {
 		listProfiles(): Promise<Profile[]>;
 		getProfileById(id: number): Promise<Profile | null>;

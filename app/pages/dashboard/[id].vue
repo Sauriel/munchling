@@ -37,7 +37,7 @@
           </div>
           <div class="text-right">
             <p class="text-3xl font-bold">{{ todayNutrition.calories }}</p>
-            <p class="text-xs text-slate-500">/ {{ profile.dailyCaloriesTarget }} kcal</p>
+            <p class="text-xs text-slate-500">/ {{ todayCalorieTarget }} kcal</p>
           </div>
         </div>
 
@@ -70,6 +70,8 @@
         </div>
       </section>
 
+      <ActivityEntry :profile-id="profile.id" />
+      <p v-if="todayActivityBonus" class="text-sm text-slate-500">{{ $t('activities.bonus', { calories: todayActivityBonus }) }}</p>
       <section class="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
         <div class="mb-4 flex items-center justify-between">
           <div>
@@ -146,6 +148,7 @@ import { useMealLogs } from '~/composables/useMealLogs'
 import { useProfiles } from '~/composables/useProfiles'
 import { useMunchlingData } from '~/composables/useMunchlingData'
 import { calculateMealLogProfileNutrition } from '../../../shared/domain/nutrition'
+import { activityBonus } from '../../../shared/domain/activities'
 import { validationMessage } from '../../../shared/domain/validation'
 import type { MealLog, NutritionValues } from '../../../shared/domain/types'
 const { t } = useI18n()
@@ -160,6 +163,9 @@ const history = ref<Array<{ date: string; label: string; calories: number }>>([]
 const profile = computed(() => profiles.value.find((item) => item.id === profileId.value) ?? null)
 const todayDate = computed(() => dateKey(new Date()))
 const formattedToday = computed(() => new Date().toLocaleDateString())
+const { activityLogs } = useActivities()
+const todayActivityBonus = computed(() => activityBonus(activityLogs.value, profileId.value, todayDate.value))
+const todayCalorieTarget = computed(() => (profile.value?.dailyCaloriesTarget ?? 0) + todayActivityBonus.value)
 
 const emptyNutrition = (): NutritionValues => ({ calories: 0, fat: 0, carbs: 0, sugar: 0, fiber: 0, protein: 0, salt: 0 })
 
@@ -188,7 +194,7 @@ const dailyTargets = computed(() => {
   if (!currentProfile) return []
 
   return [
-    { key: 'calories', label: 'dashboard.targets.calories', consumed: todayNutrition.value.calories, target: currentProfile.dailyCaloriesTarget, unit: ' kcal' },
+    { key: 'calories', label: 'dashboard.targets.calories', consumed: todayNutrition.value.calories, target: todayCalorieTarget.value, unit: ' kcal' },
     { key: 'protein', label: 'dashboard.targets.protein', consumed: todayNutrition.value.protein, target: currentProfile.dailyProteinTarget ?? 0, unit: 'g' },
     { key: 'carbs', label: 'dashboard.targets.carbs', consumed: todayNutrition.value.carbs, target: currentProfile.dailyCarbsTarget ?? 0, unit: 'g' },
     { key: 'fat', label: 'dashboard.targets.fat', consumed: todayNutrition.value.fat, target: currentProfile.dailyFatTarget ?? 0, unit: 'g' },

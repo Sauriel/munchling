@@ -21,6 +21,7 @@ export function useLocalBackups() {
 	const { refreshFoods } = useFoods();
 	const { refreshRecipes, selectedRecipe } = useRecipes();
 	const { refreshMealLogs } = useMealLogs();
+	const { refreshActivities } = useActivities();
 	const { selectProfile, initializeCurrentProfile } = useCurrentProfile();
 
 	async function run(work: () => Promise<void>) {
@@ -60,7 +61,7 @@ export function useLocalBackups() {
 			pendingBackup.value = null;
 			selectedRecipe.value = null;
 			selectProfile(null);
-			await Promise.all([refreshProfiles(), refreshFoods(), refreshRecipes(), refreshMealLogs()]);
+			await Promise.all([refreshProfiles(), refreshFoods(), refreshRecipes(), refreshMealLogs(), refreshActivities()]);
 			await initializeCurrentProfile();
 			success.value = t("settings.backup.restored");
 		});

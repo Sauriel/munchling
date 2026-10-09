@@ -76,6 +76,7 @@ export async function deletionDependents(sql: ServerSql, entity: SyncAggregate, 
 		const meals = await sql.query<{ uuid: string }>(entity === "foods" ? "SELECT uuid FROM meal_logs WHERE food_id=? AND deleted_at IS NULL" : "SELECT uuid FROM meal_logs WHERE recipe_id=? AND deleted_at IS NULL", [uuid]);
 		for (const row of meals) result.push({ entity: "meal_logs", uuid: row.uuid });
 	} else if (entity === "profiles") {
+		for (const log of await sql.query<{ uuid: string }>('SELECT uuid FROM activity_logs WHERE profile_id=? AND deleted_at IS NULL', [uuid])) result.push({ entity: 'activity_logs', uuid: log.uuid });
 		const meals = await sql.query<{ uuid: string }>("SELECT DISTINCT m.uuid FROM meal_logs m JOIN meal_log_profiles p ON p.meal_log_id=m.uuid WHERE m.deleted_at IS NULL AND p.deleted_at IS NULL AND p.profile_id=?", [uuid]);
 		for (const row of meals) result.push({ entity: "meal_logs", uuid: row.uuid });
 	}

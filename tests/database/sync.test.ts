@@ -42,7 +42,7 @@ describe("safe schema v2 migration", () => {
 		await migrate(test, save);
 		const backup = parseBackupJson(JSON.stringify(await test.service.backups!.exportBackup()));
 		expect(backup.data).toEqual(previous.data);
-		expect(backup.version).toBe(3);
+		expect(backup.version).toBe(4);
 		if (backup.version === 1) throw new Error("expected identities");
 		expect(backup.identities).toHaveLength(6);
 		expect(backup.identities.every((identity) => isUuid(identity.uuid))).toBe(true);

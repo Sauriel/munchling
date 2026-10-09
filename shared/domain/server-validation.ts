@@ -1,10 +1,11 @@
+import { validateActivity, validateActivityDate, activityTotals } from './activities';
 import type { ServerWriteBatch } from "./server";
 import { isUuid, type SyncAggregate } from "./sync";
 import { DomainValidationError, assertDateTime, assertNumber, assertRecord, assertText, fail, validateFoodInput, validateIngredientInput, validateProfileInput, validateRecipeInput } from "./validation";
 import { wireColumns } from "./wire-columns";
 type ServerTable = keyof typeof wireColumns;
 
-export const aggregates: SyncAggregate[] = ["profiles", "foods", "recipes", "meal_logs"];
+export const aggregates: SyncAggregate[] = ["profiles", "foods", "recipes", "meal_logs", "activities", "activity_logs"];
 function fields(value: Record<string, unknown>, allowed: readonly string[]) {
 	if (Object.keys(value).some((key) => !allowed.includes(key))) fail("invalidType", "fields");
 }
@@ -63,6 +64,10 @@ export function validatePayload(entity: SyncAggregate, value: Record<string, unk
 		}
 		value.name_de = (value.name_de as string).trim(); value.name_en = (value.name_en as string).trim();
 		return value.ingredients.length;
+	} else if (entity === 'activities' || entity === 'activity_logs') {
+		const activity = { name: value.name, durationMinutes: value.duration_minutes, calories: value.calories };
+		validateActivity(activity); value.name = activity.name.trim();
+		if (entity === 'activity_logs') { uuid(value.profile_id, 'profile_id'); validateActivityDate(value.date); assertNumber(value.units, 'units', true); activityTotals(activity, value.units); }
 	} else {
 		source(value, "food_id", "recipe_id"); assertNumber(value.total_weight_grams, "total_weight_grams", true);
 		// Historical datetime-local values have no known timezone. Attaching Z

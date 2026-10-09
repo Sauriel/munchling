@@ -20,11 +20,17 @@
   - [x] Mengenwahl Gramm/Portionen einschließlich Bruchteilen, ohne historische Grammwerte zu verändern; fehlende Portionsgröße erlaubt nur Gramm.
   - [x] Gezielte Persistenz-/Migrations-/Vertragstests (94 lokal, 46 Nitro/MariaDB) und beide Typechecks bestanden.
   - [x] Live-Abnahme des vollständigen Punkts auf Handy und Dokploy: Portionsgrößen speichern/synchronisieren, 0,5 bzw. 1,5 Portionen eintragen, Einheit wechseln und alte Mahlzeiten prüfen.
-- [ ] Beim Lebensmittel und beim Gerichte Tab soll es neben "Bearbeiten" und "Löschen" auch einen Button geben um direkt von dort eine Mahlzeit einzutragen
+- [x] Beim Lebensmittel und beim Gerichte Tab soll es neben "Bearbeiten" und "Löschen" auch einen Button geben um direkt von dort eine Mahlzeit einzutragen
   - [x] Aktion in beiden Eintragskarten ergänzt; Mahlzeitformular mit eindeutiger Lebensmittel-/Gericht-Vorauswahl und vorhandener Portionsgröße öffnen, ohne automatisches Speichern.
   - [x] Ungültige/gelöschte Quellen abfangen; vorhandene Mahlzeitbearbeitung hat Vorrang. Acht gezielte Tests und Typecheck bestanden.
-  - [ ] Live-Abnahme des vollständigen Punkts auf Handy und Dokploy: beide Direkteinstiege öffnen, Mengen eingeben und bewusst speichern.
+  - [x] Live-Abnahme des vollständigen Punkts auf Handy und Dokploy: beide Direkteinstiege öffnen, Mengen eingeben und bewusst speichern.
 - [ ] Es soll einen neuen Tab "Aktivitäten" geben bei denen man aktivitäten eintragen kann. Diese bestehen aus einem Namen, einer Dauer und einer Kalorienanzahl. Im Dashboard kann man dann auch eine Aktivität hinzufügen (Man kann auswählen wie viele "Einheiten" man davon hinzufügen will) Diese Aktivitäten erhöhen das tägliche Kalorienlimit (aber nur für diesen Tag) Auch über die AKtivitätenliste sollte man sie hinzufügen können.
+  - [x] Gemeinsame Vorlagen und historische, profilbezogene Tagesbuchungen; Bruchteile skalieren Dauer und Kalorien, Vorlagenänderungen verändern keine alten Einträge.
+  - [x] SQLite v6, MariaDB v4, Backup v4 (v1/v2/v3 bleiben lesbar), Sync- und Webadapter einschließlich atomarer Mehrprofil-Buchungen und Löschschutz erweitern.
+  - [x] Aktivitäten-Tab und Dashboard-Eingabe: ohne Profilauswahl mehrere Profile mit eigenen Einheiten, bei gewähltem Profil nur dieses Profil; Kalorienbonus getrennt vom dauerhaften Profilziel.
+  - [x] 141 gezielte lokale/UI-/Backup-/Receive-/Runner-Prüfungen und 85 MariaDB-/API-Tests, beide Typechecks und Browser-Backup-Smoke bestanden; Android ohne Zurücksetzen aktualisiert.
+  - [ ] Dokploy-Rollout des passenden Commits bestätigen.
+  - [ ] Live-Abnahme des vollständigen Punkts auf Handy und Dokploy: mehrere Profile, Bruchteile, Datumswechsel, Vorlagenänderung/-löschung und Sync prüfen.
 - [ ] Unter Einstellungen sollte die Checkbox "Ich vertraue dieser Adresse und ..." auch persistiert werden.
 - [ ] Die Webseiten Ansicht sollte Responsive auf die Volle Bildschirmbreite ausgelegt sein (Das Layout darf dafür angepasst werden) Wir brauchen am Ende eine Mobile ( und App) Ansicht und eine Desktop / Tablet Ansicht. Wir verfolgen dabei dem Mobile-First Ansatz.
 - [ ] Es muss möglich sein automatisches synchronisieren anschalten zu können (Beim App Start und beim wechseln in die App zurück, falls sie im Hintergrund lief) Dies sollte granular konfigurierbar sein.

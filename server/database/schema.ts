@@ -1,6 +1,6 @@
 // This manifest contains ONLY compile-time identifiers/SQL. Imported payloads
 // are always bound values; they never supply table or column identifiers.
-export const serverTables = {
+const legacyServerTables = {
 	profiles: { columns: ["name", "daily_calories_target", "daily_protein_target", "daily_carbs_target", "daily_fat_target", "daily_sugar_target", "daily_fiber_target", "daily_salt_target", "created_at", "updated_at"], definitions: `
 name LONGTEXT NOT NULL, daily_calories_target BIGINT NOT NULL CHECK (daily_calories_target BETWEEN 0 AND 9007199254740991),
 daily_protein_target DOUBLE CHECK (daily_protein_target>=0), daily_carbs_target DOUBLE CHECK (daily_carbs_target>=0),
@@ -34,6 +34,11 @@ portion_factor DOUBLE NOT NULL CHECK (portion_factor>0), FOREIGN KEY(meal_log_id
 active_flag TINYINT GENERATED ALWAYS AS (CASE WHEN deleted_at IS NULL THEN 1 ELSE NULL END) PERSISTENT,
 UNIQUE KEY uq_active_portion(meal_log_id,profile_id,active_flag)` },
 } as const;
+const activityTables = {
+	activities: { columns: ['name', 'duration_minutes', 'calories', 'created_at', 'updated_at'], definitions: `name LONGTEXT NOT NULL, duration_minutes DOUBLE NOT NULL CHECK(duration_minutes>0), calories DOUBLE NOT NULL CHECK(calories>=0)` },
+	activity_logs: { columns: ['profile_id', 'date', 'name', 'duration_minutes', 'calories', 'units', 'created_at', 'updated_at'], definitions: `profile_id CHAR(36) CHARACTER SET ascii COLLATE ascii_bin NOT NULL, date CHAR(10) CHARACTER SET ascii NOT NULL, name LONGTEXT NOT NULL, duration_minutes DOUBLE NOT NULL CHECK(duration_minutes>0), calories DOUBLE NOT NULL CHECK(calories>=0), units DOUBLE NOT NULL CHECK(units>0), FOREIGN KEY(profile_id) REFERENCES profiles(uuid), KEY idx_activity_profile_date(profile_id,date)` },
+} as const;
+export const serverTables = { ...legacyServerTables, ...activityTables };
 export type ServerTable = keyof typeof serverTables;
 export const migrationTableSql = `CREATE TABLE IF NOT EXISTS schema_migrations (
  version INT PRIMARY KEY, name VARCHAR(128) NOT NULL, checksum CHAR(64) CHARACTER SET ascii NOT NULL,
@@ -47,7 +52,7 @@ const initialStatements = [
  entity ENUM('profiles','foods','recipes','recipe_ingredients','meal_logs','meal_log_profiles') NOT NULL,
  aggregate_uuid CHAR(36) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
  version BIGINT UNSIGNED NOT NULL DEFAULT 0 CHECK (version<=9007199254740991), deleted_at DATETIME(3), KEY idx_aggregate(aggregate_uuid)) ENGINE=InnoDB`,
-	...Object.entries(serverTables).map(([name, table]) => `CREATE TABLE ${name} (
+	...Object.entries(legacyServerTables).map(([name, table]) => `CREATE TABLE ${name} (
  view_id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT UNIQUE,
  uuid CHAR(36) CHARACTER SET ascii COLLATE ascii_bin PRIMARY KEY,
  created_at DATETIME(3) NOT NULL${(table.columns as readonly string[]).includes("updated_at") ? ", updated_at DATETIME(3)" : ""}, deleted_at DATETIME(3),
@@ -88,6 +93,10 @@ export const serverMigrations = [
 	{ version: 3, name: "food_and_recipe_portion_sizes", statements: [
 		"ALTER TABLE foods ADD COLUMN portion_size_grams DOUBLE NULL CHECK(portion_size_grams IS NULL OR portion_size_grams > 0)",
 		"ALTER TABLE recipes ADD COLUMN portion_size_grams DOUBLE NULL CHECK(portion_size_grams IS NULL OR portion_size_grams > 0)",
+	] },
+	{ version: 4, name: 'activities_and_daily_activity_logs', statements: [
+		"ALTER TABLE sync_identities MODIFY entity ENUM('profiles','foods','recipes','recipe_ingredients','meal_logs','meal_log_profiles','activities','activity_logs') NOT NULL",
+		...Object.entries(activityTables).map(([name, table]) => `CREATE TABLE ${name} (view_id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT UNIQUE, uuid CHAR(36) CHARACTER SET ascii COLLATE ascii_bin PRIMARY KEY, created_at DATETIME(3) NOT NULL, updated_at DATETIME(3), deleted_at DATETIME(3), ${table.definitions}, FOREIGN KEY(uuid) REFERENCES sync_identities(uuid)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin`),
 	] },
 ];
 

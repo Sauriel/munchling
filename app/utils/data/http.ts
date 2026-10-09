@@ -1,3 +1,4 @@
+import { validateActivity, validateActivityLog, activityTotals, type ActivityInput, type ActivityLogInput } from '../../../shared/domain/activities';
 import type { MunchlingDataService } from "../../../shared/domain/data-service";
 import type { CreateFoodInput, CreateProfileInput, CreateRecipeInput, CreateMealLogInput, RecipeIngredientInput } from "../../../shared/domain/types";
 import type { SyncAggregate } from "../../../shared/domain/sync";
@@ -47,10 +48,13 @@ export function createHttpDataService(address: string, storage: JournalStore, op
 		await refresh(); storage.removeItem(key);
 	}
 	async function write(entity: SyncAggregate, uuid: string, payload: Record<string, unknown>, revision = 0, remove = false) {
+		return writeOperations([{ operationId: createUuid(), entity, entityUuid: uuid, baseRevision: revision, operation: remove ? 'delete' : 'upsert', payload }]);
+	}
+	async function writeOperations(operations: ServerWriteBatch['operations'], guards?: ServerWriteBatch['guards']) {
 		return locked(async () => {
 		if (busy || pending()) throw new SyncClientError("unconfirmedUpload"); busy = true;
 		try {
-			await current(); const batch = normalizeWriteBatch({ ...binding!, batchId: createUuid(), operations: [{ operationId: createUuid(), entity, entityUuid: uuid, baseRevision: revision, operation: remove ? "delete" : "upsert", payload }] });
+			await current(); const batch = normalizeWriteBatch({ ...binding!, batchId: createUuid(), operations, ...(guards ? { guards } : {}) });
 			// Must succeed before sending; never silently lose an uncertain write.
 			storage.setItem(key, JSON.stringify({ batch, confirmed: false })); await replay();
 			return view!;
@@ -105,7 +109,24 @@ export function createHttpDataService(address: string, storage: JournalStore, op
 		data.ingredients = children.flatMap(row => row.id !== uuid ? [row] : input ? [{ ...ingredients(v, root.id, [input])[0]!, id: uuid, created_at: row.created_at }] : []); data.updated_at = new Date().toISOString();
 		await write("recipes", root.id, data, root.version); return input ? view!.read.recipes.getRecipeIngredientById(childId) : 1;
 	}
+	async function saveActivity(input: ActivityInput, id?: number, revision?: number) {
+		validateActivity(input); const old = id === undefined ? undefined : (await selected('activities', id, revision)).root;
+		const data = { id: old?.id ?? createUuid(), name: input.name.trim(), duration_minutes: input.durationMinutes, calories: input.calories, created_at: old?.data?.created_at ?? new Date().toISOString(), updated_at: old ? new Date().toISOString() : null };
+		const v = await write('activities', data.id, data, old?.version ?? 0); return v.read.activities.getActivityById(v.id(data.id));
+	}
+	async function saveActivityLogs(input: ActivityLogInput) {
+		validateActivityLog(input); const { v, root } = await selected('activities', input.activityId, input.activityRevision);
+		const activity = (await v.read.activities.getActivityById(input.activityId))!;
+		const operations = input.profiles.map(row => {
+			activityTotals(activity, row.units); const uuid = createUuid();
+			return { operationId: createUuid(), entity: 'activity_logs' as const, entityUuid: uuid, baseRevision: 0, operation: 'upsert' as const, payload: { id: uuid, profile_id: v.uuid('profiles', row.profileId), date: input.date, name: activity.name, duration_minutes: activity.durationMinutes, calories: activity.calories, units: row.units, created_at: new Date().toISOString(), updated_at: null } };
+		});
+		const next = await writeOperations(operations, [{ entity: 'activities', entityUuid: root.id, baseRevision: root.version }]);
+		const ids = new Set(operations.map(o => next.id(o.entityUuid))); return (await next.read.activityLogs.listActivityLogs()).filter(row => ids.has(row.id));
+	}
 	const service: MunchlingDataService = {
+		activities: { listActivities: async () => (await refresh()).read.activities.listActivities(), getActivityById: async id => (await current()).read.activities.getActivityById(id), createActivity: input => saveActivity(input), updateActivity: (id,input,revision) => saveActivity(input,id,revision), deleteActivity: (id,revision) => remove('activities',id,revision) },
+		activityLogs: { listActivityLogs: async () => (await refresh()).read.activityLogs.listActivityLogs(), createActivityLogs: saveActivityLogs, deleteActivityLog: (id,revision) => remove('activity_logs',id,revision) },
 		profiles: { listProfiles: async () => (await refresh()).read.profiles.listProfiles(), getProfileById: async id => (await current()).read.profiles.getProfileById(id), createProfile: async input => { const id = await saveSimple("profiles", input); return view!.read.profiles.getProfileById(id); }, updateProfile: async (id, input, revision) => { await saveSimple("profiles", input, id, revision); return view!.read.profiles.getProfileById(id); }, deleteProfile: (id, revision) => remove("profiles", id, revision) },
 		foods: { listFoods: async search => (await refresh()).read.foods.listFoods(search), getFoodById: async id => (await current()).read.foods.getFoodById(id), getFoodByEan: async ean => (await current()).read.foods.getFoodByEan(ean), getFoodByNameDe: async name => (await current()).read.foods.getFoodByNameDe(name), createFood: async input => { const id = await saveSimple("foods", input); return view!.read.foods.getFoodById(id); }, updateFood: async (id, input, revision) => { await saveSimple("foods", input, id, revision); return view!.read.foods.getFoodById(id); }, deleteFood: (id, revision) => remove("foods", id, revision) },
 		recipes: { listRecipes: async () => (await refresh()).read.recipes.listRecipes(), getRecipeById: async id => (await current()).read.recipes.getRecipeById(id), getRecipeWithIngredients: async id => (await current()).read.recipes.getRecipeWithIngredients(id), listRecipeIngredients: async id => (await current()).read.recipes.listRecipeIngredients(id), getRecipeIngredientById: async id => (await current()).read.recipes.getRecipeIngredientById(id), calculateRecipeNutrition: async id => (await current()).read.recipes.calculateRecipeNutrition(id), createRecipe: async input => { const id = await saveSimple("recipes", input); return view!.read.recipes.getRecipeWithIngredients(id); }, updateRecipe: async (id, input, revision) => { await saveSimple("recipes", input, id, revision); return view!.read.recipes.getRecipeWithIngredients(id); }, deleteRecipe: (id, revision) => remove("recipes", id, revision), replaceRecipeIngredients: async (id, inputs, revision) => { await saveSimple("recipes", { ingredients: inputs }, id, revision); return view!.read.recipes.listRecipeIngredients(id); }, addRecipeIngredient: async (id, input, revision) => { const { v, root } = await selected("recipes", id, revision); const child = ingredients(v, root.id, [input])[0]!; await write("recipes", root.id, { ...root.data, updated_at: new Date().toISOString(), ingredients: [...root.data!.ingredients as Record<string, unknown>[], child] }, root.version); return view!.read.recipes.getRecipeIngredientById(view!.id(child.id)); }, updateRecipeIngredient: async (id, input, revision) => await changeChild(id, input, revision) as Awaited<ReturnType<MunchlingDataService["recipes"]["getRecipeIngredientById"]>>, deleteRecipeIngredient: async (id, revision) => await changeChild(id, null, revision) as number },

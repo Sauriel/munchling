@@ -48,6 +48,7 @@ async function checkReferences(sql: ServerSql, batch: ServerWriteBatch) {
 		if (operation.entity === "recipes") for (const child of payload.ingredients as Record<string, unknown>[]) {
 			await check(child.food_id, "foods", "food_id"); await check(child.sub_recipe_id, "recipes", "sub_recipe_id");
 		}
+		if (operation.entity === 'activity_logs') await check(payload.profile_id, 'profiles', 'profile_id');
 		if (operation.entity === "meal_logs") {
 			await check(payload.food_id, "foods", "food_id"); await check(payload.recipe_id, "recipes", "recipe_id");
 			for (const child of payload.profiles as Record<string, unknown>[]) await check(child.profile_id, "profiles", "profile_id");
@@ -121,6 +122,9 @@ async function commitBatch(sql: ServerSql, batch: ServerWriteBatch): Promise<Ser
 			for (const meal of meals) await removeMeal(meal.uuid);
 		}
 		if (operation.entity === "profiles") {
+			for (const log of await sql.query<{ uuid: string }>('SELECT uuid FROM activity_logs WHERE profile_id=? AND deleted_at IS NULL', [operation.entityUuid])) {
+				await removeRow(sql, 'activity_logs', log.uuid, timestamp); dirty.set(log.uuid, 'activity_logs');
+			}
 			const portions = await sql.query<{ uuid: string; meal_log_id: string }>("SELECT p.uuid,p.meal_log_id FROM meal_log_profiles p JOIN meal_logs m ON m.uuid=p.meal_log_id WHERE p.profile_id=? AND p.deleted_at IS NULL AND m.deleted_at IS NULL", [operation.entityUuid]);
 			for (const portion of portions) {
 				await removeRow(sql, "meal_log_profiles", portion.uuid, timestamp, true);

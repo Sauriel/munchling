@@ -26,6 +26,7 @@ export function completeSnapshot(pages: SnapshotPage[]): CompleteSnapshot {
 				if (child.food_id !== null) checkReference(child.food_id, "foods"); if (child.sub_recipe_id !== null) checkReference(child.sub_recipe_id, "recipes");
 				edges.push({ recipeId: root.id, subRecipeId: child.sub_recipe_id as string | null }); childRows.set(String(child.id), { entity: "recipe_ingredients", owner: root.id });
 			}
+			if (root.entity === "activity_logs") checkReference(root.data.profile_id, "profiles");
 			if (root.entity === "meal_logs") {
 				if (root.data.food_id !== null) checkReference(root.data.food_id, "foods"); if (root.data.recipe_id !== null) checkReference(root.data.recipe_id, "recipes");
 				for (const child of root.data.profiles as Record<string, unknown>[]) { checkReference(child.profile_id, "profiles"); childRows.set(String(child.id), { entity: "meal_log_profiles", owner: root.id }); }

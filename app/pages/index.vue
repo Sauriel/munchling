@@ -39,7 +39,7 @@
             <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">{{ $t('dashboard.today') }}</p>
             <p class="mt-3 text-3xl font-bold tracking-tight">
               {{ profileTodayCalories(profile.id) }}
-              <span class="text-sm font-semibold text-slate-400">/ {{ profile.dailyCaloriesTarget }} kcal</span>
+              <span class="text-sm font-semibold text-slate-400">/ {{ profileCalorieTarget(profile) }} kcal</span>
             </p>
           </div>
 
@@ -62,6 +62,7 @@
       </NuxtLink>
     </section>
 
+    <ActivityEntry />
     <AppBottomNav />
   </main>
 </template>
@@ -70,10 +71,12 @@
 import { useProfiles } from '~/composables/useProfiles'
 import { useMunchlingData } from '~/composables/useMunchlingData'
 import { calculateMealLogProfileNutrition } from '../../shared/domain/nutrition'
+import { activityBonus } from '../../shared/domain/activities'
 import type { Profile } from '../../shared/domain/types'
 
 const { listMealLogs } = useMunchlingData().mealLogs
 const { profiles, refreshProfiles } = useProfiles()
+const { activityLogs } = useActivities()
 const todayCaloriesByProfile = reactive<Record<number, number>>({})
 
 const todayDate = computed(() => dateKey(new Date()))
@@ -88,9 +91,11 @@ function profileTodayCalories(profileId: number) {
   return todayCaloriesByProfile[profileId] ?? 0
 }
 
+function profileCalorieTarget(profile: Profile) { return profile.dailyCaloriesTarget + activityBonus(activityLogs.value, profile.id, todayDate.value) }
 function profileCaloriePercent(profile: Profile) {
-  return profile.dailyCaloriesTarget > 0
-    ? Math.round((profileTodayCalories(profile.id) / profile.dailyCaloriesTarget) * 100)
+  const target = profileCalorieTarget(profile)
+  return target > 0
+    ? Math.round((profileTodayCalories(profile.id) / target) * 100)
     : 0
 }
 

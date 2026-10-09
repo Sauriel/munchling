@@ -114,7 +114,7 @@ try {
 	await navigate("/settings");
 	await wait(() => evaluate('Boolean(document.querySelector("#backup-file"))'), "backup controls");
 	const empty = await download("Export backup");
-	if (empty.data.version !== 3 || empty.data.schemaVersion !== 3 || empty.data.identities.length !== 0 || empty.data.data.profiles.length !== 0) throw new Error("Expected an empty v3 backup.");
+	if (empty.data.version !== 4 || empty.data.schemaVersion !== 4 || empty.data.identities.length !== 0 || empty.data.data.profiles.length !== 0) throw new Error("Expected an empty v4 backup.");
 	console.log("PASS: browser exports the empty local database");
 
 	await navigate("/profiles");
@@ -161,7 +161,7 @@ try {
 	await cdp("Page.reload");
 	await wait(() => evaluate('Boolean(document.querySelector("#backup-file"))'), "settings after legacy restore");
 	const legacyRestored = await download("Export backup");
-	if (legacyRestored.data.version !== 3 || legacyRestored.data.data.profiles[0]?.name !== "Browser Smoke" || !legacyRestored.data.identities[0]?.uuid || legacyRestored.data.identities[0].uuid === originalUuid) throw new Error("Legacy restore did not create a new persistent identity.");
+	if (legacyRestored.data.version !== 4 || legacyRestored.data.data.profiles[0]?.name !== "Browser Smoke" || !legacyRestored.data.identities[0]?.uuid || legacyRestored.data.identities[0].uuid === originalUuid) throw new Error("Legacy restore did not create a new persistent identity.");
 	console.log("PASS: legacy v1 restore creates persistent new UUIDs");
 	if (exceptions.length) throw new Error("Uncaught browser exceptions: " + exceptions.join("; "));
 	console.log("PASS: no uncaught browser exceptions");

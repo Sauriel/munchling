@@ -1,6 +1,6 @@
 <template>
   <nav class="fixed inset-x-0 bottom-0 z-40 mx-auto max-w-md border-t border-slate-200 bg-white/90 px-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)] pt-3 shadow-[0_-8px_24px_rgba(15,23,42,0.08)] backdrop-blur dark:border-slate-800 dark:bg-slate-950/90">
-    <div class="grid grid-cols-4 gap-2">
+    <div class="grid grid-cols-5 gap-1">
       <NuxtLink
         v-for="item in items"
         :key="item.label"
@@ -22,6 +22,7 @@ const items = [
   { label: 'nav.dashboard', icon: 'ph:gauge-duotone', to: '/' },
   { label: 'nav.foods', icon: 'ph:fork-knife-duotone', to: '/foods' },
   { label: 'nav.recipes', icon: 'ph:cooking-pot-duotone', to: '/recipes' },
+  { label: 'nav.activities', icon: 'ph:person-simple-run-duotone', to: '/activities' },
   { label: 'nav.settings', icon: 'ph:gear-six-duotone', to: '/settings' }
 ]
 

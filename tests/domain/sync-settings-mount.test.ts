@@ -24,7 +24,7 @@ function component() {
 		"../../shared/domain/replies": { SyncClientError },
 	};
 	const localRefresh = async () => {};
-	const data = { refreshProfiles: localRefresh, refreshFoods: localRefresh, refreshRecipes: localRefresh, refreshMealLogs: localRefresh, selectedRecipe: Vue.ref(null), initializeCurrentProfile: localRefresh };
+	const data = { refreshProfiles: localRefresh, refreshFoods: localRefresh, refreshRecipes: localRefresh, refreshMealLogs: localRefresh, refreshActivities: localRefresh, selectedRecipe: Vue.ref(null), initializeCurrentProfile: localRefresh };
 	const text = readFileSync(new URL("../../app/components/SyncPreparation.client.vue", import.meta.url), "utf8");
 	const compiled = compileScript(parse(text).descriptor, { id: "sync-settings-mount-test", genDefaultAs: "Settings" }).content;
 	const output = transpileModule(`${compiled}\nexports.Settings = Settings;`, { compilerOptions: { module: ModuleKind.CommonJS, target: ScriptTarget.ES2022 } }).outputText;
@@ -32,6 +32,7 @@ function component() {
 	new Script(output, { filename: "fixed-sync-settings-test.cjs" }).runInNewContext({
 		exports, require: (name: string) => { if (!(name in imports)) throw new Error("Unexpected SFC test dependency"); return imports[name]; },
 		ref: Vue.ref, shallowRef: Vue.shallowRef, computed: Vue.computed, watch: Vue.watch, onMounted: Vue.onMounted, onBeforeUnmount: Vue.onBeforeUnmount,
+		useActivities: () => data,
 		useI18n: () => ({ t: (key: string) => key, te: () => false }), useProfiles: () => data, useFoods: () => data, useRecipes: () => data, useMealLogs: () => data, useCurrentProfile: () => data,
 		AbortController,
 	});

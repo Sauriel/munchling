@@ -21,7 +21,7 @@ async function pending(sql: SqlExecutor, uuid: string) {
 export async function deletionDependents(sql: SqlExecutor, root: ServerAggregate) {
 	if (root.entity === "foods") return sql.query<{ uuid: string }>("SELECT r.uuid FROM recipes r JOIN recipe_ingredients i ON r.id=i.recipe_id WHERE i.food_id=(SELECT local_id FROM sync_records WHERE uuid=?) UNION SELECT uuid FROM meal_logs WHERE food_id=(SELECT local_id FROM sync_records WHERE uuid=?);", [root.id, root.id]);
 	if (root.entity === "recipes") return sql.query<{ uuid: string }>("SELECT r.uuid FROM recipes r JOIN recipe_ingredients i ON r.id=i.recipe_id WHERE i.sub_recipe_id=(SELECT local_id FROM sync_records WHERE uuid=?) UNION SELECT uuid FROM meal_logs WHERE recipe_id=(SELECT local_id FROM sync_records WHERE uuid=?);", [root.id, root.id]);
-	if (root.entity === "profiles") return sql.query<{ uuid: string }>("SELECT m.uuid FROM meal_logs m JOIN meal_log_profiles p ON p.meal_log_id=m.id WHERE p.profile_id=(SELECT local_id FROM sync_records WHERE uuid=?);", [root.id]);
+	if (root.entity === "profiles") return sql.query<{ uuid: string }>("SELECT m.uuid FROM meal_logs m JOIN meal_log_profiles p ON p.meal_log_id=m.id WHERE p.profile_id=(SELECT local_id FROM sync_records WHERE uuid=?) UNION SELECT uuid FROM activity_logs WHERE profile_id=(SELECT local_id FROM sync_records WHERE uuid=?);", [root.id, root.id]);
 	return [];
 }
 export function referenceIds(payload: Record<string, unknown>): string[] {
@@ -94,14 +94,14 @@ export async function writeRoots(sql: SqlExecutor, roots: ServerAggregate[], ide
 	await sql.run("UPDATE sync_state SET tracking_enabled=0 WHERE id=1;");
 	// Free unique keys before any replacement, independent of input order.
 	for (const root of roots) if (root.entity === "foods") await sql.run("UPDATE foods SET ean=NULL WHERE uuid=?;", [root.id]);
-	for (const entity of ["profiles", "foods", "recipes", "meal_logs"] as const) for (const root of roots) if (root.entity === entity && root.data) await writeRow(sql, entity, entity, root.id, root.data);
+	for (const entity of ["profiles", "foods", "recipes", "meal_logs", "activities", "activity_logs"] as const) for (const root of roots) if (root.entity === entity && root.data) await writeRow(sql, entity, entity, root.id, root.data);
 	for (const root of roots) {
 		const children = rootChildren(root); if (!children) continue;
 		const parent = (await meta(sql, root.id))!;
 		await sql.run(removeChildren[children.entity], [parent.local_id]);
 		for (const child of children.rows) await writeRow(sql, children.entity, root.entity, root.id, child);
 	}
-	for (const entity of ["meal_logs", "recipes", "foods", "profiles"] as const) for (const root of roots) if (root.entity === entity && root.deletedAt !== null) await sql.run(receiveSql[entity].remove, [root.id]);
+	for (const entity of ["activity_logs", "activities", "meal_logs", "recipes", "foods", "profiles"] as const) for (const root of roots) if (root.entity === entity && root.deletedAt !== null) await sql.run(receiveSql[entity].remove, [root.id]);
 	for (const root of roots) {
 		const known = await meta(sql, root.id);
 		if (!known) await sql.run("INSERT INTO sync_records(uuid,entity,aggregate_entity,aggregate_uuid,server_revision,deleted_at) VALUES (?,?,?,?,?,?);", [root.id, root.entity, root.entity, root.id, root.version, root.deletedAt]);

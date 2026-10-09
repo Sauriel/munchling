@@ -86,6 +86,7 @@ const modes: InitialMode[] = ['combine', 'local', 'server'], mode = ref<InitialM
 const blocked = computed(() => busy.value || props.disabled || !props.approved)
 const hasDeletion = computed(() => conflict.value?.entries.some(entry => entry.deletedLocally || !!entry.remote?.deletedAt))
 const allChosen = computed(() => conflict.value?.entries.every(entry => choices.value[entry.id] === 'local' || choices.value[entry.id] === 'server'))
+const { refreshActivities } = useActivities()
 const { refreshProfiles } = useProfiles(), { refreshFoods } = useFoods(), { refreshRecipes, selectedRecipe } = useRecipes(), { refreshMealLogs } = useMealLogs(), { selectProfile, initializeCurrentProfile } = useCurrentProfile()
 const controller = new AbortController()
 onBeforeUnmount(() => controller.abort())
@@ -130,7 +131,7 @@ async function commitDisconnect() {
 async function dataChanged() {
   cancel(); await refresh(); emit('changed')
   selectedRecipe.value = null; selectProfile(null)
-  await Promise.all([refreshProfiles(), refreshFoods(), refreshRecipes(), refreshMealLogs()]); await initializeCurrentProfile()
+  await Promise.all([refreshProfiles(), refreshFoods(), refreshRecipes(), refreshMealLogs(), refreshActivities()]); await initializeCurrentProfile()
 }
 async function commitInitial() {
   if (!confirmed.value || !initial.value) return
