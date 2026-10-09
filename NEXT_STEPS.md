@@ -43,11 +43,11 @@
   - [x] Gemeinsame App-Hülle und Navigation unten/oben/links, volle Arbeitsbreite und seitenbezogene Raster für alle acht Seiten; keine doppelten Formulare oder größenabhängigen Mounts.
   - [x] Abschlussprüfung: 38 gezielte UI-/Navigationsprüfungen, Typecheck, 69 gefüllte responsive Browserfälle, stabile Formularentwürfe/Portionen, unveränderte gespeicherte Fachdaten und Browser-Backup-Smoke; Server-/Static-/Android-Build bestanden.
   - [x] Live-Abnahme des vollständigen Layoutpunkts auf Handy und Dokploy durch Nutzer bestätigt: funktioniert auf Webseite und Handy perfekt.
-- [ ] Im Dashboard „Aktivität hinzufügen“ als Button analog „Mahlzeit eintragen“ auf eine eigene Eingabeseite verlagern.
+- [x] Im Dashboard „Aktivität hinzufügen“ als Button analog „Mahlzeit eintragen“ auf eine eigene Eingabeseite verlagern.
   - [x] Allgemeines Dashboard: mehrere Profile mit eigenen Einheiten; Profil-Dashboard: nur das gewählte Profil. Eigene Seite `/activity-log` mit profilbezogenem Zurück-Link; ungültige/fehlende gewählte Profile führen nie zur Buchung für andere Profile.
   - [x] Bestehende Buchungslogik wiederverwendet; Dashboards laden den Tagesbonus auch ohne Inline-Formular selbst.
   - [x] 45 gezielte UI-/Routingprüfungen, Typecheck und 85 responsive Browserfälle bestanden; Server-/Static-/Android-Build und Handy-Update ohne Zurücksetzen mit frischer Sicherung.
-  - [ ] Live-Abnahme des vollständigen Punkts auf Webseite und Handy: beide Dashboard-Einstiege, Profilauswahl, Bruchteile, Zurück-Link und Tagesbonus prüfen.
+  - [x] Live-Abnahme des vollständigen Punkts auf Webseite und Handy durch Nutzer bestätigt.
 - [ ] Es muss möglich sein automatisches synchronisieren anschalten zu können (Beim App Start und beim wechseln in die App zurück, falls sie im Hintergrund lief) Dies sollte granular konfigurierbar sein.
   - Bestehenden manuellen Runner und dessen Single-Flight-, Journal- und Konfliktschutz wiederverwenden; Start und Rückkehr aus dem Hintergrund getrennt schaltbar, standardmäßig aus.
 
@@ -58,4 +58,26 @@
 - [ ] Web-Schreibkonflikte komfortabler darstellen und referenzierte Löschungen ausdrücklich ermöglichen.
   - Basis, eigenen Entwurf und Serverstand gegenüberstellen.
   - Versionsgebundene Kaskaden-/Löschvorschau mit ausdrücklicher Bestätigung; bestehende Löschsperren bis dahin erhalten.
+
+## Neue Anforderungen (am Ende der Roadmap)
+
+Die folgenden Punkte sind zunächst nur dokumentiert; mit diesem Auftrag erfolgt keine Umsetzung.
+
+- [ ] Profile um Gewicht und weitere Angaben zur automatischen Kalorienbedarfs- und Zielberechnung erweitern.
+  - [ ] Grundlage prüfen: [TK-Kalorienrechner-Rekonstruktion](tk-kalorienrechner-rekonstruktion.md). Die MET-Methode ist eine Schätzung; die dort genannten Faktoren und Teile des Ablaufs sind vorläufig bzw. unbestätigt und dürfen nicht als verifizierte TK-Originalwerte übernommen werden.
+  - [ ] Gewicht in kg und die für das geprüfte Berechnungsmodell benötigten Angaben erfassen, insbesondere Schlafdauer, Arbeitsart/-dauer sowie Sportdauer und Intensität (Wochenwerte korrekt auf den Tag umrechnen).
+  - [ ] Geschätzten Tagesbedarf und angestrebtes Kalorienziel getrennt anzeigen. Ein gewünschtes Defizit wahlweise absolut in kcal/Tag oder prozentual vom Bedarf konfigurieren; Modus und Wert dauerhaft speichern.
+  - [ ] Gewicht jederzeit mit Datum aktualisieren können. Bedarf und Ziel automatisch anhand des neuen Gewichts und der bestehenden Berechnungs-/Defiziteinstellungen anpassen; Eingaben und Zielwerte auf Plausibilität prüfen und vor zu niedrigen Zielen warnen.
+  - [ ] Datierte Gewichts- und Zielkalorienhistorien einschließlich Gültigkeitsbeginn und Berechnungsgrundlage erhalten. Neue Gewichte oder Einstellungen dürfen frühere Zielwerte und Mahlzeitendaten nicht nachträglich verändern.
+  - [ ] Gewichtsverlauf und Verlauf der Ziel-Kalorien in den Statistiken darstellen; Bedarf, Ziel nach Defizit und zusätzliche Tagesboni eindeutig unterscheiden. Die Abgrenzung zwischen bereits im Bedarfsmodell berücksichtigter Bewegung und gebuchten Aktivitäten festlegen, um Doppelzählungen zu vermeiden.
+  - [ ] Bestehende manuelle Profilziele erhalten; automatische Berechnung ausdrücklich pro Profil aktivierbar machen. Neue Einstellungen und Historien in lokale Datenhaltung, Server, Sync und Backup/Restore integrieren, ohne Identitäten oder historische Werte zu verlieren.
+
+- [ ] Eine bessere, profilbezogene Statistikseite mit druckbarer Web-Ansicht für Arzttermine bereitstellen.
+  - [ ] Profil und Zeitraum auswählen; Gewicht, Ziel-Kalorien und tatsächliche Kalorienaufnahme mit verständlichen Diagrammen und Zusammenfassungen vergleichen. Historische Ziele statt des heutigen Ziels für frühere Tage verwenden.
+  - [ ] Fehlende Messungen/Einträge erkennbar lassen und geschätzte Werte klar kennzeichnen; keine erfundenen Verlaufswerte oder medizinischen Diagnosen darstellen.
+  - [ ] Drucklayout für die Webseite einschließlich „Als PDF speichern“ über den Browser vorsehen: lesbare Diagramme, Einheiten, Legenden, Zeitraum und Profilname, sinnvolle Seitenumbrüche und keine Navigation oder Eingabeformulare auf dem Ausdruck.
+
+- [ ] Profile auf allen Geräten und der Webseite einheitlich alphabetisch sortieren.
+  - [ ] Dieselbe Namenssortierung in Profilverwaltung, Dashboard sowie allen Profil-Auswahl- und Buchungsansichten verwenden; bestehende geräteabhängige Reihenfolgen beseitigen.
+  - [ ] Einheitliche Regeln für Groß-/Kleinschreibung, Umlaute und eine stabile identitätsbezogene Reihenfolge bei gleichen Namen festlegen. Auswahl und Zuordnungen bleiben an IDs/UUIDs gebunden, nicht an Listenpositionen.
 
