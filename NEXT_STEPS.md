@@ -50,6 +50,12 @@
   - [x] Live-Abnahme des vollständigen Punkts auf Webseite und Handy durch Nutzer bestätigt.
 - [ ] Es muss möglich sein automatisches synchronisieren anschalten zu können (Beim App Start und beim wechseln in die App zurück, falls sie im Hintergrund lief) Dies sollte granular konfigurierbar sein.
   - Bestehenden manuellen Runner und dessen Single-Flight-, Journal- und Konfliktschutz wiederverwenden; Start und Rückkehr aus dem Hintergrund getrennt schaltbar, standardmäßig aus.
+  - [x] Persistenzgrundlage: SQLite v8 mit getrennten Gerätepräferenzen, standardmäßig aus und an vertrauenswürdige bestehende Bindung, lokale Epoch und Serveridentität gebunden. Widerruf/erneute Zustimmung aktiviert alte Automatik-Einstellungen nicht wieder; keine Übertragung durch Fachbackup oder Sync.
+  - [x] Lifecycle-unabhängigen Koordinator mit getrennten Start-/Resume-Ereignissen, Single-Flight, Abbruch beim Hintergrundwechsel und Fehlercodes statt privater Fehlermeldungen testen; 47 gezielte Persistenz-/Backup-/Consent-/Runner-/Koordinatorprüfungen und Typecheck bestanden.
+  - [x] Native App-Lifecycle und zwei unabhängige Einstellungsschalter angebunden; gemeinsamer Runner/Single-Flight, gesperrte parallele Entscheidungsaktionen, erneute Berechtigungsprüfung vor Netzwerk, Upload-Claim und Empfangsanwendung. Datenaktualisierung ohne Zurücksetzen offener Formularentwürfe; Automatik nur im Dashboard; Seitenwechsel brechen den Lauf ab und warten einschließlich Cache-Aktualisierung, bevor ein Editor öffnet.
+  - [x] Status-/Fehleranzeige und Integrationsprüfungen: 78 gezielte Lifecycle-/UI-/Consent-/Runner-/Migrations-/Restore-/Backup-Tests, Typecheck, Browser-Backup-Smoke und 85 responsive Browserfälle bestanden. Schnelle Rückkehr wartet auf den abgebrochenen Lauf statt parallele Anfragen zu erzeugen.
+  - [x] Server-/Static-/Android-Builds bestanden; unabhängige frische Handy-Sicherung und Update ohne Zurücksetzen. Native Migration v7→v8 geprüft: sämtliche Fachdaten/UUIDs/Historien sowie Bindung/Zustimmung unverändert, beide Automatik-Schalter aus.
+  - [ ] Live-Abnahme von Start/Rückkehr, getrennten Schaltern, Offline-Fall, Widerruf und Konflikten durch Nutzer; anschließend diesen Gesamtpunkt abschließen.
 
 ## Übernommene offene Aufgaben (nachrangig)
 

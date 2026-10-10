@@ -45,25 +45,32 @@ function definitive(error: unknown) {
 	return error instanceof SyncClientError && (error.status === 409 && ["versionConflict", "dependencyConflict", "identityConflict"].includes(error.code) || error.status === 422 && ["reference", "duplicate", "cycle"].includes(error.code));
 }
 
-// Manual-only: construction/status never network, bind, enable, or upload.
+// Construction/status never network, bind, enable, or upload.
 // Exactly one run per shared SQLite facade, including component remounts.
 export function createManualSyncRunner(db: SqlDatabase, options: Parameters<typeof createSyncHttpClient>[1] = {}) {
 	return {
 		status: () => syncStatus(db),
-		sync: async (confirmed = false, signal?: AbortSignal): Promise<SyncRunResult> => {
+		sync: async (confirmed = false, signal?: AbortSignal, authorize?: () => Promise<boolean>): Promise<SyncRunResult> => {
 			if (!confirmed) throw new SyncClientError("confirmSync");
 			if (running.has(db)) throw new SyncClientError("syncBusy");
 			running.add(db);
 			const result = { uploaded: 0, received: 0, pending: 0, blocked: 0 };
+			async function permission() {
+				aborted(signal);
+				if (authorize && !await authorize()) throw new SyncClientError('confirmSync');
+				aborted(signal);
+			}
 			try {
-				aborted(signal); const state = await db.transaction(receiveState);
+				await permission(); const state = await db.transaction(receiveState);
 				if (state.seeded) throw new SyncClientError("developmentSeeded");
 				if (!state.url || state.cursor === null) throw new SyncClientError("notInitialized");
 				const context: Context = { ...state, url: state.url, cursor: state.cursor }, client = createSyncHttpClient(context.url, options), receiver = createRemoteReceiver(db);
 				async function pull() {
 					for (let count = 0; count < 128; count++) {
 						aborted(signal); const current = await db.transaction(sql => check(sql, context));
+						await permission();
 						const page = await client.changes(context, current.cursor!, signal);
+						await permission();
 						const outcomes = await receiver.applyPage({ ...context, cursor: current.cursor! }, page);
 						result.received += outcomes.length;
 						if (!page.hasMore) return;
@@ -73,6 +80,7 @@ export function createManualSyncRunner(db: SqlDatabase, options: Parameters<type
 				async function send(saved: NonNullable<Awaited<ReturnType<typeof journal>>>) {
 					if (saved.row.receipt === null) {
 						try {
+							await permission();
 							const receipt = await client.push(saved.request, signal);
 							await db.transaction(async sql => { const current = await journal(sql, context); if (!current || current.row.request !== saved.row.request) throw new SyncClientError("localReset"); await sql.run("UPDATE sync_upload SET receipt=? WHERE id=1;", [JSON.stringify(receipt)]); });
 						} catch (error) {
@@ -100,13 +108,14 @@ export function createManualSyncRunner(db: SqlDatabase, options: Parameters<type
 				// server is offline/restored now. It belongs to the OLD binding;
 				// subsequent info still enforces explicit resync, never rebinds.
 				if (saved && saved.row.receipt !== null) await send(saved);
+				await permission();
 				const info = await client.info(signal);
 				if (info.serverInstanceId !== context.serverInstanceId || info.serverEpoch !== context.serverEpoch) throw new SyncClientError("serverChanged", true);
 				if (saved && saved.row.receipt === null) await send(saved);
 				if ((await syncStatus(db)).uncertain) throw new SyncClientError("unconfirmedUpload");
 				await pull();
 				for (let count = 0; count < 512; count++) {
-					aborted(signal);
+					await permission();
 					const next = await db.transaction(async sql => {
 						await check(sql, context);
 						if ((await sql.query("SELECT id FROM sync_inbox WHERE status='blocked' LIMIT 1;")).length || (await sql.query("SELECT uuid FROM sync_conflicts LIMIT 1;")).length) throw new SyncClientError("conflictsPending");

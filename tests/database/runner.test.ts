@@ -43,6 +43,21 @@ function server() {
 }
 
 describe("manual native sync runner", () => {
+	it('rechecks automatic authorization after info and before receiving or claiming uploads', async () => {
+		const t = await open(); await t.service.profiles.createProfile({ name: 'Queued',dailyCaloriesTarget: 2000 }); await connect(t);
+		const s = server(), before = await createSyncQueue(t.database).list(); let allowed = true;
+		const fetcher: typeof fetch = async (input,init) => { const result = await s.fetcher(input,init); allowed = false; return result; };
+		await expect(createManualSyncRunner(t.database,{ fetch: fetcher }).sync(true,undefined,async () => allowed)).rejects.toThrow('confirmSync');
+		expect(s.fetcher).toHaveBeenCalledOnce(); expect(s.bodies).toEqual([]); expect(await createSyncQueue(t.database).list()).toEqual(before);
+	});
+	it('retains the exact journal when authorization is withdrawn between claim and send', async () => {
+		const t = await open(); await t.service.profiles.createProfile({ name: 'Queued',dailyCaloriesTarget: 2000 }); await connect(t);
+		const s = server(), run = createManualSyncRunner(t.database,{ fetch: s.fetcher });
+		await expect(run.sync(true,undefined,async () => !(await t.database.query('SELECT id FROM sync_upload;')).length)).rejects.toThrow('confirmSync');
+		const saved = (await t.database.query<{ request: string }>('SELECT request FROM sync_upload;'))[0]!.request;
+		expect(s.bodies).toEqual([]); expect((await run.status()).uncertain).toBe(true);
+		await run.sync(true); expect(s.bodies).toEqual([saved]); expect((await run.status()).uncertain).toBe(false);
+	});
 	it("uploads local data, advances queued bases and pulls server edits/new records without echo", async () => {
 		const t = await open(), local = (await t.service.profiles.createProfile({ name: "Local", dailyCaloriesTarget: 2000 }))!;
 		await t.service.profiles.updateProfile(local.id, { name: "Latest" }); await connect(t);

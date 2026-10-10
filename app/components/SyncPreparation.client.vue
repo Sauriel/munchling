@@ -27,7 +27,7 @@
       <p v-if="result" role="status" class="text-sm">{{ $t('settings.syncManual.result', result) }}</p>
     </div>
     <p v-else class="text-sm">{{ $t('settings.syncManual.setup') }}</p>
-    <SyncDecisions :revision="decisionRevision" :approved="secure" :disabled="busy" @busy="decisionBusy = $event" @changed="onDecision" />
+    <SyncDecisions :revision="decisionRevision" :approved="secure" :disabled="busy || automatic.busy" @busy="decisionBusy = $event" @changed="onDecision" />
     <p v-if="error" role="alert" class="text-sm text-red-700 dark:text-red-300">{{ error }}</p>
     <p v-if="busy" role="status" class="text-sm">{{ $t('common.loading') }}</p>
   </section>
@@ -43,7 +43,8 @@ import { SyncClientError } from '../../shared/domain/replies'
 import type { ServerInfo } from '../../shared/domain/protocol'
 const native = Capacitor.isNativePlatform(), { t, te } = useI18n(), stage = createSnapshotStaging(databaseSql)
 const address = ref(''), secure = ref(false), busy = ref(false), error = ref(''), info = shallowRef<ServerInfo | null>(null), validated = ref(false)
-const decisionBusy = ref(false), decisionRevision = ref(0), occupied = computed(() => busy.value || decisionBusy.value)
+const automatic = useState('automatic-sync-status', () => ({ busy: false,error: '',completed: false }))
+const decisionBusy = ref(false), decisionRevision = ref(0), occupied = computed(() => busy.value || decisionBusy.value || automatic.value.busy)
 const progress = shallowRef<Awaited<ReturnType<typeof stage.progress>>>(null), localCounts = ref<Record<string, number>>({})
 const addresses = createSyncAddressSettings(databaseSql), boundUrl = ref<string | null>(null)
 const runner = createManualSyncRunner(databaseSql), manual = shallowRef<Awaited<ReturnType<typeof runner.status>> | null>(null), result = shallowRef<SyncRunResult | null>(null)

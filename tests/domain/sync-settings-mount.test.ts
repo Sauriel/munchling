@@ -34,6 +34,7 @@ function component(trusted = true) {
 	new Script(output, { filename: "fixed-sync-settings-test.cjs" }).runInNewContext({
 		exports, require: (name: string) => { if (!(name in imports)) throw new Error("Unexpected SFC test dependency"); return imports[name]; },
 		ref: Vue.ref, shallowRef: Vue.shallowRef, computed: Vue.computed, watch: Vue.watch, onMounted: Vue.onMounted, onBeforeUnmount: Vue.onBeforeUnmount,
+		useState: (_key: string, initialize: () => unknown) => Vue.ref(initialize()),
 		useActivities: () => data,
 		useI18n: () => ({ t: (key: string) => key, te: () => false }), useProfiles: () => data, useFoods: () => data, useRecipes: () => data, useMealLogs: () => data, useCurrentProfile: () => data,
 		AbortController,

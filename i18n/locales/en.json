@@ -307,9 +307,18 @@
       "title": "Profiles",
       "hint": "Manage body data, goals, and active profiles."
     },
+    "syncAutomatic": {
+      "title": "Automatic synchronization",
+      "scope": "Optionally send and receive on startup or return to the app. Off by default. Runs in the dashboard, pauses on other pages and during navigation; no background loop or automatic conflict decisions.",
+      "setup": "Connect a server, complete initial reconciliation and explicitly trust its address first.",
+      "start": "Synchronize on app startup",
+      "resume": "Synchronize when returning to the app",
+      "running": "Automatic synchronization is running …",
+      "failed": "Last automatic sync did not finish ({code}). Durable progress is preserved; check settings."
+    },
     "syncManual": {
       "title": "Manual synchronization",
-      "scope": "This button sends queued phone changes and applies new server data. No automatic sync on startup, edits, or in the background.",
+      "scope": "This button sends queued phone changes and applies new server data. Automatic startup and resume sync can be enabled separately; no background loop.",
       "setup": "Once: check connection → stage server snapshot → review initial reconciliation → confirm Keep both. Then Sync now becomes available.",
       "status": "{pending} queued changes · {blocked} blocked received groups",
       "uncertain": "An earlier upload reply is missing. Only the exact saved request is replayed; local drafts are preserved.",
@@ -329,7 +338,7 @@
     },
     "syncPreparation": {
       "title": "Connect and synchronize with server",
-      "scope": "Automatic synchronization remains off. Connection checks and downloads do not change business data. Initial reconciliation and conflict decisions require separate confirmation. Then upload and receive happen only through Sync now; automatic synchronization stays off.",
+      "scope": "Connection checks and downloads do not change business data. Initial reconciliation and conflict decisions require separate confirmation. Manual sync is then available; automation requires an additional explicit opt-in.",
       "security": "There is no authentication yet. Only connect to a server on your secure private network. Nutrition data is transferred to the selected address.",
       "secure": "I trust this address and its network access controls.",
       "address": "Server address (HTTP/HTTPS origin)",

@@ -30,6 +30,7 @@
   "dependencies": {
     "@capacitor-community/sqlite": "^8.1.0",
     "@capacitor/android": "^8.4.0",
+    "@capacitor/app": "^8.1.2",
     "@capacitor/barcode-scanner": "^3.0.2",
     "@capacitor/core": "^8.4.0",
     "@capacitor/filesystem": "^8.1.4",

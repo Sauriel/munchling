@@ -307,9 +307,18 @@
       "title": "Profile",
       "hint": "Körperdaten, Ziele und aktive Profile verwalten."
     },
+    "syncAutomatic": {
+      "title": "Automatische Synchronisierung",
+      "scope": "Optional senden und empfangen beim Start bzw. bei Rückkehr in die App. Standardmäßig aus. Läuft im Dashboard, pausiert auf anderen Seiten und bei Seitenwechseln; keine Hintergrundschleife und keine automatische Konfliktentscheidung.",
+      "setup": "Zuerst Server verbinden, Erstabgleich abschließen und dieser Adresse ausdrücklich vertrauen.",
+      "start": "Beim App-Start synchronisieren",
+      "resume": "Bei Rückkehr in die App synchronisieren",
+      "running": "Automatische Synchronisierung läuft …",
+      "failed": "Letzter automatischer Sync nicht abgeschlossen ({code}). Gesicherter Fortschritt bleibt erhalten; bitte Einstellungen prüfen."
+    },
     "syncManual": {
       "title": "Manuelle Synchronisierung",
-      "scope": "Dieser Knopf sendet vorgemerkte Handy-Änderungen und übernimmt neue Serverdaten. Kein automatischer Sync bei Start, Änderung oder im Hintergrund.",
+      "scope": "Dieser Knopf sendet vorgemerkte Handy-Änderungen und übernimmt neue Serverdaten. Automatischer Sync kann separat für Start und Rückkehr aktiviert werden; keine Hintergrundschleife.",
       "setup": "Einmalig: Verbindung prüfen → Serverbestand zwischenspeichern → Erstabgleich prüfen → Beide behalten bestätigen. Danach erscheint Jetzt synchronisieren.",
       "status": "{pending} vorgemerkte Änderungen · {blocked} blockierte Empfangspakete",
       "uncertain": "Eine frühere Upload-Antwort fehlt. Nur exakt dieselbe gespeicherte Anfrage wird erneut gesendet; lokale Entwürfe bleiben erhalten.",
@@ -329,7 +338,7 @@
     },
     "syncPreparation": {
       "title": "Server verbinden und synchronisieren",
-      "scope": "Automatischer Sync bleibt ausgeschaltet. Verbindungstest und Download verändern keine Geschäftsdaten. Ein Erstabgleich oder eine Konfliktentscheidung wird erst nach gesonderter Bestätigung übernommen. Upload und Empfang erfolgen anschließend nur über Jetzt synchronisieren; automatischer Sync bleibt aus.",
+      "scope": "Verbindungstest und Download verändern keine Geschäftsdaten. Erstabgleich und Konfliktentscheidungen benötigen eine gesonderte Bestätigung. Danach ist manueller Sync möglich; Automatik muss zusätzlich ausdrücklich aktiviert werden.",
       "security": "Es gibt noch keine Anmeldung. Verbinde dich nur mit einem Server in deinem abgesicherten privaten Netz. Ernährungsdaten werden an die gewählte Adresse übertragen.",
       "secure": "Ich vertraue dieser Adresse und ihrer Netzwerk-Absicherung.",
       "address": "Serveradresse (HTTP-/HTTPS-Origin)",

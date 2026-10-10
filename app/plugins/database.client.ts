@@ -1,6 +1,6 @@
 import { Capacitor } from "@capacitor/core";
 import { createHttpDataService } from "~/utils/data/http";
-export default defineNuxtPlugin(async () => {
+export default defineNuxtPlugin({ name: 'munchling-data', async setup() {
 	if (useRuntimeConfig().public.dataMode === "online") {
 		if (Capacitor.isNativePlatform()) throw new Error("Online build must not be installed as the offline native app.");
 		return { provide: { munchlingData: createHttpDataService(window.location.origin, window.localStorage) } };
@@ -16,4 +16,4 @@ export default defineNuxtPlugin(async () => {
 	}
 	await initializeMunchlingDatabase({ seedTestData: import.meta.dev });
 	return { provide: { munchlingData: createLocalDataService(databaseSql) } };
-});
+} });

@@ -155,4 +155,16 @@ export const schemaMigrations: DatabaseMigration[] = [
 		ALTER TABLE sync_state ADD COLUMN trusted_url TEXT;
 		ALTER TABLE sync_state ADD COLUMN trusted_epoch TEXT;
 	` },
+	{ version: 8, name: 'device_automatic_sync_preferences', statements: `
+		CREATE TABLE sync_automatic_preferences (
+			id INTEGER PRIMARY KEY CHECK(id=1),
+			on_start INTEGER NOT NULL DEFAULT 0 CHECK(on_start IN (0,1)),
+			on_resume INTEGER NOT NULL DEFAULT 0 CHECK(on_resume IN (0,1)),
+			server_url TEXT, local_epoch TEXT, server_instance_id TEXT, server_epoch TEXT
+		);
+		INSERT INTO sync_automatic_preferences(id) VALUES(1);
+		CREATE TRIGGER sync_automatic_consent_changed AFTER UPDATE OF trusted_url,trusted_epoch ON sync_state
+		WHEN NEW.trusted_url IS NOT OLD.trusted_url OR NEW.trusted_epoch IS NOT OLD.trusted_epoch
+		BEGIN UPDATE sync_automatic_preferences SET on_start=0,on_resume=0 WHERE id=1; END;
+	` },
 ];

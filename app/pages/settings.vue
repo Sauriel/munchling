@@ -89,6 +89,7 @@
       <p v-if="success" role="status" class="text-sm text-munchling-700 dark:text-munchling-500">{{ success }}</p>
     </section>
     <SyncPreparation />
+    <AutomaticSyncSettings />
     </div>
   </main>
 </template>

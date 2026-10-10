@@ -37,7 +37,7 @@ END;`;
 		const before = (await db.service.backups!.exportBackup()).data, save = vi.fn(async () => {}), run = vi.fn(db.driver.run), native = { ...db.driver, run, execute: createSqlScriptExecutor({ ...db.driver, run }) };
 		await runLocalMigrations(createSqlDatabase(native), save); expect(save).toHaveBeenCalledOnce();
 		const after = createLocalDataService(createSqlDatabase(native, flushOutbox)); expect((await after.backups!.exportBackup()).data).toEqual(before);
-		expect((await db.database.query<{ version: number }>("SELECT version FROM schema_migrations ORDER BY version;"))).toEqual([{ version: 1 }, { version: 2 }, { version: 3 }, { version: 4 }, { version: 5 }]);
+		expect((await db.database.query<{ version: number }>("SELECT version FROM schema_migrations ORDER BY version;"))).toEqual(schemaMigrations.map(({ version }) => ({ version })));
 		const triggers = run.mock.calls.map(call => call[0]).filter(sql => /CREATE TRIGGER/.test(sql)); expect(triggers.length).toBeGreaterThan(20); expect(triggers.every(sql => /END;\s*$/.test(sql))).toBe(true);
 		await after.foods.updateFood(f!.id, { brand: "Updated" }); expect((await db.database.query<{ count: number }>("SELECT COUNT(*) AS count FROM sync_outbox;"))[0]!.count).toBeGreaterThan(0);
 		await expect(db.database.run("UPDATE foods SET uuid=? WHERE id=?;", ["other", f!.id])).rejects.toThrow("UUID is immutable");
