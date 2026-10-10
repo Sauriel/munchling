@@ -1,3 +1,4 @@
+import type { FoodMergeReview } from './food-merge';
 import type { Activity, ActivityInput, ActivityLog, ActivityLogInput } from './activities';
 import type { LocalBackupService } from "./backup";
 import type {
@@ -13,6 +14,8 @@ export interface MunchlingDataService {
 	// Optional local capability; an online server adapter must not expose a
 	// browser-side destructive restore against the shared server database.
 	backups?: LocalBackupService;
+	// Explicit online capability; absent on the offline SQLite adapter.
+	foodMerges?: { preview(sourceId: number, targetId: number): Promise<FoodMergeReview>; commit(token: string, confirmed: boolean): Promise<void> };
 	activities: {
 		listActivities(): Promise<Activity[]>;
 		getActivityById(id: number): Promise<Activity | null>;

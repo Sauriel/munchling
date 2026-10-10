@@ -60,7 +60,11 @@
 ## Übernommene offene Aufgaben (nachrangig)
 
 - [ ] Bereits serverregistrierte Lebensmittel ausdrücklich zusammenführen können (bisher #31).
-  - Versionsgebundene Vorschau mit sämtlichen betroffenen Referenzen und Konflikten; keine automatische Zusammenführung nach Name/EAN und kein stilles Überschreiben.
+  - Freigegebener Umfang: zunächst Website, nur exakt gleiche Nährwerte pro 100 g; keine historischen Nährwert-Snapshots und keine automatische Zusammenführung nach Name/EAN.
+  - [x] Konsistente Servervorschau mit beiden UUIDs/Metadaten/Nährwerten sowie direkten und bekannten indirekten Referenzen; ausdrückliche Bestätigung, ursprüngliche Versionen und unveränderte Kinder-IDs/Mengen/Zeitpunkte/Profilportionen.
+  - [x] Atomarer bestehender Schreibpfad mit ursprünglichen Payloads, Web-Lock/Journal/Receipt, Schutz gegen neue direkte Referenzen und Ziel-Reaffirmierung als versioniertes Gruppenmitglied zum Schutz offener nativer Zielentwürfe. Keine neuen Migrationen, Formate oder Endpoints.
+  - [x] 31 gezielte Domänen-/Webjournal-/SQLite-Tests und 27 echte MariaDB-/Nitro-/Chromium-Prüfungen einschließlich mobiler Oberfläche; beide Typechecks bestanden. Details: [registrierter Lebensmittel-Merge](docs/registered-food-merge.md).
+  - [ ] Passenden Website-Rollout verifizieren und Nutzer-Live-Abnahme einschließlich anschließendem Native-Sync bestätigen; bestehende App kann das gewöhnliche HTTP-v1-Change-Batch bereits empfangen.
 - [ ] Web-Schreibkonflikte komfortabler darstellen und referenzierte Löschungen ausdrücklich ermöglichen.
   - Basis, eigenen Entwurf und Serverstand gegenüberstellen.
   - Versionsgebundene Kaskaden-/Löschvorschau mit ausdrücklicher Bestätigung; bestehende Löschsperren bis dahin erhalten.

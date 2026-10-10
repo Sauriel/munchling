@@ -83,6 +83,32 @@
     }
   },
   "foods": {
+    "merge": {
+      "title": "Merge registered foods",
+      "scope": "Website only, with exactly equal nutrient values. Explicitly choose source and target; no automatic name or EAN matching.",
+      "source": "Source – will be removed",
+      "target": "Target – will remain",
+      "portion": "Portion size",
+      "preview": "Review preview",
+      "references": "{ingredients} ingredients, {recipes} directly/indirectly affected recipes and {meals} meals in the displayed server cut.",
+      "direct": "will be redirected",
+      "indirect": "indirect reference, unchanged",
+      "warning": "The target's names, brand, EAN and portion size apply going forward. The source EAN is not retained as a barcode alias. Quantities, timestamps, profile portions and reference UUIDs are preserved; this merge does not change nutrient calculations. Concurrent changes may block confirmation.",
+      "confirm": "I confirm exactly this source, target and the displayed effects.",
+      "commit": "Apply confirmed merge",
+      "done": "Merge confirmed. Other devices receive the result through sync.",
+      "failed": "Not completed ({code}). If the outcome is uncertain, resolve the saved write through the existing status notice; do not start another merge.",
+      "errors": {
+        "mergeNutritionMismatch": "Nutrients differ. Merge is blocked to protect existing calculations.",
+        "mergeSameFood": "Choose different source and target foods.",
+        "mergePreviewMissing": "Review a new preview first.",
+        "confirmMerge": "Explicitly confirm the preview first.",
+        "versionConflict": "A displayed record changed. Review a new preview.",
+        "dependencyConflict": "References or target values changed. Nothing was applied; review a new preview.",
+        "unconfirmedUpload": "Resolve the existing uncertain write first."
+      },
+      "nutrients": { "calories_per_100g": "kcal/100g", "fat_per_100g": "Fat g/100g", "carbs_per_100g": "Carbs g/100g", "sugar_per_100g": "Sugar g/100g", "protein_per_100g": "Protein g/100g", "fiber_per_100g": "Fiber g/100g", "salt_per_100g": "Salt g/100g" }
+    },
     "eyebrow": "Food management",
     "title": "Foods",
     "description": "Search foods and create custom products with nutrition values per 100g or 100ml.",

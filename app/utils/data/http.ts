@@ -1,3 +1,4 @@
+import { planFoodMerge } from '../../../shared/domain/food-merge';
 import { validateActivity, validateActivityLog, activityTotals, type ActivityInput, type ActivityLogInput } from '../../../shared/domain/activities';
 import type { MunchlingDataService } from "../../../shared/domain/data-service";
 import type { CreateFoodInput, CreateProfileInput, CreateRecipeInput, CreateMealLogInput, RecipeIngredientInput } from "../../../shared/domain/types";
@@ -124,7 +125,26 @@ export function createHttpDataService(address: string, storage: JournalStore, op
 		const next = await writeOperations(operations, [{ entity: 'activities', entityUuid: root.id, baseRevision: root.version }]);
 		const ids = new Set(operations.map(o => next.id(o.entityUuid))); return (await next.read.activityLogs.listActivityLogs()).filter(row => ids.has(row.id));
 	}
+	let mergeTicket: { token: string; plan: ReturnType<typeof planFoodMerge> } | undefined;
+	const foodMerges: NonNullable<MunchlingDataService['foodMerges']> = {
+		preview: async (sourceId, targetId) => {
+			mergeTicket = undefined;
+			if (busy || pending()) throw new SyncClientError('unconfirmedUpload');
+			const v = await refresh(), plan = planFoodMerge([...v.roots.values()], v.uuid('foods',sourceId), v.uuid('foods',targetId));
+			const token = createUuid(); mergeTicket = { token,plan };
+			return { token,...structuredClone(plan.review) };
+		},
+		commit: async (token, confirmed) => {
+			if (confirmed !== true) throw new SyncClientError('confirmMerge');
+			if (!mergeTicket || mergeTicket.token !== token) throw new SyncClientError('mergePreviewMissing');
+			const { plan } = mergeTicket; mergeTicket = undefined;
+			// Original versions, payloads and child UUIDs from the shown cut. Never
+			// rebuild against newer data behind the confirmation or journal replay.
+			await writeOperations(plan.operations,plan.guards);
+		},
+	};
 	const service: MunchlingDataService = {
+		foodMerges,
 		activities: { listActivities: async () => (await refresh()).read.activities.listActivities(), getActivityById: async id => (await current()).read.activities.getActivityById(id), createActivity: input => saveActivity(input), updateActivity: (id,input,revision) => saveActivity(input,id,revision), deleteActivity: (id,revision) => remove('activities',id,revision) },
 		activityLogs: { listActivityLogs: async () => (await refresh()).read.activityLogs.listActivityLogs(), createActivityLogs: saveActivityLogs, deleteActivityLog: (id,revision) => remove('activity_logs',id,revision) },
 		profiles: { listProfiles: async () => (await refresh()).read.profiles.listProfiles(), getProfileById: async id => (await current()).read.profiles.getProfileById(id), createProfile: async input => { const id = await saveSimple("profiles", input); return view!.read.profiles.getProfileById(id); }, updateProfile: async (id, input, revision) => { await saveSimple("profiles", input, id, revision); return view!.read.profiles.getProfileById(id); }, deleteProfile: (id, revision) => remove("profiles", id, revision) },

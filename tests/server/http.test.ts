@@ -207,7 +207,7 @@ describe("built Nitro sync HTTP API", () => {
 			const timer = setTimeout(() => { browser.kill("SIGTERM"); reject(new Error("Browser web smoke timeout")); }, 60_000);
 			browser.stdout.on("data", data => { text += data; }); browser.stderr.on("data", data => { text += data; }); browser.once("error", error => { clearTimeout(timer); reject(error); }); browser.once("exit", code => { clearTimeout(timer); if (code !== 0) reject(new Error(text)); else resolve(text); });
 		});
-		expect(output).toContain("PASS: versioned website edit survives reload"); expect((await createSyncHttpClient(base).webState(binding)).snapshot.aggregates[0]!.data!.name).toBe("Browser updated");
+		expect(output).toContain("PASS: versioned website edit survives reload"); expect(output).toContain('PASS: website merge blocks differing nutrients'); expect((await createSyncHttpClient(base).webState(binding)).snapshot.aggregates.find(row => row.entity === 'profiles')!.data!.name).toBe("Browser updated");
 	}, 75_000);
 	it("edits the shared household through the online adapter with stable view IDs and optimistic forms", async () => {
 		const a = createHttpDataService(base, journalStore(), { lock: webLock }), b = createHttpDataService(base, journalStore(), { lock: webLock });

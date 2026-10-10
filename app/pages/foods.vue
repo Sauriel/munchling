@@ -77,6 +77,8 @@
       </section>
     </header>
 
+    <FoodMerge />
+
     <div class="editor-layout">
       <div class="panel-stack">
     <section class="space-y-3">

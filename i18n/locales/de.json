@@ -83,6 +83,32 @@
     }
   },
   "foods": {
+    "merge": {
+      "title": "Registrierte Lebensmittel zusammenführen",
+      "scope": "Nur auf der Website, nur bei exakt gleichen Nährwerten. Quelle und Ziel ausdrücklich auswählen; keine automatische Namens- oder EAN-Zuordnung.",
+      "source": "Quelle – wird entfernt",
+      "target": "Ziel – bleibt bestehen",
+      "portion": "Portionsgröße",
+      "preview": "Vorschau prüfen",
+      "references": "{ingredients} Zutaten, {recipes} direkt/indirekt betroffene Gerichte und {meals} Mahlzeiten im gezeigten Serverstand.",
+      "direct": "wird umgestellt",
+      "indirect": "indirekt referenziert, bleibt unverändert",
+      "warning": "Namen, Marke, EAN und Portionsgröße des Ziels gelten künftig. Die Quell-EAN wird nicht als Barcode-Alias übernommen. Mengen, Zeitpunkte, Profilportionen und UUIDs der Referenzen bleiben erhalten; Nährwertberechnungen ändern sich durch diesen Schritt nicht. Gleichzeitige Änderungen können die Übernahme blockieren.",
+      "confirm": "Ich bestätige genau diese Quelle, dieses Ziel und die gezeigten Auswirkungen.",
+      "commit": "Bestätigte Zusammenführung übernehmen",
+      "done": "Zusammenführung bestätigt. Andere Geräte erhalten das Ergebnis beim Sync.",
+      "failed": "Nicht abgeschlossen ({code}). Bei ungewissem Ausgang den gesicherten Schreibvorgang über den bestehenden Statushinweis klären, nicht neu zusammenführen.",
+      "errors": {
+        "mergeNutritionMismatch": "Die Nährwerte unterscheiden sich. Zusammenführen ist zum Schutz bisheriger Berechnungen gesperrt.",
+        "mergeSameFood": "Quelle und Ziel müssen verschieden sein.",
+        "mergePreviewMissing": "Bitte eine neue Vorschau prüfen.",
+        "confirmMerge": "Bitte die Vorschau ausdrücklich bestätigen.",
+        "versionConflict": "Ein gezeigter Datensatz wurde geändert. Bitte eine neue Vorschau prüfen.",
+        "dependencyConflict": "Referenzen oder Zielwerte wurden geändert. Es wurde nichts übernommen; bitte eine neue Vorschau prüfen.",
+        "unconfirmedUpload": "Zuerst den bestehenden ungewissen Schreibvorgang klären."
+      },
+      "nutrients": { "calories_per_100g": "kcal/100g", "fat_per_100g": "Fett g/100g", "carbs_per_100g": "Kohlenhydrate g/100g", "sugar_per_100g": "Zucker g/100g", "protein_per_100g": "Eiweiß g/100g", "fiber_per_100g": "Ballaststoffe g/100g", "salt_per_100g": "Salz g/100g" }
+    },
     "eyebrow": "Lebensmittelverwaltung",
     "title": "Lebensmittel",
     "description": "Suche Lebensmittel und lege eigene Produkte mit Nährwerten pro 100g oder 100ml an.",
