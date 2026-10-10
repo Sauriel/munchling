@@ -12,7 +12,7 @@ export class DomainValidationError extends Error {
 export function validationMessage(error: unknown, translate: (key: string) => string) {
 	if (error instanceof DomainValidationError) return translate(`validation.${error.code}`);
 	const code = error && typeof error === "object" && "code" in error ? error.code : null;
-	return translate(typeof code === "string" && ["versionConflict", "dependencyConflict", "unconfirmedUpload"].includes(code) ? `web.${code}` : "validation.failed");
+	return translate(typeof code === "string" && ["versionConflict", "dependencyConflict", "unconfirmedUpload", "deletionPreviewRequired", "historyConflict"].includes(code) ? `web.${code}` : "validation.failed");
 }
 
 export function fail(code: ValidationCode, field: string): never { throw new DomainValidationError(code, field); }

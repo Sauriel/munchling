@@ -12,6 +12,8 @@ export type ServerGuard = { entity: SyncAggregate; entityUuid: string; baseRevis
 export type ServerWriteBatch = {
 	batchId: string; serverInstanceId: string; serverEpoch: string; deviceId?: string;
 	operations: ServerOperation[]; guards?: ServerGuard[];
+	// Absent from released requests: never inject a default into their hashes.
+	preserveHistory?: true;
 };
 export type ServerAggregate = { entity: SyncAggregate; id: string; version: number; deletedAt: string | null; data: Record<string, unknown> | null };
 export type ServerReceipt = {
@@ -19,7 +21,7 @@ export type ServerReceipt = {
 	operations: { operationId: string; entity: SyncAggregate; entityUuid: string; serverRevision: number }[];
 	changes: { entity: SyncAggregate; entityUuid: string; serverRevision: number }[];
 };
-export type ServerWriteCode = "versionConflict" | "dependencyConflict" | "identityConflict" | "idempotencyConflict" | "serverChanged";
+export type ServerWriteCode = "versionConflict" | "dependencyConflict" | "identityConflict" | "idempotencyConflict" | "serverChanged" | "historyConflict";
 export class ServerWriteError extends Error {
 	constructor(public readonly code: ServerWriteCode, public readonly current: ServerAggregate[] = []) {
 		super(code); this.name = "ServerWriteError";

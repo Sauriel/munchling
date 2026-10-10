@@ -207,7 +207,7 @@ describe("built Nitro sync HTTP API", () => {
 			const timer = setTimeout(() => { browser.kill("SIGTERM"); reject(new Error("Browser web smoke timeout")); }, 60_000);
 			browser.stdout.on("data", data => { text += data; }); browser.stderr.on("data", data => { text += data; }); browser.once("error", error => { clearTimeout(timer); reject(error); }); browser.once("exit", code => { clearTimeout(timer); if (code !== 0) reject(new Error(text)); else resolve(text); });
 		});
-		expect(output).toContain("PASS: versioned website edit survives reload"); expect(output).toContain('PASS: website merge blocks differing nutrients'); expect((await createSyncHttpClient(base).webState(binding)).snapshot.aggregates.find(row => row.entity === 'profiles')!.data!.name).toBe("Browser updated");
+		expect(output).toContain("PASS: versioned website edit survives reload"); expect(output).toContain('PASS: website merge blocks differing nutrients'); expect(output).toContain('PASS: web conflict compares base/draft/server'); expect(output).toContain('PASS: web deletion requires version-bound preview'); expect(output).toContain('PASS: web cascade blocks historical'); expect((await createSyncHttpClient(base).webState(binding)).snapshot.aggregates.find(row => row.entity === 'profiles')!.data!.name).toBe("Concurrent household");
 	}, 75_000);
 	it("edits the shared household through the online adapter with stable view IDs and optimistic forms", async () => {
 		const a = createHttpDataService(base, journalStore(), { lock: webLock }), b = createHttpDataService(base, journalStore(), { lock: webLock });
@@ -219,7 +219,8 @@ describe("built Nitro sync HTTP API", () => {
 		expect((await a.recipes.calculateRecipeNutrition(nested.id)).per100g.calories).toBe(100);
 		const loggedAt = "2019-06-07 12:34:56", meal = (await a.mealLogs.createMealLog({ loggedAt, recipeId: nested.id, profiles: [{ profileId: p.id, portionGrams: 33.3 }, { profileId: q.id, portionGrams: 66.7 }] }))!;
 		expect(meal).toMatchObject({ loggedAt, totalWeightGrams: 100 }); expect(meal.profiles.map(row => row.portionGrams).sort()).toEqual([33.3, 66.7]); expect(await a.mealLogs.listMealLogs({ profileId: p.id, date: "2019-06-07" })).toHaveLength(1);
-		await expect(a.foods.deleteFood(food.id, 2)).rejects.toThrow("dependencyConflict");
+		await expect(a.foods.deleteFood(food.id, 2)).rejects.toThrow("deletionPreviewRequired");
+		const deletion = a.getDeletionReview()!; expect(deletion.history).toHaveLength(1); await expect(a.confirmDeletion(deletion.token,true)).rejects.toThrow('historyConflict'); a.cancelDeletion();
 		await a.mealLogs.deleteMealLog(meal.id, meal.revision); await a.recipes.deleteRecipe(nested.id, nested.revision); await a.recipes.deleteRecipe(recipe.id, recipe.revision); await a.foods.deleteFood(food.id, 2); await a.profiles.deleteProfile(q.id, q.revision);
 		expect((await createHttpDataService(base, journalStore(), { lock: webLock }).profiles.listProfiles())[0]!.id).toBe(p.id); expect(a.backups).toBeUndefined();
 	});

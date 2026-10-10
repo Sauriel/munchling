@@ -7,6 +7,7 @@ import type { ServerDatabase, ServerSql } from "../database/connection";
 import { readServerState } from "../database/state";
 import { aggregateSnapshot, activeChildren, deletionDependents, identity, removeRow, replaceChildren, reserveIdentity, upsertRow } from "./storage";
 import { aggregates, normalizeWriteBatch, sqlTimestamp } from "./validation";
+import { hasDeletionHistory, recipeDeletionSet } from './deletion-history';
 
 export class ServerStorageError extends Error {
 	readonly code = "DB_WRITE_FAILED";
@@ -84,6 +85,14 @@ async function commitBatch(sql: ServerSql, batch: ServerWriteBatch): Promise<Ser
 			}
 		}
 		if (unguarded.length) throw new ServerWriteError("dependencyConflict", unguarded);
+	}
+	if (batch.preserveHistory) for (const operation of batch.operations) if (operation.operation === 'delete') {
+		const affected = await recipeDeletionSet(sql,operation.entity,operation.entityUuid);
+		for (const uuid of affected) if (uuid !== operation.entityUuid && guarded.get(uuid)?.entity !== 'recipes') {
+			const current = await aggregateSnapshot(sql,'recipes',uuid);
+			throw new ServerWriteError('dependencyConflict',current ? [current] : []);
+		}
+		if (await hasDeletionHistory(sql,operation.entity,operation.entityUuid,affected)) throw new ServerWriteError('historyConflict');
 	}
 	await checkReferences(sql, batch);
 	const timestamp = sqlTimestamp(new Date().toISOString());

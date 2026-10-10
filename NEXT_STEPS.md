@@ -59,15 +59,18 @@
 
 ## Übernommene offene Aufgaben (nachrangig)
 
-- [ ] Bereits serverregistrierte Lebensmittel ausdrücklich zusammenführen können (bisher #31).
+- [x] Bereits serverregistrierte Lebensmittel ausdrücklich zusammenführen können (bisher #31).
   - Freigegebener Umfang: zunächst Website, nur exakt gleiche Nährwerte pro 100 g; keine historischen Nährwert-Snapshots und keine automatische Zusammenführung nach Name/EAN.
   - [x] Konsistente Servervorschau mit beiden UUIDs/Metadaten/Nährwerten sowie direkten und bekannten indirekten Referenzen; ausdrückliche Bestätigung, ursprüngliche Versionen und unveränderte Kinder-IDs/Mengen/Zeitpunkte/Profilportionen.
   - [x] Atomarer bestehender Schreibpfad mit ursprünglichen Payloads, Web-Lock/Journal/Receipt, Schutz gegen neue direkte Referenzen und Ziel-Reaffirmierung als versioniertes Gruppenmitglied zum Schutz offener nativer Zielentwürfe. Keine neuen Migrationen, Formate oder Endpoints.
   - [x] 31 gezielte Domänen-/Webjournal-/SQLite-Tests und 27 echte MariaDB-/Nitro-/Chromium-Prüfungen einschließlich mobiler Oberfläche; beide Typechecks bestanden. Details: [registrierter Lebensmittel-Merge](docs/registered-food-merge.md).
-  - [ ] Passenden Website-Rollout verifizieren und Nutzer-Live-Abnahme einschließlich anschließendem Native-Sync bestätigen; bestehende App kann das gewöhnliche HTTP-v1-Change-Batch bereits empfangen.
+  - [x] Website-Rollout mit neuen Assets/Readiness verifiziert; Nutzer hat die Live-Abnahme einschließlich anschließendem Native-Sync bestätigt: „Abgenommen, nächster Punkt“. Bestehende App empfängt das gewöhnliche HTTP-v1-Change-Batch ohne APK-Update.
 - [ ] Web-Schreibkonflikte komfortabler darstellen und referenzierte Löschungen ausdrücklich ermöglichen.
-  - Basis, eigenen Entwurf und Serverstand gegenüberstellen.
-  - Versionsgebundene Kaskaden-/Löschvorschau mit ausdrücklicher Bestätigung; bestehende Löschsperren bis dahin erhalten.
+  - Freigegebene Grenze: Neue Web-Kaskaden sperren historische Bezüge einschließlich indirekter Gerichtsberechnungen; keine Archiv-/Snapshot-Einführung. Bestehende direkte Buchungskorrekturen bleiben unverändert.
+  - [x] Erfasste Basis, eigenen Entwurf und separaten Serverstand gegenüberstellen; keine automatische Neubasierung, unbekannte Basis/unerreichbaren Server kennzeichnen, Originalbasen als zusätzliche Journal-Metadaten und begrenzten Lesecache erhalten. JSON-Sicherung und ausdrücklich bestätigtes Neuladen ohne stillen Entwurfsverlust.
+  - [x] Private versionsgebundene Kaskadenvorschau mit Checkbox, direkten/indirekten Referenzen und historischen Sperrgründen; ursprüngliche Operationen/Guards unverändert bestätigen. `preserveHistory: true` unter Haushaltsschreiblock schützt auch neue indirekte Buchungen/Referenzen vor jeder Mutation. Bestehende Anfragen erhalten keine Defaults oder geänderten Hashes.
+  - [x] 50 gezielte lokale Tests, 49 MariaDB- und 21 Nitro-/Chromium-Prüfungen, beide Typechecks, Server-/Mobile-Build, Browser-Backup, 85 responsive Fälle und isolierter Docker-Deploymenttest bestanden. Details: [Web-Konflikte/Löschvorschau](docs/web-conflicts-and-deletion.md).
+  - [ ] Website-Rollout und Nutzer-Live-Abnahme bestätigen; keine Schemaänderung und kein APK-Update für den bestehenden Sync-Empfang nötig.
 
 ## Neue Anforderungen (am Ende der Roadmap)
 

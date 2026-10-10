@@ -101,8 +101,9 @@ export function normalizeWriteBatch(value: unknown): ServerWriteBatch {
 	if (new TextEncoder().encode(text).byteLength > 25 * 1024 * 1024) fail("backupLimit", "batch");
 	let input: unknown;
 	try { input = JSON.parse(text); } catch { fail("invalidType", "batch"); }
-	assertRecord(input, "batch"); fields(input, ["batchId", "serverInstanceId", "serverEpoch", "deviceId", "operations", "guards"]); uuid(input.batchId, "batchId"); uuid(input.serverInstanceId, "serverInstanceId"); uuid(input.serverEpoch, "serverEpoch");
+	assertRecord(input, "batch"); fields(input, ["batchId", "serverInstanceId", "serverEpoch", "deviceId", "operations", "guards", "preserveHistory"]); uuid(input.batchId, "batchId"); uuid(input.serverInstanceId, "serverInstanceId"); uuid(input.serverEpoch, "serverEpoch");
 	if (input.deviceId !== undefined) uuid(input.deviceId, "deviceId");
+	if (input.preserveHistory !== undefined && input.preserveHistory !== true) fail("invalidType", "preserveHistory");
 	if (!Array.isArray(input.operations) || input.operations.length === 0) fail("required", "operations");
 	const operationIds = new Set<string>(), rootIds = new Set<string>(), allIds = new Set<string>(); let count = input.operations.length;
 	for (const operation of input.operations) {

@@ -4,6 +4,7 @@
     <button v-if="pending" :disabled="busy" class="min-h-11 rounded-lg border border-amber-700 px-3 py-2 disabled:opacity-50" @click="retry">{{ $t('web.retryWrite') }}</button>
     <p v-if="error">{{ error }}</p>
   </aside>
+  <WebDataReview />
 </template>
 <script setup lang="ts">
 import type { createHttpDataService } from '~/utils/data/http'

@@ -7,7 +7,18 @@
     "retryFailed": "Noch nicht geklärt. Bei Serverwechsel/Restore ist eine gesonderte Prüfung nötig. Das Journal bleibt erhalten.",
     "versionConflict": "Dieser Datensatz wurde inzwischen geändert oder gelöscht. Dein Formular bleibt erhalten. Bitte aktuellen Serverstand laden und bewusst vergleichen; es wurde nichts überschrieben.",
     "dependencyConflict": "Der Datensatz wird noch verwendet oder seine Abhängigkeiten haben sich geändert. Bitte diese zuerst prüfen; keine automatische Web-Löschkaskade.",
-    "unconfirmedUpload": "Bitte zuerst die gespeicherte Server-Anfrage oben klären."
+    "unconfirmedUpload": "Bitte zuerst die gespeicherte Server-Anfrage oben klären.",
+    "deletionPreviewRequired": "Bitte die versionsgebundene Löschvorschau oben prüfen und ausdrücklich bestätigen.",
+    "historyConflict": "Diese Löschung würde gebuchte Einträge oder ihre historischen Berechnungen verändern und ist gesperrt.",
+    "review": {
+      "conflict": "Schreibkonflikt bewusst vergleichen", "noOverwrite": "Dein Formular bleibt unverändert. Es gibt kein automatisches Überschreiben oder Neubasieren. Vergleiche die Werte; nach bewusstem Neuladen kannst du gewünschte Änderungen neu eintragen.",
+      "base": "Erfasste Basis", "baseUnknown": "Keine ursprüngliche Basis verfügbar (neuer Datensatz, altes Journal oder begrenzter Lesecache). Der aktuelle Serverstand wird nicht als alte Basis ausgegeben.",
+      "draft": "Dein Entwurf", "rawDraft": "Ursprüngliche Formularfelder, noch nicht in Serverfelder umgewandelt.", "server": "Serverstand beim Vergleich", "serverUnavailable": "Der Serverstand konnte nicht geladen werden; das bedeutet nicht, dass der Datensatz fehlt.",
+      "export": "Vergleich und Entwurf als JSON sichern", "keepDraft": "Vergleich schließen, Formular behalten", "reloadWarning": "Ich möchte neu laden. Dabei gehen alle ungespeicherten Formulareingaben auf dieser Seite verloren; benötigte Entwürfe habe ich vorher gesichert.", "reload": "Seite mit Serverstand neu laden",
+      "deleteTitle": "Versionsgebundene Löschvorschau", "deleteRule": "Nur die hier gezeigten Versionen werden bestätigt. Direkte Zutatenbezüge können entfernt werden; indirekte Gerichte werden nicht gelöscht. Gebuchte Einträge oder ihre Berechnungen dürfen durch diese Kaskade nicht verändert werden.",
+      "direct": "Direkt betroffene Datensätze", "indirect": "Indirekt betroffene Gerichte", "history": "Betroffene Buchungen (Löschsperre)", "historyBlocked": "Löschung gesperrt: Bereits gebuchte Mahlzeiten/Aktivitäten oder ihre Berechnungen wären betroffen. Es wird nichts entfernt, archiviert oder umgerechnet.",
+      "confirmDelete": "Ich bestätige die Löschung und die gezeigten Referenzänderungen in genau diesen Versionen.", "delete": "Geprüfte Löschung ausführen", "deleted": "Löschung bestätigt. Listen wurden aktualisiert; andere Formularentwürfe bleiben erhalten.", "failed": "Die Löschung wurde nicht abschließend übernommen. Bitte Konfliktanzeige bzw. Schreibjournal prüfen; nicht mit neuen Versionen blind wiederholen."
+    }
   },
   "app": {
     "name": "Munchling",

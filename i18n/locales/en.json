@@ -7,7 +7,18 @@
     "retryFailed": "Still unsettled. Server switches/restores need separate review. The journal is retained.",
     "versionConflict": "This record has changed or been deleted. Your form is preserved. Load and consciously compare the current server state; nothing was overwritten.",
     "dependencyConflict": "This record is still referenced or dependencies have changed. Review these first; no automatic web deletion cascade.",
-    "unconfirmedUpload": "Please settle the saved server request shown above first."
+    "unconfirmedUpload": "Please settle the saved server request shown above first.",
+    "deletionPreviewRequired": "Review and explicitly confirm the version-bound deletion preview above.",
+    "historyConflict": "This deletion would affect booked entries or their historical calculations and is blocked.",
+    "review": {
+      "conflict": "Review write conflict", "noOverwrite": "Your form remains unchanged. There is no automatic overwrite or rebase. Compare the values; after consciously reloading you can enter your desired changes again.",
+      "base": "Captured base", "baseUnknown": "Original base unavailable (new record, legacy journal or bounded read cache). The current server state is not presented as the original base.",
+      "draft": "Your draft", "rawDraft": "Original form fields, not yet mapped to server fields.", "server": "Server state at comparison", "serverUnavailable": "Server state could not be loaded; this does not mean that the record is absent.",
+      "export": "Save comparison and draft as JSON", "keepDraft": "Close comparison, keep form", "reloadWarning": "I want to reload. All unsaved form inputs on this page will be lost; I have saved any drafts I need first.", "reload": "Reload page with server state",
+      "deleteTitle": "Version-bound deletion preview", "deleteRule": "Only the displayed versions are confirmed. Direct ingredient references may be removed; indirect recipes are not deleted. This cascade must not change booked entries or their calculations.",
+      "direct": "Directly affected records", "indirect": "Indirectly affected recipes", "history": "Affected bookings (deletion blocked)", "historyBlocked": "Deletion blocked: existing meal/activity bookings or their calculations would be affected. Nothing is deleted, archived or recalculated.",
+      "confirmDelete": "I confirm deletion and the displayed reference changes at these exact versions.", "delete": "Apply reviewed deletion", "deleted": "Deletion confirmed. Lists were refreshed; other form drafts remain unchanged.", "failed": "Deletion was not fully settled. Check the conflict display or write journal; do not blindly retry against new versions."
+    }
   },
   "app": {
     "name": "Munchling",

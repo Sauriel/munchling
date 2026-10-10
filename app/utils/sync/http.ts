@@ -4,7 +4,7 @@ import { syncLimits, syncProtocolVersion, type ServerBinding, type SnapshotPage 
 import { replyWebState } from "../../../shared/domain/web";
 import type { ServerWriteBatch } from "../../../shared/domain/server";
 
-const errorCodes = new Set(["versionConflict", "dependencyConflict", "identityConflict", "idempotencyConflict", "serverChanged", "cursorInvalid", "snapshotExpired", "snapshotBusy", "snapshotLimit", "batchTooLarge", "protocolMismatch", "invalidRequest", "DB_READ_FAILED", "DB_WRITE_FAILED", "DB_UNAVAILABLE", "API_NOT_CONFIGURED", "ORIGIN_DENIED", "JSON_REQUIRED", "BODY_TOO_LARGE", "REQUEST_TIMEOUT", "REQUEST_ABORTED", "INVALID_JSON", "required", "invalidType", "invalidNumber", "invalidDate", "invalidSource", "duplicate", "reference", "cycle", "backupFormat", "backupLimit"]);
+const errorCodes = new Set(["historyConflict", "versionConflict", "dependencyConflict", "identityConflict", "idempotencyConflict", "serverChanged", "cursorInvalid", "snapshotExpired", "snapshotBusy", "snapshotLimit", "batchTooLarge", "protocolMismatch", "invalidRequest", "DB_READ_FAILED", "DB_WRITE_FAILED", "DB_UNAVAILABLE", "API_NOT_CONFIGURED", "ORIGIN_DENIED", "JSON_REQUIRED", "BODY_TOO_LARGE", "REQUEST_TIMEOUT", "REQUEST_ABORTED", "INVALID_JSON", "required", "invalidType", "invalidNumber", "invalidDate", "invalidSource", "duplicate", "reference", "cycle", "backupFormat", "backupLimit"]);
 export function syncServerUrl(value: string): string {
 	try { const url = new URL(value); if (!["https:", "http:"].includes(url.protocol) || url.username || url.password || url.search || url.hash || url.pathname !== "/") throw new Error(); return url.origin; }
 	catch { throw new SyncClientError("invalidServerUrl"); }
