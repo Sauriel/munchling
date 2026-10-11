@@ -5,6 +5,7 @@ type Row = Record<string, unknown> & { id: number; uuid: string };
 async function findRow(sql: SqlExecutor, entity: SyncEntity, uuid: string): Promise<Row | null> {
 	const statements: Record<SyncEntity, string> = {
 		activities: "SELECT * FROM activities WHERE uuid=?;", activity_logs: "SELECT * FROM activity_logs WHERE uuid=?;",
+		profile_calorie_history: 'SELECT * FROM profile_calorie_history WHERE uuid=?;',
 		profiles: "SELECT * FROM profiles WHERE uuid=?;", foods: "SELECT * FROM foods WHERE uuid=?;",
 		recipes: "SELECT * FROM recipes WHERE uuid=?;", recipe_ingredients: "SELECT * FROM recipe_ingredients WHERE uuid=?;",
 		meal_logs: "SELECT * FROM meal_logs WHERE uuid=?;", meal_log_profiles: "SELECT * FROM meal_log_profiles WHERE uuid=?;",
@@ -33,7 +34,11 @@ export async function aggregatePayload(sql: SqlExecutor, entity: SyncAggregate, 
 	if (!row) throw new Error("Missing active sync aggregate.");
 	identities.set(`${entity}:${row.id}`, uuid);
 	const payload = await wireRow(sql, row, identities);
-	if (entity === "recipes") {
+	if (entity === "profiles" && (await sql.query("SELECT name FROM sqlite_master WHERE type='table' AND name='profile_calorie_history';")).length) {
+		const history = await sql.query<Row>("SELECT * FROM profile_calorie_history WHERE profile_id=? ORDER BY sequence;", [row.id]);
+		// Omit on legacy/empty profiles: existing request bytes are unchanged.
+		if (history.length) payload.calorie_history = await Promise.all(history.map((child) => wireRow(sql, child, identities)));
+	} else if (entity === "recipes") {
 		const children = await sql.query<Row>("SELECT * FROM recipe_ingredients WHERE recipe_id=? ORDER BY id;", [row.id]);
 		payload.ingredients = await Promise.all(children.map((child) => wireRow(sql, child, identities)));
 	} else if (entity === "meal_logs") {

@@ -114,7 +114,7 @@ try {
 	await navigate("/settings");
 	await wait(() => evaluate('Boolean(document.querySelector("#backup-file"))'), "backup controls");
 	const empty = await download("Export backup");
-	if (empty.data.version !== 4 || empty.data.schemaVersion !== 4 || empty.data.identities.length !== 0 || empty.data.data.profiles.length !== 0) throw new Error("Expected an empty v4 backup.");
+	if (empty.data.version !== 5 || empty.data.schemaVersion !== 5 || empty.data.identities.length !== 0 || empty.data.data.profiles.length !== 0) throw new Error("Expected an empty v5 backup.");
 	console.log("PASS: browser exports the empty local database");
 
 	await navigate("/profiles");
@@ -127,8 +127,8 @@ try {
 	await wait(() => evaluate('document.body.textContent.includes("Browser Smoke")'), "profile saved");
 	await navigate("/settings");
 	const populated = await download("Export backup");
-	if (populated.data.data.profiles.length !== 1 || populated.data.identities.length !== 1) throw new Error("The profile identity did not persist.");
-	const originalUuid = populated.data.identities[0].uuid;
+	if (populated.data.data.profiles.length !== 1 || populated.data.identities.length !== 2 || populated.data.data.profileCalorieHistory.length !== 1) throw new Error("The profile and dated goal identities did not persist.");
+	const originalUuid = populated.data.identities.find(row => row.entity === 'profiles')?.uuid;
 	if (!/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/.test(originalUuid)) throw new Error("Invalid generated UUID.");
 	console.log("PASS: profile creation persists across navigation and export");
 
@@ -153,15 +153,17 @@ try {
 	console.log("PASS: safety backup contains previous data and survives reload");
 	await restoreFile(recovery.file);
 	const restored = await download("Export backup");
-	if (restored.data.identities[0]?.uuid !== originalUuid) throw new Error("Identity-preserving restore changed the profile UUID.");
-	console.log("PASS: v3 restore preserves UUIDs");
+	if (restored.data.identities.find(row => row.entity === 'profiles')?.uuid !== originalUuid) throw new Error("Identity-preserving restore changed the profile UUID.");
+	if (JSON.stringify(restored.data.data.profileCalorieHistory) !== JSON.stringify(populated.data.data.profileCalorieHistory)) throw new Error('Restore changed historical goal UUIDs or original JSON');
+	console.log("PASS: v5 restore preserves profile/history UUIDs and original JSON");
 	const legacyFile = path.join(downloads, "legacy-v1.json");
-	fs.writeFileSync(legacyFile, JSON.stringify({ format: "munchling-backup", version: 1, schemaVersion: 1, exportedAt: populated.data.exportedAt, data: populated.data.data }));
+	const legacyData = structuredClone(populated.data.data); delete legacyData.profileCalorieHistory;
+	fs.writeFileSync(legacyFile, JSON.stringify({ format: "munchling-backup", version: 1, schemaVersion: 1, exportedAt: populated.data.exportedAt, data: legacyData }));
 	await restoreFile(legacyFile);
 	await cdp("Page.reload");
 	await wait(() => evaluate('Boolean(document.querySelector("#backup-file"))'), "settings after legacy restore");
 	const legacyRestored = await download("Export backup");
-	if (legacyRestored.data.version !== 4 || legacyRestored.data.data.profiles[0]?.name !== "Browser Smoke" || !legacyRestored.data.identities[0]?.uuid || legacyRestored.data.identities[0].uuid === originalUuid) throw new Error("Legacy restore did not create a new persistent identity.");
+	if (legacyRestored.data.version !== 5 || legacyRestored.data.data.profiles[0]?.name !== "Browser Smoke" || !legacyRestored.data.identities[0]?.uuid || legacyRestored.data.identities[0].uuid === originalUuid || legacyRestored.data.data.profileCalorieHistory.length !== 0) throw new Error("Legacy restore did not create a new persistent identity.");
 	console.log("PASS: legacy v1 restore creates persistent new UUIDs");
 	if (exceptions.length) throw new Error("Uncaught browser exceptions: " + exceptions.join("; "));
 	console.log("PASS: no uncaught browser exceptions");

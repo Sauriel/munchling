@@ -39,8 +39,8 @@ function guard(event: H3Event, protocol: boolean) {
 	if (getMethod(event) === "OPTIONS") {
 		const method = getHeader(event, "access-control-request-method");
 		const headers = String(getHeader(event, "access-control-request-headers") || "").split(",").map((value) => value.trim().toLowerCase()).filter(Boolean);
-		if (!origin || !["GET", "POST", "DELETE"].includes(method || "") || headers.some((name) => !["content-type", "x-munchling-protocol"].includes(name))) throw new HttpError(403, "ORIGIN_DENIED");
-		setHeader(event, "Access-Control-Allow-Methods", "GET, POST, DELETE, OPTIONS"); setHeader(event, "Access-Control-Allow-Headers", "Content-Type, X-Munchling-Protocol");
+		if (!origin || !["GET", "POST", "DELETE"].includes(method || "") || headers.some((name) => !["content-type", "x-munchling-protocol", "x-munchling-schema"].includes(name))) throw new HttpError(403, "ORIGIN_DENIED");
+		setHeader(event, "Access-Control-Allow-Methods", "GET, POST, DELETE, OPTIONS"); setHeader(event, "Access-Control-Allow-Headers", "Content-Type, X-Munchling-Protocol, X-Munchling-Schema");
 		setHeader(event, "Access-Control-Max-Age", 600); sendNoContent(event, 204); return false;
 	}
 	if (protocol && getHeader(event, "x-munchling-protocol") !== String(syncProtocolVersion)) throw new ServerProtocolError("protocolMismatch");

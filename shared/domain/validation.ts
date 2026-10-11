@@ -1,6 +1,6 @@
 import type { CreateFoodInput, CreateMealLogInput, CreateProfileInput, CreateRecipeInput, RecipeIngredientInput, UpdateFoodInput, UpdateProfileInput, UpdateRecipeInput } from "./types";
 
-export type ValidationCode = "required" | "invalidType" | "invalidNumber" | "invalidDate" | "invalidSource" | "duplicate" | "reference" | "cycle" | "backupFormat" | "backupLimit";
+export type ValidationCode = "required" | "invalidType" | "invalidNumber" | "invalidDate" | "invalidSource" | "duplicate" | "reference" | "cycle" | "backupFormat" | "backupLimit" | "historyImmutable";
 
 export class DomainValidationError extends Error {
 	constructor(public readonly code: ValidationCode, public readonly field: string) {

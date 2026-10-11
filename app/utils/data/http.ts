@@ -1,3 +1,5 @@
+import { decodeProfileCalorieRows,encodeProfileCalorieEvent,type ProfileCalorieWireRow } from '../../../shared/domain/profile-calorie-wire';
+import { planProfileCalorieEvents,localCalendarDate } from '../../../shared/domain/profile-calorie-command';
 import { createWebReviews } from './web-reviews';
 import { deletionReview } from '../../../shared/domain/deletion-review';
 import { planFoodMerge } from '../../../shared/domain/food-merge';
@@ -90,6 +92,15 @@ export function createHttpDataService(address: string, storage: JournalStore, op
 		for (const [key, field] of Object.entries(fields[entity])) {
 			const value = (input as Record<string, unknown>)[key]; if (old && value === undefined) continue;
 			data[field] = field.startsWith("is_") ? Number(value ?? (entity === "foods")) : typeof value === "string" ? (["brand", "ean", "description"].includes(field) ? value.trim() || null : value.trim()) : value ?? null;
+		}
+		if (entity === 'profiles') {
+			const profile = input as CreateProfileInput;
+			if (!old && Number(data.daily_calories_target) <= 0) throw new SyncClientError('invalidNumber');
+			if (!old && profile.calorieChange) throw new SyncClientError('reference');
+			const original = old?.calorie_history as ProfileCalorieWireRow[] | undefined ?? [];
+			const history = decodeProfileCalorieRows(original,String(data.id));
+			const events = planProfileCalorieEvents(String(data.id),history,Number(old?.daily_calories_target ?? data.daily_calories_target),Number(data.daily_calories_target),profile.calorieDate ?? localCalendarDate(),profile.calorieChange,!!profile.calorieDate && !old);
+			if (events.length) data.calorie_history = [...original,...events.map(encodeProfileCalorieEvent)];
 		}
 		return data;
 	}

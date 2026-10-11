@@ -29,7 +29,7 @@ describe('activities, daily allowances and safety', () => {
       await expect(d.service.activityLogs.createActivityLogs({ activityId: a.id, activityRevision: a.revision, date: '2026-10-08', profiles: [{ profileId: p.id, units: 1 }] })).rejects.toThrow('versionConflict')
       await d.service.activities.deleteActivity(a.id)
       expect(activityBonus(await d.service.activityLogs.listActivityLogs(),p.id,'2026-10-08')).toBe(300)
-      const backup = await d.service.backups!.exportBackup(); expect(backup.version).toBe(4)
+      const backup = await d.service.backups!.exportBackup(); expect(backup.version).toBe(5)
       await d.service.backups!.restoreBackup(backup, async () => {})
       expect(await d.service.activityLogs.listActivityLogs()).toEqual(logs.slice().reverse())
       await d.service.activityLogs.deleteActivityLog(logs[0]!.id)

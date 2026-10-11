@@ -324,6 +324,7 @@
     "duplicate": "Die Daten enthalten doppelte IDs, EANs oder Profilzuordnungen.",
     "reference": "Ein verknüpftes Profil, Lebensmittel oder Gericht ist nicht vorhanden.",
     "cycle": "Gerichte dürfen sich nicht direkt oder indirekt selbst als Zutat enthalten.",
+    "historyImmutable": "Bereits gespeicherte Profilhistorie darf nicht entfernt, verändert oder ersetzt werden. Bitte den Profilkonflikt ausdrücklich prüfen.",
     "backupFormat": "Die Datei ist keine unterstützte Munchling-Sicherung oder hat eine andere Schemaversion.",
     "backupLimit": "Die Sicherung ist zu groß. Unterstützt werden höchstens 25 MiB und 100.000 Datensätze."
   },

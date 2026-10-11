@@ -2,6 +2,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { spawn, type ChildProcess } from "node:child_process";
 import { createServer } from "node:net";
 import { readFileSync, readdirSync } from "node:fs";
+import { serverMigrations } from '../../server/database/schema';
 import type { ServerDatabase } from "../../server/database/connection";
 import { newDatabase, resetDatabase, testConfig } from "./helpers";
 
@@ -42,7 +43,7 @@ describe("built Nitro backend health and private configuration", () => {
 	it("migrates on actual server startup and exposes live/ready endpoints", async () => {
 		const live = await fetch(`${base}/api/health/live`); expect(live.status).toBe(200); expect(await live.json()).toEqual({ status: "ok" });
 		const ready = await fetch(`${base}/api/health/ready`); expect(ready.status).toBe(200); expect(await ready.json()).toEqual({ status: "ready" });
-		expect(await database.withConnection((sql) => sql.query("SELECT version,status FROM schema_migrations"))).toEqual([{ version: 1, status: "applied" }, { version: 2, status: "applied" }]);
+		expect(await database.withConnection((sql) => sql.query("SELECT version,status FROM schema_migrations"))).toEqual(serverMigrations.map(({ version }) => ({ version,status: 'applied' })));
 	});
 	it("keeps data API disabled until a canonical public origin is configured", async () => {
 		const response = await fetch(`${base}/api/sync/info`); expect(response.status).toBe(503); expect(await response.json()).toMatchObject({ error: { code: "API_NOT_CONFIGURED" } });

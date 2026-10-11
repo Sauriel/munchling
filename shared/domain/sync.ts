@@ -1,4 +1,4 @@
-export const syncEntities = ["profiles", "foods", "recipes", "recipe_ingredients", "meal_logs", "meal_log_profiles", "activities", "activity_logs"] as const;
+export const syncEntities = ["profiles", "foods", "recipes", "recipe_ingredients", "meal_logs", "meal_log_profiles", "activities", "activity_logs", "profile_calorie_history"] as const;
 export type SyncEntity = typeof syncEntities[number];
 export type SyncAggregate = "profiles" | "foods" | "recipes" | "meal_logs" | "activities" | "activity_logs";
 export type SyncIdentity = { entity: SyncEntity; localId: number; uuid: string };

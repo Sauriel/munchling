@@ -5,6 +5,7 @@ import { readServerState } from "../../server/database/state";
 import { serverMigrations } from "../../server/database/schema";
 import { migrateServerDatabase } from "../../server/database/migrations";
 import { createServerSnapshot, getSnapshotPage, readServerChanges, releaseServerSnapshot, serverInfo } from "../../server/services/read";
+import { reserveIdentity,upsertRow } from '../../server/services/storage';
 import { writeServerBatch } from "../../server/services/write";
 import { createUuid } from "../../shared/domain/sync";
 import type { ServerBinding } from "../../shared/domain/protocol";
@@ -22,12 +23,17 @@ describe("consistent MariaDB sync downloads", () => {
 	it("upgrades v1 without changing identity, data or the initial migration checksum", async () => {
 		await resetDatabase(db, false); await migrateServerDatabase(db, "munchling_test", [serverMigrations[0]!]);
 		const state = await db.withConnection(readServerState); binding = { serverInstanceId: state.instance_uuid, serverEpoch: state.epoch_uuid };
-		const p = profile(); await push([operation(p)]); await migrateServerDatabase(db, "munchling_test");
-		expect((await serverInfo(db)).cursor).toBe("1"); expect((await serverInfo(db)).serverEpoch).toBe(binding.serverEpoch);
+		// Seed the published v1 representation; the current writer requires v5.
+		const p = profile(); await db.transaction(async sql => {
+			await reserveIdentity(sql,p.id,'profiles',p.id); await upsertRow(sql,'profiles',p);
+			await sql.write('UPDATE sync_identities SET version=1 WHERE uuid=?',[p.id]);
+		});
+		await migrateServerDatabase(db, "munchling_test");
+		expect((await serverInfo(db)).cursor).toBe("0"); expect((await serverInfo(db)).serverEpoch).toBe(binding.serverEpoch);
 		expect((await createServerSnapshot(db, binding)).aggregates[0]!.data).toEqual(p);
 	});
 	it("returns a resumable empty snapshot and negotiable info", async () => {
-		expect(await serverInfo(db)).toMatchObject({ protocolVersion: 1, schemaVersion: 4, cursor: "0", capabilities: { authentication: "none" } });
+		expect(await serverInfo(db)).toMatchObject({ protocolVersion: 1, schemaVersion: 5, cursor: "0", capabilities: { authentication: "none" } });
 		const page = await createServerSnapshot(db, binding); expect(page).toMatchObject({ aggregates: [], identities: [], cursor: "0", pageCount: 1, nextPage: null });
 		expect(await getSnapshotPage(db, binding, page.snapshotId, 0)).toEqual(page);
 	});

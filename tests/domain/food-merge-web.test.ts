@@ -11,7 +11,7 @@ function setup() {
   let lose = false, failRefresh = false, committed = false
   const respond = (v: unknown) => new Response(JSON.stringify(v),{ headers: { 'Content-Type': 'application/json' } })
   const fetcher: typeof fetch = async (input,init) => {
-    if (String(input).endsWith('/info')) return respond({ ...binding,protocolVersion: 1,schemaVersion: 4,cursor: '0',counts: [],capabilities: { authentication: 'none',fullAggregates: true,manualConflicts: true,atomicBatches: true },limits: syncLimits })
+    if (String(input).endsWith('/info')) return respond({ ...binding,protocolVersion: 1,schemaVersion: 5,cursor: '0',counts: [],capabilities: { authentication: 'none',fullAggregates: true,manualConflicts: true,atomicBatches: true },limits: syncLimits })
     if (String(input).includes('/view?')) { if (committed && failRefresh) throw new Error('offline'); return respond(state) }
     const text = String(init!.body); bodies.push(text); const batch = JSON.parse(text); committed = true
     if (lose) throw new Error('lost')

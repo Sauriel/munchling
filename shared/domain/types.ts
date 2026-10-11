@@ -1,7 +1,11 @@
+import type { ProfileCalorieEvent } from './profile-calorie-history';
+import type { ProfileCalorieChange } from './profile-calorie-command';
 // Persistence-independent application DTOs. Numeric IDs are local identities;
 // the forthcoming sync protocol will use additional global UUIDs.
 export type Profile = {
 	id: number;
+	uuid?: string;
+	calorieHistory?: ProfileCalorieEvent[];
 	revision?: number;
 	name: string;
 	dailyCaloriesTarget: number;
@@ -16,6 +20,8 @@ export type Profile = {
 };
 
 export type CreateProfileInput = {
+	calorieDate?: string;
+	calorieChange?: ProfileCalorieChange;
 	name: string;
 	dailyCaloriesTarget: number;
 	dailyProteinTarget?: number | null;

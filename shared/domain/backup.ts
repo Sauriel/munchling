@@ -1,3 +1,4 @@
+import { decodeProfileCalorieRows } from './profile-calorie-wire';
 import { validateActivity, validateActivityDate, activityTotals, type Activity, type ActivityLog } from './activities';
 import type { Food, Profile, Recipe, RecipeIngredient } from "./types";
 import { isUuid, syncEntities, type SyncIdentity, type SyncTombstone } from "./sync";
@@ -13,7 +14,9 @@ export type StoredMealLog = {
 export type StoredMealLogProfile = {
 	id: number; mealLogId: number; profileId: number; portionFactor: number; createdAt: string;
 };
+export type StoredProfileCalorieEvent = { id: number; profileId: number; sequence: number; validFrom: string; createdAt: string; eventJson: string };
 export type BackupData = {
+	profileCalorieHistory?: StoredProfileCalorieEvent[];
 	activities?: Activity[]; activityLogs?: ActivityLog[];
 	profiles: Profile[]; foods: Food[]; recipes: Recipe[];
 	recipeIngredients: RecipeIngredient[]; mealLogs: StoredMealLog[]; mealLogProfiles: StoredMealLogProfile[];
@@ -23,7 +26,8 @@ export type LegacyBackup = BackupBase & { version: 1; schemaVersion: 1 };
 export type IdentityBackup = BackupBase & { version: 2; schemaVersion: 2; identities: SyncIdentity[]; tombstones: SyncTombstone[] };
 export type PortionBackup = Omit<IdentityBackup, "version" | "schemaVersion"> & { version: 3; schemaVersion: 3 };
 export type ActivityBackup = Omit<IdentityBackup, 'version' | 'schemaVersion'> & { version: 4; schemaVersion: 4 };
-export type MunchlingBackup = LegacyBackup | IdentityBackup | PortionBackup | ActivityBackup;
+export type ProfileCalorieBackup = Omit<IdentityBackup,'version' | 'schemaVersion'> & { version: 5; schemaVersion: 5 };
+export type MunchlingBackup = LegacyBackup | IdentityBackup | PortionBackup | ActivityBackup | ProfileCalorieBackup;
 
 function nullableText(value: unknown, field: string) { if (value !== null) assertText(value, field); }
 function nullableDate(value: unknown, field: string) { if (value !== null) assertDateTime(value, field); }
@@ -47,14 +51,14 @@ function reference(value: unknown, allowed: Set<number>, field: string) {
 
 export function validateBackup(value: unknown): asserts value is MunchlingBackup {
 	assertRecord(value, "backup");
-	if (value.format !== "munchling-backup" || !((value.version === 1 && value.schemaVersion === 1) || (value.version === 2 && value.schemaVersion === 2) || (value.version === 3 && value.schemaVersion === 3) || (value.version === 4 && value.schemaVersion === 4))) fail("backupFormat", "backup");
+	if (value.format !== "munchling-backup" || !((value.version === 1 && value.schemaVersion === 1) || (value.version === 2 && value.schemaVersion === 2) || (value.version === 3 && value.schemaVersion === 3) || (value.version === 4 && value.schemaVersion === 4) || (value.version === 5 && value.schemaVersion === 5))) fail("backupFormat", "backup");
 	assertDateTime(value.exportedAt, "exportedAt");
 	assertRecord(value.data, "data");
-	const tables = ["profiles", "foods", "recipes", "recipeIngredients", "mealLogs", "mealLogProfiles", "activities", "activityLogs"] as const;
+	const tables = ["profiles", "foods", "recipes", "recipeIngredients", "mealLogs", "mealLogProfiles", "activities", "activityLogs", 'profileCalorieHistory'] as const;
 	const rows = {} as Record<typeof tables[number], Record<string, unknown>[]>;
 	let count = 0;
 	for (const table of tables) {
-		const entries = value.data[table] ?? (value.version !== 4 && (table === 'activities' || table === 'activityLogs') ? [] : undefined);
+		const entries = value.data[table] ?? (Number(value.version) < 4 && (table === 'activities' || table === 'activityLogs') || Number(value.version) < 5 && table === 'profileCalorieHistory' ? [] : undefined);
 		if (!Array.isArray(entries)) fail("invalidType", table);
 		count += entries.length;
 		if (count > MAX_BACKUP_ROWS) fail("backupLimit", "backup");
@@ -125,7 +129,17 @@ export function validateBackup(value: unknown): asserts value is MunchlingBackup
 		validateActivityDate(date); reference(profileId, profiles, 'profileId'); assertNumber(units, 'units', true);
 		validateActivity(row); activityTotals(row, units); timestamps(row);
 	}
+	ids(rows.profileCalorieHistory,'profileCalorieHistory');
+	if (value.version !== 5 && rows.profileCalorieHistory.length) fail('backupFormat','profileCalorieHistory');
+	for (const row of rows.profileCalorieHistory) { reference(row.profileId,profiles,'profileId'); assertNumber(row.sequence,'sequence',true); assertText(row.validFrom,'validFrom',true); assertText(row.eventJson,'eventJson',true); timestamps(row,false); }
 	if (value.version !== 1) validateIdentities(value, rows, count);
+	if (value.version === 5) {
+		const identities = new Map((value.identities as SyncIdentity[]).map(row => [`${row.entity}:${row.localId}`,row.uuid]));
+		for (const id of profiles) {
+			const uuid = identities.get(`profiles:${id}`)!;
+			decodeProfileCalorieRows(rows.profileCalorieHistory.filter(row => row.profileId === id).map(row => ({ id: identities.get(`profile_calorie_history:${row.id}`),profile_id: uuid,sequence: row.sequence,valid_from: row.validFrom,created_at: row.createdAt,event_json: row.eventJson })),uuid);
+		}
+	}
 	// Existing profile deletion can leave a meal with zero/fewer profile links.
 	// Backups preserve that stored state; they do not recalculate portions.
 }
@@ -134,7 +148,7 @@ function validateIdentities(value: Record<string, unknown>, rows: Record<string,
 	if (!Array.isArray(value.identities) || !Array.isArray(value.tombstones)) fail("backupFormat", "identities");
 	if (value.identities.length !== count) fail("backupFormat", "identities");
 	if (count + value.tombstones.length > MAX_BACKUP_ROWS) fail("backupLimit", "tombstones");
-	const tableNames = { profiles: "profiles", foods: "foods", recipes: "recipes", recipe_ingredients: "recipeIngredients", meal_logs: "mealLogs", meal_log_profiles: "mealLogProfiles", activities: 'activities', activity_logs: 'activityLogs' };
+	const tableNames = { profiles: "profiles", foods: "foods", recipes: "recipes", recipe_ingredients: "recipeIngredients", meal_logs: "mealLogs", meal_log_profiles: "mealLogProfiles", activities: 'activities', activity_logs: 'activityLogs', profile_calorie_history: 'profileCalorieHistory' };
 	const expected = new Set<string>();
 	for (const entity of syncEntities) for (const row of rows[tableNames[entity]]!) expected.add(`${entity}:${row.id}`);
 	const seen = new Map<string, string>();
@@ -155,7 +169,7 @@ function validateIdentities(value: Record<string, unknown>, rows: Record<string,
 		seen.set(tombstone.uuid, String(tombstone.entity));
 	}
 	for (const tombstone of value.tombstones) {
-		const root = tombstone.entity === "recipe_ingredients" ? "recipes" : tombstone.entity === "meal_log_profiles" ? "meal_logs" : tombstone.entity;
+		const root = tombstone.entity === 'profile_calorie_history' ? 'profiles' : tombstone.entity === "recipe_ingredients" ? "recipes" : tombstone.entity === "meal_log_profiles" ? "meal_logs" : tombstone.entity;
 		if (tombstone.aggregateEntity !== root || seen.get(tombstone.aggregateUuid) !== root) fail("reference", "aggregateUuid");
 		if (tombstone.entity === root && tombstone.aggregateUuid !== tombstone.uuid) fail("reference", "aggregateUuid");
 	}

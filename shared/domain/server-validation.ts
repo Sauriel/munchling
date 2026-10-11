@@ -1,3 +1,4 @@
+import { decodeProfileCalorieRows } from './profile-calorie-wire';
 import { validateActivity, validateActivityDate, activityTotals } from './activities';
 import type { ServerWriteBatch } from "./server";
 import { isUuid, type SyncAggregate } from "./sync";
@@ -26,7 +27,7 @@ function row(value: unknown, table: ServerTable, ids: Set<string>): Record<strin
 	assertRecord(value, table); uuid(value.id, "id");
 	if (ids.has(value.id)) fail("duplicate", "id"); ids.add(value.id);
 	const fields: readonly string[] = wireColumns[table];
-	const extras = table === "recipes" ? ["ingredients"] : table === "meal_logs" ? ["profiles"] : [];
+	const extras = table === "recipes" ? ["ingredients"] : table === "meal_logs" ? ["profiles"] : table === 'profiles' ? ['calorie_history'] : [];
 	for (const key of Object.keys(value)) if (key !== "id" && !fields.includes(key) && !extras.includes(key)) fail("invalidType", key);
 	value.created_at = utcTimestamp(value.created_at, "created_at");
 	if (fields.includes("updated_at")) value.updated_at = value.updated_at === null ? null : utcTimestamp(value.updated_at, "updated_at");
@@ -45,6 +46,11 @@ export function validatePayload(entity: SyncAggregate, value: Record<string, unk
 		validateProfileInput({ name: value.name, dailyCaloriesTarget: value.daily_calories_target, dailyProteinTarget: value.daily_protein_target, dailyCarbsTarget: value.daily_carbs_target, dailyFatTarget: value.daily_fat_target, dailySugarTarget: value.daily_sugar_target, dailyFiberTarget: value.daily_fiber_target, dailySaltTarget: value.daily_salt_target });
 		for (const key of ["daily_protein_target", "daily_carbs_target", "daily_fat_target", "daily_sugar_target", "daily_fiber_target", "daily_salt_target"]) if (value[key] !== null) assertNumber(value[key], key);
 		assertText(value.name, "name", true); value.name = value.name.trim();
+		if (value.calorie_history !== undefined) {
+			const events = decodeProfileCalorieRows(value.calorie_history,String(value.id));
+			for (const event of events) { if (ids.has(event.id)) fail('duplicate','id'); ids.add(event.id); }
+			return events.length;
+		}
 	} else if (entity === "foods") {
 		validateFoodInput({ nameDe: value.name_de, nameEn: value.name_en, brand: value.brand, ean: value.ean, caloriesPer100g: value.calories_per_100g, fatPer100g: value.fat_per_100g, carbsPer100g: value.carbs_per_100g, sugarPer100g: value.sugar_per_100g, fiberPer100g: value.fiber_per_100g, proteinPer100g: value.protein_per_100g, saltPer100g: value.salt_per_100g, isCustom: booleanFlag(value.is_custom, "is_custom") });
 		value.brand = nullableText(value.brand, "brand"); value.ean = nullableText(value.ean, "ean");

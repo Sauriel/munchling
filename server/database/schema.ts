@@ -1,3 +1,4 @@
+import { serverProfileCalorieStatements } from './profile-calorie-schema';
 // This manifest contains ONLY compile-time identifiers/SQL. Imported payloads
 // are always bound values; they never supply table or column identifiers.
 const legacyServerTables = {
@@ -38,7 +39,7 @@ const activityTables = {
 	activities: { columns: ['name', 'duration_minutes', 'calories', 'created_at', 'updated_at'], definitions: `name LONGTEXT NOT NULL, duration_minutes DOUBLE NOT NULL CHECK(duration_minutes>0), calories DOUBLE NOT NULL CHECK(calories>=0)` },
 	activity_logs: { columns: ['profile_id', 'date', 'name', 'duration_minutes', 'calories', 'units', 'created_at', 'updated_at'], definitions: `profile_id CHAR(36) CHARACTER SET ascii COLLATE ascii_bin NOT NULL, date CHAR(10) CHARACTER SET ascii NOT NULL, name LONGTEXT NOT NULL, duration_minutes DOUBLE NOT NULL CHECK(duration_minutes>0), calories DOUBLE NOT NULL CHECK(calories>=0), units DOUBLE NOT NULL CHECK(units>0), FOREIGN KEY(profile_id) REFERENCES profiles(uuid), KEY idx_activity_profile_date(profile_id,date)` },
 } as const;
-export const serverTables = { ...legacyServerTables, ...activityTables };
+export const serverTables = { ...legacyServerTables, ...activityTables, profile_calorie_history: { columns: ['profile_id','sequence','valid_from','created_at','event_json'],definitions: '' } as const };
 export type ServerTable = keyof typeof serverTables;
 export const migrationTableSql = `CREATE TABLE IF NOT EXISTS schema_migrations (
  version INT PRIMARY KEY, name VARCHAR(128) NOT NULL, checksum CHAR(64) CHARACTER SET ascii NOT NULL,
@@ -98,11 +99,12 @@ export const serverMigrations = [
 		"ALTER TABLE sync_identities MODIFY entity ENUM('profiles','foods','recipes','recipe_ingredients','meal_logs','meal_log_profiles','activities','activity_logs') NOT NULL",
 		...Object.entries(activityTables).map(([name, table]) => `CREATE TABLE ${name} (view_id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT UNIQUE, uuid CHAR(36) CHARACTER SET ascii COLLATE ascii_bin PRIMARY KEY, created_at DATETIME(3) NOT NULL, updated_at DATETIME(3), deleted_at DATETIME(3), ${table.definitions}, FOREIGN KEY(uuid) REFERENCES sync_identities(uuid)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_bin`),
 	] },
+	{ version: 5, name: 'immutable_profile_calorie_history', statements: [...serverProfileCalorieStatements] },
 ];
 
 export const tableStatements = Object.fromEntries(Object.entries(serverTables).map(([name, table]) => [name, {
 	select: `SELECT * FROM ${name} WHERE uuid=?`,
-	insert: `INSERT INTO ${name} (uuid,${table.columns.join(",")},deleted_at) VALUES (${["uuid", ...table.columns, "deleted_at"].map(() => "?").join(",")})`,
-	update: `UPDATE ${name} SET ${[...table.columns, "deleted_at"].map((column) => `${column}=?`).join(",")} WHERE uuid=?`,
+	insert: `INSERT INTO ${name} (uuid,${table.columns.map(column => `\`${column}\``).join(",")},deleted_at) VALUES (${["uuid", ...table.columns, "deleted_at"].map(() => "?").join(",")})`,
+	update: `UPDATE ${name} SET ${[...table.columns, "deleted_at"].map((column) => `\`${column}\`=?`).join(",")} WHERE uuid=?`,
 	remove: `UPDATE ${name} SET deleted_at=? WHERE uuid=?`,
 }])) as Record<ServerTable, { select: string; insert: string; update: string; remove: string }>;

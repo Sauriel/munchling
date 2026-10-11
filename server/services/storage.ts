@@ -1,3 +1,4 @@
+import { readServerProfileCalorieHistory } from './profile-calorie-history';
 import type { ServerAggregate } from "../../shared/domain/server";
 import { ServerWriteError } from "../../shared/domain/server";
 import type { SyncAggregate, SyncEntity } from "../../shared/domain/sync";
@@ -25,6 +26,10 @@ export async function aggregateSnapshot(sql: ServerSql, entity: SyncAggregate, u
 	const row = (await sql.query(tableStatements[entity].select, [uuid]))[0];
 	if (!row) throw new Error("Missing active aggregate row.");
 	const data = payloadRow(row, entity);
+	if (entity === 'profiles') {
+		const history = await readServerProfileCalorieHistory(sql,uuid);
+		if (history.length) data.calorie_history = history;
+	}
 	if (entity === "recipes") data.ingredients = (await sql.query("SELECT * FROM recipe_ingredients WHERE recipe_id=? AND deleted_at IS NULL ORDER BY view_id", [uuid])).map((child) => payloadRow(child, "recipe_ingredients"));
 	if (entity === "meal_logs") data.profiles = (await sql.query("SELECT * FROM meal_log_profiles WHERE meal_log_id=? AND deleted_at IS NULL ORDER BY view_id", [uuid])).map((child) => payloadRow(child, "meal_log_profiles"));
 	return { entity, id: uuid, version: meta.version, deletedAt: null, data };

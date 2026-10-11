@@ -1,3 +1,5 @@
+import { decodeProfileCalorieRows } from '../../../shared/domain/profile-calorie-wire';
+import { assertProfileCalorieAppendOnly,sameProfileCalorieValue } from '../../../shared/domain/profile-calorie-history';
 import type { SqlDatabase, SqlExecutor, SqlValue } from "../database/executor";
 import { aggregatePayload } from "../database/outbox";
 import type { ServerAggregate } from "../../../shared/domain/server";
@@ -14,7 +16,7 @@ export type RecordRow = { uuid: string; entity: SyncEntity; local_id: number | n
 type Outcome = { id: string; status: "applied" | "blocked"; reason: string | null };
 const refs: Record<string, SyncAggregate> = { food_id: "foods", recipe_id: "recipes", sub_recipe_id: "recipes", meal_log_id: "meal_logs", profile_id: "profiles" };
 export const meta = async (sql: SqlExecutor, uuid: string) => (await sql.query<RecordRow>("SELECT * FROM sync_records WHERE uuid=?;", [uuid]))[0] ?? null;
-const rootChildren = (root: ServerAggregate): { entity: "recipe_ingredients" | "meal_log_profiles"; rows: Record<string, unknown>[] } | null => root.data && root.entity === "recipes" ? { entity: "recipe_ingredients", rows: root.data.ingredients as Record<string, unknown>[] } : root.data && root.entity === "meal_logs" ? { entity: "meal_log_profiles", rows: root.data.profiles as Record<string, unknown>[] } : null;
+const rootChildren = (root: ServerAggregate): { entity: "recipe_ingredients" | "meal_log_profiles" | 'profile_calorie_history'; rows: Record<string, unknown>[] } | null => root.data && root.entity === 'profiles' ? { entity: 'profile_calorie_history',rows: root.data.calorie_history as Record<string,unknown>[] ?? [] } : root.data && root.entity === "recipes" ? { entity: "recipe_ingredients", rows: root.data.ingredients as Record<string, unknown>[] } : root.data && root.entity === "meal_logs" ? { entity: "meal_log_profiles", rows: root.data.profiles as Record<string, unknown>[] } : null;
 async function pending(sql: SqlExecutor, uuid: string) {
 	return (await sql.query("SELECT entity_uuid FROM sync_outbox WHERE entity_uuid=? UNION SELECT uuid FROM sync_conflicts WHERE uuid=?;", [uuid, uuid])).length > 0;
 }
@@ -46,6 +48,19 @@ export async function preflight(sql: SqlExecutor, roots: ServerAggregate[], iden
 	const proposed = new Map(changes.map((root) => [root.id, root]));
 	for (const root of changes) {
 		const children = rootChildren(root);
+		if (root.entity === 'profiles' && root.data) {
+			const known = await meta(sql,root.id);
+			if (known?.local_id && known.deleted_at === null) {
+				const current = await aggregatePayload(sql,'profiles',root.id,new Map());
+				const baseline = force.has(root.id) ? (await sql.query<{payload:string}>('SELECT payload FROM sync_baselines WHERE uuid=?;',[root.id]))[0] : null;
+				const previous = force.has(root.id) ? baseline ? storedJson<Record<string,unknown>>(baseline.payload) : { calorie_history: [] } : current;
+				try {
+					const old = previous.calorie_history as Record<string,unknown>[] ?? [], next = root.data.calorie_history as Record<string,unknown>[] ?? [];
+					assertProfileCalorieAppendOnly(decodeProfileCalorieRows(old,root.id),decodeProfileCalorieRows(next,root.id),root.id);
+					for (const row of old) if (!sameProfileCalorieValue(row,next.find(child => child.id === row.id))) throw new Error('changed history');
+				} catch { return { reason: 'historyImmutable',changes: [] }; }
+			}
+		}
 		for (const child of children?.rows ?? []) { const known = await meta(sql, String(child.id)); if (known && (known.entity !== children!.entity || known.aggregate_uuid !== root.id)) return { reason: "identityConflict", changes: [] }; }
 		if (root.deletedAt !== null) {
 			for (const dependent of await deletionDependents(sql, root)) if (!proposed.has(dependent.uuid) || await pending(sql, dependent.uuid)) return { reason: "localDependency", changes: [] };
@@ -80,6 +95,11 @@ async function writeRow(sql: SqlExecutor, entity: SyncEntity, ownerEntity: SyncA
 	// Identifiers come only from validated entity enums and immutable wire lists.
 	const statements = receiveSql[entity];
 	const exists = (await sql.query(statements.find, [uuid])).length > 0;
+	if (exists && entity === 'profile_calorie_history') {
+		const stored = (await sql.query<Record<string,unknown>>('SELECT * FROM profile_calorie_history WHERE uuid=?;',[uuid]))[0]!;
+		if (wireColumns[entity].some((field,index) => stored[field] !== values[index])) throw new SyncClientError('historyImmutable');
+		return; // Never UPDATE or replace an accepted immutable observation.
+	}
 	if (exists) await sql.run(statements.update, [...values, uuid]);
 	else {
 		// Insert triggers always create registry rows. Preserve the old numeric
@@ -98,7 +118,10 @@ export async function writeRoots(sql: SqlExecutor, roots: ServerAggregate[], ide
 	for (const root of roots) {
 		const children = rootChildren(root); if (!children) continue;
 		const parent = (await meta(sql, root.id))!;
-		await sql.run(removeChildren[children.entity], [parent.local_id]);
+		if (children.entity === 'profile_calorie_history') {
+			const retained = new Set(children.rows.map(row => String(row.id)));
+			for (const row of await sql.query<{uuid:string}>('SELECT uuid FROM profile_calorie_history WHERE profile_id=?;',[parent.local_id])) if (!retained.has(row.uuid)) await sql.run('DELETE FROM profile_calorie_history WHERE uuid=?;',[row.uuid]);
+		} else await sql.run(removeChildren[children.entity], [parent.local_id]);
 		for (const child of children.rows) await writeRow(sql, children.entity, root.entity, root.id, child);
 	}
 	for (const entity of ["activity_logs", "activities", "meal_logs", "recipes", "foods", "profiles"] as const) for (const root of roots) if (root.entity === entity && root.deletedAt !== null) await sql.run(receiveSql[entity].remove, [root.id]);

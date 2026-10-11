@@ -22,6 +22,7 @@ export function completeSnapshot(pages: SnapshotPage[]): CompleteSnapshot {
 			if (!meta || meta.entity !== root.entity || meta.aggregateUuid !== root.id || meta.version !== root.version || meta.deletedAt !== root.deletedAt) throw new SyncClientError("invalidResponse");
 			if (!root.data) continue;
 			if (root.entity === "foods" && root.data.ean !== null) { const ean = String(root.data.ean); if (eans.has(ean)) throw new SyncClientError("invalidResponse"); eans.add(ean); }
+			if (root.entity === 'profiles') for (const child of root.data.calorie_history as Record<string,unknown>[] ?? []) childRows.set(String(child.id),{ entity: 'profile_calorie_history',owner: root.id });
 			if (root.entity === "recipes") for (const child of root.data.ingredients as Record<string, unknown>[]) {
 				if (child.food_id !== null) checkReference(child.food_id, "foods"); if (child.sub_recipe_id !== null) checkReference(child.sub_recipe_id, "recipes");
 				edges.push({ recipeId: root.id, subRecipeId: child.sub_recipe_id as string | null }); childRows.set(String(child.id), { entity: "recipe_ingredients", owner: root.id });
@@ -36,7 +37,7 @@ export function completeSnapshot(pages: SnapshotPage[]): CompleteSnapshot {
 		for (const meta of identities) {
 			if (!roots.has(meta.aggregateUuid)) throw new SyncClientError("invalidResponse");
 			const owner = roots.get(meta.aggregateUuid)!;
-			if (meta.uuid !== meta.aggregateUuid && meta.entity !== (owner.entity === "recipes" ? "recipe_ingredients" : owner.entity === "meal_logs" ? "meal_log_profiles" : "")) throw new SyncClientError("invalidResponse");
+			if (meta.uuid !== meta.aggregateUuid && meta.entity !== (owner.entity === 'profiles' ? 'profile_calorie_history' : owner.entity === "recipes" ? "recipe_ingredients" : owner.entity === "meal_logs" ? "meal_log_profiles" : "")) throw new SyncClientError("invalidResponse");
 			if (meta.deletedAt === null && !ids.has(meta.uuid)) throw new SyncClientError("invalidResponse");
 		}
 		validateRecipeGraph(edges); return { first, aggregates, identities };

@@ -1,7 +1,10 @@
+import { verifyProfileCalorieWrite,type ProfileCalorieWireRow } from '../../shared/domain/profile-calorie-wire';
+import { ProfileCalorieHistoryError } from '../../shared/domain/profile-calorie-history';
+import { appendServerProfileCalorieHistory,tombstoneServerProfileCalorieHistory } from './profile-calorie-history';
 import { createHash } from "node:crypto";
 import { ServerWriteError, type ServerAggregate, type ServerGuard, type ServerReceipt, type ServerWriteBatch } from "../../shared/domain/server";
 import type { SyncAggregate } from "../../shared/domain/sync";
-import { ServerProtocolError, syncLimits } from "../../shared/domain/protocol";
+import { ServerProtocolError, syncLimits, syncSchemaVersion } from "../../shared/domain/protocol";
 import { DomainValidationError, fail, validateRecipeGraph } from "../../shared/domain/validation";
 import type { ServerDatabase, ServerSql } from "../database/connection";
 import { readServerState } from "../database/state";
@@ -57,7 +60,7 @@ async function checkReferences(sql: ServerSql, batch: ServerWriteBatch) {
 	}
 }
 
-async function commitBatch(sql: ServerSql, batch: ServerWriteBatch): Promise<ServerReceipt> {
+async function commitBatch(sql: ServerSql, batch: ServerWriteBatch,schemaVersion: number): Promise<ServerReceipt> {
 	// One household: serialize ALL service writes using this row, held until
 	// commit. This prevents concurrent graph/EAN races and assigns cursors in
 	// actual commit order, rather than unsafe auto-increment allocation order.
@@ -69,6 +72,9 @@ async function commitBatch(sql: ServerSql, batch: ServerWriteBatch): Promise<Ser
 		if (replay.request_hash !== hash) throw new ServerWriteError("idempotencyConflict");
 		try { return JSON.parse(replay.receipt_json) as ServerReceipt; } catch { throw new ServerStorageError(); }
 	}
+	// Known immutable receipts remain replayable even by a legacy client. Fence
+	// only NEW writes before any mutation, never misreport an old commit as rejected.
+	if (schemaVersion !== syncSchemaVersion) throw new ServerProtocolError('protocolMismatch');
 	for (const operation of batch.operations) {
 		if ((await sql.query("SELECT uuid FROM write_operations WHERE uuid=?", [operation.operationId])).length) throw new ServerWriteError("idempotencyConflict");
 		await checkRevision(sql, operation);
@@ -95,6 +101,16 @@ async function commitBatch(sql: ServerSql, batch: ServerWriteBatch): Promise<Ser
 		if (await hasDeletionHistory(sql,operation.entity,operation.entityUuid,affected)) throw new ServerWriteError('historyConflict');
 	}
 	await checkReferences(sql, batch);
+	const profileHistory = new Map<string,{ rows: ProfileCalorieWireRow[]; manual: number }>();
+	for (const operation of batch.operations) if (operation.entity === 'profiles' && operation.operation === 'upsert') {
+		const previous = (await aggregateSnapshot(sql,'profiles',operation.entityUuid))?.data;
+		const oldRows = previous?.calorie_history as ProfileCalorieWireRow[] | undefined ?? [];
+		const manual = Number(previous?.daily_calories_target ?? operation.payload.daily_calories_target);
+		const rows = operation.payload.calorie_history as ProfileCalorieWireRow[] | undefined ?? oldRows;
+		try { verifyProfileCalorieWrite(oldRows,rows,operation.entityUuid,manual,Number(operation.payload.daily_calories_target)); }
+		catch (error) { if (error instanceof ProfileCalorieHistoryError) fail(error.code === 'historyImmutable' ? 'historyImmutable' : 'reference','calorie_history'); throw error; }
+		profileHistory.set(operation.entityUuid,{ rows,manual });
+	}
 	const timestamp = sqlTimestamp(new Date().toISOString());
 	const dirty = new Map<string, SyncAggregate>();
 	for (const operation of batch.operations) {
@@ -109,6 +125,10 @@ async function commitBatch(sql: ServerSql, batch: ServerWriteBatch): Promise<Ser
 	// recipe supplied later in the same batch. Validate the FINAL graph below.
 	for (const entity of aggregates) for (const operation of batch.operations) if (operation.entity === entity && operation.operation === "upsert") await upsertRow(sql, entity, operation.payload);
 	for (const operation of batch.operations) if (operation.operation === "upsert") {
+		if (operation.entity === 'profiles') {
+			const history = profileHistory.get(operation.entityUuid)!;
+			await appendServerProfileCalorieHistory(sql,operation.entityUuid,history.rows,history.manual,Number(operation.payload.daily_calories_target));
+		}
 		if (operation.entity === "recipes") await replaceChildren(sql, "recipe_ingredients", operation.entityUuid, operation.payload.ingredients as Record<string, unknown>[], timestamp);
 		if (operation.entity === "meal_logs") await replaceChildren(sql, "meal_log_profiles", operation.entityUuid, operation.payload.profiles as Record<string, unknown>[], timestamp);
 	}
@@ -131,6 +151,7 @@ async function commitBatch(sql: ServerSql, batch: ServerWriteBatch): Promise<Ser
 			for (const meal of meals) await removeMeal(meal.uuid);
 		}
 		if (operation.entity === "profiles") {
+			await tombstoneServerProfileCalorieHistory(sql,operation.entityUuid,timestamp);
 			for (const log of await sql.query<{ uuid: string }>('SELECT uuid FROM activity_logs WHERE profile_id=? AND deleted_at IS NULL', [operation.entityUuid])) {
 				await removeRow(sql, 'activity_logs', log.uuid, timestamp); dirty.set(log.uuid, 'activity_logs');
 			}
@@ -175,9 +196,9 @@ async function commitBatch(sql: ServerSql, batch: ServerWriteBatch): Promise<Ser
 	return receipt;
 }
 
-export async function writeServerBatch(database: ServerDatabase, input: unknown): Promise<ServerReceipt> {
+export async function writeServerBatch(database: ServerDatabase, input: unknown,schemaVersion = syncSchemaVersion): Promise<ServerReceipt> {
 	const batch = normalizeWriteBatch(input);
-	try { return await database.transaction((sql) => commitBatch(sql, batch)); }
+	try { return await database.transaction((sql) => commitBatch(sql, batch,schemaVersion)); }
 	catch (error) {
 		if (error instanceof ServerWriteError || error instanceof DomainValidationError || error instanceof ServerStorageError || error instanceof ServerProtocolError) throw error;
 		if (error !== null && typeof error === "object" && "errno" in error && error.errno === 1062) fail("duplicate", "ean");

@@ -13,7 +13,7 @@ function setup(booked = true) {
   let lost = false,rejected = false,failView = false,rejectionCode = 'versionConflict'
   const response = (v: unknown,status = 200) => new Response(JSON.stringify(v),{ status,headers: { 'Content-Type': 'application/json' } })
   const fetcher: typeof fetch = async (input,init) => {
-    if (String(input).endsWith('/info')) return response({ ...binding,protocolVersion: 1,schemaVersion: 4,cursor: '0',counts: [],capabilities: { authentication: 'none',fullAggregates: true,manualConflicts: true,atomicBatches: true },limits: syncLimits })
+    if (String(input).endsWith('/info')) return response({ ...binding,protocolVersion: 1,schemaVersion: 5,cursor: '0',counts: [],capabilities: { authentication: 'none',fullAggregates: true,manualConflicts: true,atomicBatches: true },limits: syncLimits })
     if (String(input).includes('/view?')) { if (failView) throw new Error('offline'); return response(state) }
     const body = String(init?.body); bodies.push(body); const batch = JSON.parse(body)
     if (lost) throw new Error('lost')

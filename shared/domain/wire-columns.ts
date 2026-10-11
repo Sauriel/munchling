@@ -1,5 +1,6 @@
 // Protocol-v1 field names only. No SQL, storage or platform dependencies.
 export const wireColumns = {
+	profile_calorie_history: ['profile_id','sequence','valid_from','created_at','event_json'],
 	activities: ["name", "duration_minutes", "calories", "created_at", "updated_at"],
 	activity_logs: ["profile_id", "date", "name", "duration_minutes", "calories", "units", "created_at", "updated_at"],
 	profiles: ["name", "daily_calories_target", "daily_protein_target", "daily_carbs_target", "daily_fat_target", "daily_sugar_target", "daily_fiber_target", "daily_salt_target", "created_at", "updated_at"],

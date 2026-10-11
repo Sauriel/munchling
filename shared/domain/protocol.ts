@@ -2,6 +2,7 @@ import type { ServerAggregate } from "./server";
 import type { SyncEntity } from "./sync";
 
 export const syncProtocolVersion = 1;
+export const syncSchemaVersion = 5;
 export const syncLimits = {
 	pushBytes: 25 * 1024 * 1024, batchBytes: 32 * 1024 * 1024,
 	defaultPageBytes: 256 * 1024, minPageBytes: 64 * 1024, maxPageBytes: 1024 * 1024,

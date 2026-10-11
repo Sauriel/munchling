@@ -88,16 +88,7 @@
 
         <svg class="calorie-chart overflow-visible" viewBox="0 0 320 160" role="img" :aria-label="$t('dashboard.calorieHistory')">
           <line x1="8" y1="128" x2="312" y2="128" class="stroke-slate-200 dark:stroke-slate-800" stroke-width="2" />
-          <line
-            v-if="profile.dailyCaloriesTarget > 0"
-            x1="8"
-            :y1="calorieTargetY"
-            x2="312"
-            :y2="calorieTargetY"
-            class="stroke-munchling-600/40"
-            stroke-width="2"
-            stroke-dasharray="4 4"
-          />
+          <polyline :points="calorieTargetPoints" fill="none" class="stroke-munchling-600/40" stroke-width="2" stroke-dasharray="4 4" />
           <polyline :points="calorieLinePoints" fill="none" class="stroke-munchling-600" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" />
           <circle v-for="point in calorieChartPoints" :key="point.date" :cx="point.x" :cy="point.y" r="4" class="fill-munchling-600" />
           <text v-for="point in calorieChartPoints" :key="`${point.date}-label`" :x="point.x" y="150" text-anchor="middle" class="fill-slate-500 text-[10px]">
@@ -105,6 +96,8 @@
           </text>
         </svg>
       </section>
+
+      <ProfileCalorieHistory :profile="profile" />
 
       <section class="space-y-3">
         <div class="flex items-center justify-between">
@@ -153,6 +146,7 @@ import { useMealLogs } from '~/composables/useMealLogs'
 import { useProfiles } from '~/composables/useProfiles'
 import { useMunchlingData } from '~/composables/useMunchlingData'
 import { calculateMealLogProfileNutrition } from '../../../shared/domain/nutrition'
+import { profileGoalAt } from '../../../shared/domain/profile-calorie-history'
 import { activityBonus } from '../../../shared/domain/activities'
 import { validationMessage } from '../../../shared/domain/validation'
 import type { MealLog, NutritionValues } from '../../../shared/domain/types'
@@ -170,7 +164,16 @@ const todayDate = computed(() => dateKey(new Date()))
 const formattedToday = computed(() => new Date().toLocaleDateString())
 const { activityLogs, refreshActivities } = useActivities()
 const todayActivityBonus = computed(() => activityBonus(activityLogs.value, profileId.value, todayDate.value))
-const todayCalorieTarget = computed(() => (profile.value?.dailyCaloriesTarget ?? 0) + todayActivityBonus.value)
+const todayCalorieTarget = computed(() => {
+  const p = profile.value
+  const baseline = p?.uuid ? profileGoalAt(p.calorieHistory ?? [],p.uuid,todayDate.value)?.targetKcal ?? p.dailyCaloriesTarget : p?.dailyCaloriesTarget ?? 0
+  return baseline + todayActivityBonus.value
+})
+function datedBudget(date: string) {
+  const p = profile.value
+  const goal = p?.uuid ? profileGoalAt(p.calorieHistory ?? [],p.uuid,date) : null
+  return goal ? goal.targetKcal + activityBonus(activityLogs.value,profileId.value,date) : null
+}
 
 const emptyNutrition = (): NutritionValues => ({ calories: 0, fat: 0, carbs: 0, sugar: 0, fiber: 0, protein: 0, salt: 0 })
 
@@ -213,8 +216,7 @@ const dailyTargets = computed(() => {
 })
 
 const maxChartCalories = computed(() => {
-  const target = profile.value?.dailyCaloriesTarget ?? 0
-  return Math.max(target, ...history.value.map((day) => day.calories), 1)
+  return Math.max(...history.value.map(day => datedBudget(day.date) ?? 0), ...history.value.map((day) => day.calories), 1)
 })
 
 const calorieChartPoints = computed(() => {
@@ -227,7 +229,10 @@ const calorieChartPoints = computed(() => {
 })
 
 const calorieLinePoints = computed(() => calorieChartPoints.value.map((point) => `${point.x},${point.y}`).join(' '))
-const calorieTargetY = computed(() => 128 - ((profile.value?.dailyCaloriesTarget ?? 0) / maxChartCalories.value) * 104)
+const calorieTargetPoints = computed(() => calorieChartPoints.value.flatMap(point => {
+  const budget = datedBudget(point.date)
+  return budget === null ? [] : [`${point.x},${128 - budget / maxChartCalories.value * 104}`]
+}).join(' '))
 
 function roundNutrition(values: NutritionValues): NutritionValues {
   return {

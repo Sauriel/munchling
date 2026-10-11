@@ -87,8 +87,8 @@ try {
   }
   // Reduced height models the usable viewport with a screen keyboard.
   await navigate('/profiles'); await viewport(390,320);
-  await evaluate('(() => { const inputs=[...document.querySelectorAll("form input")]; const last=inputs.at(-1); last.focus(); last.scrollIntoView({block:"center"}); })()'); await settle();
-  if (!await evaluate('document.activeElement.getBoundingClientRect().bottom <= document.querySelector("nav").getBoundingClientRect().top')) throw new Error('Keyboard-sized viewport hides focused input');
+  await evaluate('(() => { const inputs=[...document.querySelector("form").querySelectorAll("input")]; const last=inputs.at(-1); last.focus(); last.scrollIntoView({block:"center"}); })()'); await settle();
+  if (!await evaluate('document.activeElement.getBoundingClientRect().bottom <= document.querySelector("nav").getBoundingClientRect().top')) throw new Error('Keyboard-sized viewport hides focused input: '+await evaluate('JSON.stringify({ active: document.activeElement.tagName,type: document.activeElement.type,input: document.activeElement.getBoundingClientRect().toJSON(),nav: document.querySelector("nav").getBoundingClientRect().toJSON(),scrollY })'));
   console.log('PASS: focused input remains above mobile navigation at reduced viewport height');
 
   // Effective 200% zoom widths for tablet/desktop reflow, not a cosmetic transform.
@@ -117,7 +117,9 @@ try {
   await cdp('Browser.setDownloadBehavior',{ behavior: 'allow',downloadPath: downloads });
   await click('Export backup'); await wait(async () => fs.readdirSync(downloads).some(n => n.endsWith('.json')),'final backup export');
   const saved = JSON.parse(fs.readFileSync(path.join(downloads,fs.readdirSync(downloads).find(n => n.endsWith('.json'))),'utf8'));
-  assert.deepEqual(saved.data,fixture.data);
+  const { profileCalorieHistory,...legacyBusinessData } = saved.data;
+  assert.deepEqual(legacyBusinessData,fixture.data);
+  assert.deepEqual(profileCalorieHistory,[]); // Never invent history for the legacy fixture.
   console.log('PASS: resizing, source preselection and unsaved drafts did not change persisted business data');
   await evaluate('document.activeElement.blur()');
   for (const type of ['keyDown','keyUp']) await cdp('Input.dispatchKeyEvent',{ type,key: 'Tab',code: 'Tab',windowsVirtualKeyCode: 9 });

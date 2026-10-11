@@ -1,3 +1,4 @@
+import { profileCalorieSchemaStatements } from './profile-calorie-schema';
 import { activitySchemaStatements } from './activity-schema';
 import { receiveSchemaStatements } from "./receive-schema";
 import { runnerSchemaStatements } from "./runner-schema";
@@ -167,4 +168,5 @@ export const schemaMigrations: DatabaseMigration[] = [
 		WHEN NEW.trusted_url IS NOT OLD.trusted_url OR NEW.trusted_epoch IS NOT OLD.trusted_epoch
 		BEGIN UPDATE sync_automatic_preferences SET on_start=0,on_resume=0 WHERE id=1; END;
 	` },
+	{ version: 9, name: 'immutable_profile_calorie_history', statements: profileCalorieSchemaStatements },
 ];

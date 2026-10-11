@@ -75,6 +75,7 @@
 import { useProfiles } from '~/composables/useProfiles'
 import { useMunchlingData } from '~/composables/useMunchlingData'
 import { calculateMealLogProfileNutrition } from '../../shared/domain/nutrition'
+import { profileGoalAt } from '../../shared/domain/profile-calorie-history'
 import { activityBonus } from '../../shared/domain/activities'
 import type { Profile } from '../../shared/domain/types'
 
@@ -95,7 +96,10 @@ function profileTodayCalories(profileId: number) {
   return todayCaloriesByProfile[profileId] ?? 0
 }
 
-function profileCalorieTarget(profile: Profile) { return profile.dailyCaloriesTarget + activityBonus(activityLogs.value, profile.id, todayDate.value) }
+function profileCalorieTarget(profile: Profile) {
+  const baseline = profile.uuid ? profileGoalAt(profile.calorieHistory ?? [],profile.uuid,todayDate.value)?.targetKcal ?? profile.dailyCaloriesTarget : profile.dailyCaloriesTarget
+  return baseline + activityBonus(activityLogs.value, profile.id, todayDate.value)
+}
 function profileCaloriePercent(profile: Profile) {
   const target = profileCalorieTarget(profile)
   return target > 0

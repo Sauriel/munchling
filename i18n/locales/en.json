@@ -324,6 +324,7 @@
     "duplicate": "The data contains duplicate IDs, EANs or profile assignments.",
     "reference": "A linked profile, food or recipe does not exist.",
     "cycle": "Recipes must not contain themselves, directly or indirectly.",
+    "historyImmutable": "Accepted profile history cannot be removed, changed or replaced. Please explicitly review the profile conflict.",
     "backupFormat": "The file is not a supported Munchling backup or uses a different schema version.",
     "backupLimit": "The backup is too large. The limits are 25 MiB and 100,000 records."
   },

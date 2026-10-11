@@ -27,7 +27,7 @@ const profile = (name = "HTTP 🥗") => ({ id: createUuid(), name, daily_calorie
 
 describe("built Nitro sync HTTP API", () => {
 	let db: ServerDatabase, child: ChildProcess, base: string, binding: ServerBinding, logs = "";
-	const headers = { "x-munchling-protocol": "1", "content-type": "application/json" };
+	const headers = { "x-munchling-protocol": "1", "x-munchling-schema": "5", "content-type": "application/json" };
 	const query = (extra: Record<string, string> = {}) => new URLSearchParams({ ...binding, ...extra }).toString();
 	const post = (path: string, body: unknown, extra: Record<string, string> = {}) => fetch(`${base}/api/sync/${path}`, { method: "POST", headers: { ...headers, ...extra }, body: JSON.stringify(body) });
 	const batch = (p = profile(), baseRevision = 0): ServerWriteBatch => ({ ...binding, batchId: createUuid(), operations: [{ operationId: createUuid(), entity: "profiles", entityUuid: p.id, baseRevision, operation: "upsert", payload: p }] });
@@ -51,6 +51,14 @@ describe("built Nitro sync HTTP API", () => {
 	afterAll(async () => {
 		if (child && child.exitCode === null && child.signalCode === null) { const exited = new Promise<void>((resolve) => child.once("exit", () => resolve())); child.kill("SIGTERM"); const timer = setTimeout(() => child.kill("SIGKILL"), 6000); try { await exited; } finally { clearTimeout(timer); } }
 		if (db) await db.close();
+	});
+	it('fences new legacy HTTP writes without hiding immutable receipts for already committed requests',async () => {
+		const command = batch(),oldHeaders = { 'x-munchling-schema': '4' };
+		const rejected = await post('push',command,oldHeaders); expect(rejected.status).toBe(426);
+		expect(await rejected.json()).toMatchObject({ error: { code: 'protocolMismatch',retryable: false } });
+		expect(await db.withConnection(sql => sql.query('SELECT COUNT(*) AS n FROM profiles'))).toEqual([{ n: 0 }]);
+		const accepted = await (await post('push',command)).json();
+		expect(await (await post('push',command,oldHeaders)).json()).toEqual(accepted);
 	});
 	it("uses the production client decoder against actual Nitro responses", async () => {
 		const client = createSyncHttpClient(base); expect((await client.info()).serverEpoch).toBe(binding.serverEpoch);
@@ -247,7 +255,7 @@ describe("built Nitro sync HTTP API", () => {
 		} finally { local.close(); }
 	});
 	it("negotiates info, pushes/replays and pulls exact confirmed data without duplicate operations", async () => {
-		const infoResponse = await fetch(`${base}/api/sync/info`); expect(infoResponse.status).toBe(200); expect(infoResponse.headers.get("cache-control")).toBe("no-store"); expect(await infoResponse.json()).toMatchObject({ protocolVersion: 1, schemaVersion: 4, capabilities: { authentication: "none" } });
+		const infoResponse = await fetch(`${base}/api/sync/info`); expect(infoResponse.status).toBe(200); expect(infoResponse.headers.get("cache-control")).toBe("no-store"); expect(await infoResponse.json()).toMatchObject({ protocolVersion: 1, schemaVersion: 5, capabilities: { authentication: "none" } });
 		const command = batch(); const first = await post("push", command); expect(first.status).toBe(200); const receipt = await first.json(); expect(await (await post("push", command)).json()).toEqual(receipt);
 		const delta: ChangePage = await (await fetch(`${base}/api/sync/changes?${query({ cursor: "0" })}`, { headers })).json(); expect(delta).toMatchObject({ cursor: "1", hasMore: false }); expect(delta.batches[0]!.changes[0]!.aggregate.data).toEqual(command.operations[0]!.payload);
 		expect(await db.withConnection((sql) => sql.query("SELECT COUNT(*) AS n FROM write_operations"))).toEqual([{ n: 1 }]);

@@ -1,5 +1,5 @@
 import type { Activity, ActivityLog } from '../../../shared/domain/activities';
-import type { LocalBackupService, MunchlingBackup, StoredMealLog, StoredMealLogProfile } from "../../../shared/domain/backup";
+import type { LocalBackupService, MunchlingBackup, StoredMealLog, StoredMealLogProfile, StoredProfileCalorieEvent } from "../../../shared/domain/backup";
 import { cloneBackup } from "../../../shared/domain/backup";
 import { fail } from "../../../shared/domain/validation";
 import { schemaMigrations } from "./schema";
@@ -46,17 +46,19 @@ export async function snapshotBackup(sql: SqlExecutor): Promise<MunchlingBackup>
 	);
 	const activities = version >= 6 ? await sql.query<Activity>('SELECT id,name,duration_minutes AS durationMinutes,calories,created_at AS createdAt,updated_at AS updatedAt FROM activities ORDER BY id;') : [];
 	const activityLogs = version >= 6 ? await sql.query<ActivityLog>('SELECT id,profile_id AS profileId,date,name,duration_minutes AS durationMinutes,calories,units,created_at AS createdAt,updated_at AS updatedAt FROM activity_logs ORDER BY id;') : [];
+	const profileCalorieHistory = version >= 9 ? await sql.query<StoredProfileCalorieEvent>('SELECT id,profile_id AS profileId,sequence,valid_from AS validFrom,created_at AS createdAt,event_json AS eventJson FROM profile_calorie_history ORDER BY id;') : [];
 	const base = {
 		format: "munchling-backup" as const, exportedAt: new Date().toISOString(),
 		data: {
 			profiles, foods: foods.map((row) => ({ ...row, isCustom: fromSqlBoolean(row.isCustom) })),
 			recipes: recipes.map((row) => ({ ...row, isSubRecipe: fromSqlBoolean(row.isSubRecipe) })),
-			recipeIngredients, mealLogs, mealLogProfiles, activities, activityLogs,
+			recipeIngredients, mealLogs, mealLogProfiles, activities, activityLogs, profileCalorieHistory,
 		},
 	};
 	if (version < 2) return { ...base, version: 1, schemaVersion: 1 };
 	const identities = await sql.query<SyncIdentity>("SELECT entity,local_id AS localId,uuid FROM sync_records WHERE deleted_at IS NULL ORDER BY entity,local_id;");
 	const tombstones = await sql.query<SyncTombstone>("SELECT entity,uuid,aggregate_entity AS aggregateEntity,aggregate_uuid AS aggregateUuid,deleted_at AS deletedAt FROM sync_records WHERE deleted_at IS NOT NULL ORDER BY entity,uuid;");
+	if (version >= 9) return { ...base, version: 5, schemaVersion: 5, identities, tombstones };
 	if (version >= 6) return { ...base, version: 4, schemaVersion: 4, identities, tombstones };
 	if (version >= 5) return { ...base, version: 3, schemaVersion: 3, identities, tombstones };
 	return { ...base, version: 2, schemaVersion: 2, identities, tombstones };
@@ -67,6 +69,7 @@ async function replaceData(sql: SqlExecutor, backup: MunchlingBackup) {
 	const uuid = (entity: SyncEntity, id: number) => identities.get(`${entity}:${id}`) ?? null;
 	await sql.run("UPDATE sync_state SET tracking_enabled=0 WHERE id=1;");
 	// Children first; never disable foreign keys and never execute imported SQL.
+	await sql.run('DELETE FROM profile_calorie_history;');
 	await sql.run('DELETE FROM activity_logs;'); await sql.run('DELETE FROM activities;');
 	await sql.run("DELETE FROM meal_log_profiles;");
 	await sql.run("DELETE FROM meal_logs;");
@@ -88,6 +91,7 @@ async function replaceData(sql: SqlExecutor, backup: MunchlingBackup) {
 				row.dailyFatTarget, row.dailySugarTarget, row.dailyFiberTarget, row.dailySaltTarget, row.createdAt, row.updatedAt, uuid("profiles", row.id)],
 		);
 	}
+	for (const row of backup.data.profileCalorieHistory ?? []) await sql.run('INSERT INTO profile_calorie_history(id,uuid,profile_id,sequence,valid_from,created_at,event_json) VALUES(?,?,?,?,?,?,?);',[row.id,uuid('profile_calorie_history',row.id),row.profileId,row.sequence,row.validFrom,row.createdAt,row.eventJson]);
 	for (const row of backup.data.foods) {
 		await sql.run(
 			`INSERT INTO foods (id, name_de, name_en, brand, ean, calories_per_100g, fat_per_100g,

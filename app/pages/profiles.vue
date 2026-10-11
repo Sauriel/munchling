@@ -56,7 +56,7 @@
           <input
             v-model.number="form.dailyCaloriesTarget"
             required
-            min="0"
+            min="1"
             inputmode="numeric"
             type="number"
             class="min-h-12 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 text-base outline-none transition focus:border-munchling-600 focus:ring-4 focus:ring-munchling-600/10 dark:border-slate-700 dark:bg-slate-950"
@@ -123,7 +123,7 @@
               </span>
             </div>
             <p class="text-sm text-slate-500 dark:text-slate-400">
-              {{ profile.dailyCaloriesTarget }} kcal · {{ macroSummary(profile) }}
+              {{ profileTarget(profile) }} kcal · {{ macroSummary(profile) }}
             </p>
           </div>
           <button
@@ -142,6 +142,7 @@
           </div>
         </dl>
 
+        <ProfileCalories :profile="profile" />
         <div class="mt-4 grid grid-cols-2 gap-2">
           <button
             type="button"
@@ -166,6 +167,8 @@
 </template>
 
 <script setup lang="ts">
+import { profileGoalAt } from '../../shared/domain/profile-calorie-history'
+import { localCalendarDate } from '../../shared/domain/profile-calorie-command'
 import { validationMessage } from '../../shared/domain/validation'
 import { useCurrentProfile } from '~/composables/useCurrentProfile'
 import { useProfiles } from '~/composables/useProfiles'
@@ -216,6 +219,8 @@ const nutrientFields: Array<{ key: NutrientKey; label: string }> = [
   { key: 'dailySaltTarget', label: 'profiles.fields.salt' }
 ]
 
+function profileTarget(profile: Profile) { return profile.uuid ? profileGoalAt(profile.calorieHistory ?? [],profile.uuid,localCalendarDate())?.targetKcal ?? profile.dailyCaloriesTarget : profile.dailyCaloriesTarget }
+
 function nullableNumber(value: number | null) {
   return typeof value === 'number' && Number.isFinite(value) ? value : null
 }
@@ -247,6 +252,7 @@ async function submitForm() {
 
   try {
     const input = {
+      calorieDate: localCalendarDate(),
       name: form.name,
       dailyCaloriesTarget: form.dailyCaloriesTarget,
       dailyProteinTarget: nullableNumber(form.dailyProteinTarget),

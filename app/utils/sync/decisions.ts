@@ -1,3 +1,4 @@
+import { verifyProfileCalorieWrite } from '../../../shared/domain/profile-calorie-wire';
 import type { SqlDatabase, SqlExecutor } from "../database/executor";
 import { snapshotBackup } from "../database/backup";
 import { aggregatePayload } from "../database/outbox";
@@ -133,7 +134,11 @@ function checkServerProjection(snapshot: CompleteSnapshot, entries: DecisionEntr
 	// A local child cannot steal a server-owned UUID, even from an inactive root.
 	const registry = new Map(snapshot.identities.map((row) => [row.uuid, row]));
 	for (const entry of entries) if (choices[entry.id] === "local" && !entry.deletedLocally) {
-		for (const [field, entity] of [["ingredients", "recipe_ingredients"], ["profiles", "meal_log_profiles"]] as const) for (const child of entry.local![field] as Record<string, unknown>[] ?? []) {
+		if (entry.entity === 'profiles' && entry.remote?.data) {
+			try { verifyProfileCalorieWrite(entry.remote.data.calorie_history ?? [],entry.local!.calorie_history ?? [],entry.id,Number(entry.remote.data.daily_calories_target),Number(entry.local!.daily_calories_target)); }
+			catch { throw new SyncClientError('historyImmutable'); }
+		}
+		for (const [field, entity] of [["ingredients", "recipe_ingredients"], ["profiles", "meal_log_profiles"], ['calorie_history','profile_calorie_history']] as const) for (const child of entry.local![field] as Record<string, unknown>[] ?? []) {
 			const owner = registry.get(String(child.id)); if (owner && (owner.entity !== entity || owner.aggregateUuid !== entry.id)) throw new SyncClientError("identityConflict");
 		}
 	}
