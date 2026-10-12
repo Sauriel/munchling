@@ -1,74 +1,115 @@
 # Munchling
 
-Lokaler Kalorien- und Nährwerttracker als mobile Hybrid-App mit Nuxt 4, Vue 3 und Capacitor.
+Kalorien- und Nährwerttracker mit **offlinefähiger Android-/iOS-App** und **bearbeitbarer Online-Website**. Nuxt 4 / Vue 3 bilden die Oberfläche, Capacitor 8 die native App; Fachdaten liegen nativ in SQLite und auf dem Server in MariaDB.
 
-## Setup
+> **Sicherheitsgrenze:** Munchling hat derzeit keine Benutzeranmeldung oder Anwendungsauthentifizierung. Website **und API** ausschließlich hinter einem privaten Netzwerk/VPN bzw. einer nachweislich geeigneten Zugangsbeschränkung betreiben. Öffentlich verfügbarer Quellcode bedeutet nicht, dass eine ungeschützte Instanz sicher ins Internet gestellt werden kann. HTTPS/CORS ersetzen keine Zugriffskontrolle.
 
-```bash
-pnpm install
+## Funktionen
+
+- Mehrere Profile mit individuellen Kalorien-/Nährwertzielen und einheitlicher alphabetischer Sortierung.
+- Eigene Lebensmittel, EAN-/Open-Food-Facts-Abfrage und lokal gebündelte BLS-Suche.
+- Gerichte mit Zutaten/Untergerichten; Mahlzeiten mit individuellen Profilportionen, Gramm oder Bruchteilen einer Portion.
+- Aktivitätsvorlagen und datierte Buchungen; Zusatzkalorien gelten nur für das jeweilige Profil und den gebuchten Tag.
+- Optionale automatische Profilziele aus ausdrücklich eingegebenem Gewicht, Schlaf, Arbeit, Sport und kcal-/Prozentdefizit; separate manuelle Ziele bleiben erhalten.
+- Unveränderliche datierte Gewichts-/Zielhistorie, Warnbestätigung und transparente Modellannahmen. Das MET-Modell ist eine Schätzung, keine medizinische Bewertung und keine verifizierte Reproduktion des TK-Rechners.
+- Profilstatistik für bis zu 366 Tage mit Datenlücken, tatsächlichen Messtagen und Web-Druck/PDF. Mahlzeitnährwerte werden aus gespeicherten Portionen und aktuellen Quellnährwerten rekonstruiert, nicht aus unveränderlichen Nährwert-Snapshots.
+- Optionaler bidirektionaler Native-Sync mit explizitem Erstabgleich, Konfliktentscheidungen und unveränderlichen Upload-Journalen. Automatik bei Start/Rückkehr separat pro Gerät schaltbar und standardmäßig aus; sie läuft nur in Dashboard-Ansichten, nicht während der Bearbeitung.
+- Lokaler JSON-Export/Restore mit vorheriger Sicherheitssicherung; Online-Browser verwenden kein lokales Restore gegen den Server.
+- Deutsch/Englisch und responsive Ansichten für Handy, Tablet und Desktop.
+
+## Voraussetzungen und lokaler Start
+
+- Node.js **22 oder neuer**, pnpm **10.33.0** (siehe `packageManager`).
+- Python 3 zum Neubauen des BLS-Katalogs.
+- Android: JDK **21**, Android SDK/platform-tools; iOS: macOS/Xcode.
+- MariaDB **11.4** für Serverbetrieb; Docker und Chromium für die entsprechenden Integrationstests.
+
+```sh
+pnpm install --frozen-lockfile
+cp .env.example .env
 pnpm dev
 ```
 
-## Mobile / Capacitor
+`pnpm dev` nutzt lokale Browser-SQLite als Entwicklungsmodus. `.env` enthält ausschließlich eigene lokale Werte, ist ignoriert und darf nicht veröffentlicht werden. Für gewöhnliche Webnutzer ist der Server-/Online-Build vorgesehen.
 
-```bash
-pnpm generate
-pnpm cap:add:android
-pnpm cap:add:ios
-pnpm cap:sync
+## Online-Website / Dokploy
+
+```sh
+pnpm build:server
+# Vorher die privaten Runtime-Variablen setzen, siehe Deployment-Anleitung:
+node .output/server/index.mjs
 ```
 
-Die Capacitor-Ausgabe nutzt `.output/public` als Web-Verzeichnis.
+Alternativ den enthaltenen `Dockerfile` in Dokploy bauen, Containerport 3000 routen und MariaDB mit separatem persistentem Volume im privaten Dienstnetz betreiben. Der Container läuft als nicht privilegierter Benutzer; Readiness: `/api/health/ready`, Liveness: `/api/health/live`.
 
-## Tests und Typprüfung
+`NUXT_MARIA_DB_*`, `NUXT_SYNC_PUBLIC_ORIGIN` und ausdrücklich erlaubte native Origins werden **zur Laufzeit** gesetzt. Produktions-Nuxt lädt `.env` nicht automatisch. Passwörter bleiben serverseitig, niemals in `runtimeConfig.public` oder Build-Argumenten.
 
-```bash
-pnpm test
-pnpm test:watch
+Vollständige Anleitung: [Betrieb und Dokploy](docs/dokploy.md).
+
+## Native App bauen und Android aktualisieren
+
+Android/iOS-Projekte sind bereits enthalten; `cap:add:*` ist für diesen Checkout nicht erforderlich.
+
+```sh
+pnpm generate
+pnpm exec cap sync
+pnpm cap:open:android
+# Auf macOS mit Xcode:
+pnpm cap:open:ios
+```
+
+Capacitor verwendet `.output/public`. Server- und Mobile-Build überschreiben `.output`; deshalb **Server zuerst, Mobile zuletzt** bauen, bevor Capacitor synchronisiert wird.
+
+Vor Installation den aktuellen Handybestand **extern sichern**. Das Bash-Skript erkennt Standard-SDK-Pfade und JDK/ADB bzw. verwendet `ANDROID_HOME`, `JAVA_HOME`, `ADB_BIN` und `ADB_SERIAL`. Ohne explizite Gerätekennung muss genau ein bereitstehendes Gerät verbunden sein:
+
+```sh
+# Nach einer frischen unabhängigen Sicherung; Seriennummer lokal konfigurieren:
+ANDROID_BACKUP_CONFIRMED=true pnpm android:update
+```
+
+Das Skript baut BLS, Mobile-Assets und Debug-APK und installiert mit `install -r`, ohne Reset/Deinstallation. Die Bestätigung erzeugt selbst **keine** Sicherung; nicht dauerhaft in `.env` speichern. Keine Fernentsperrung. Die App startet nur bei `OPEN_AFTER_INSTALL=true`. `.env` wird vom Skript als **vertrauenswürdiger Shell-Code** geladen.
+
+Standardmäßig vertraut Android nur System-CAs. Für einen ausdrücklich gewählten privaten HTTPS-Host ist eine eng begrenzte lokale Benutzer-CA-Regel möglich, ohne Domain im öffentlichen Repository:
+
+```properties
+# android/local-network.properties – ignoriert, nicht veröffentlichen
+userCaHost=sync.example.internal
+```
+
+Alternativ `MUNCHLING_ANDROID_USER_CA_HOST` als Build-Umgebungsvariable setzen. Ein leerer Wert deaktiviert eine lokale Überschreibung. Nur exakte DNS-Namen, keine URLs/Wildcards/Subdomains-Freigabe; die Regel wird im ignorierten Build-Verzeichnis erzeugt. Die öffentliche CA muss der Geräteinhaber selbst installieren; private Schlüssel werden niemals eingebettet, TLS-Prüfungen bleiben aktiv. Details: [Entwicklung und Native-Build](docs/development.md).
+
+Android-Laufzeit ist geprüft; iOS-Laufzeitabnahme benötigt weiterhin macOS/Xcode und ein passendes Gerät. Debug-APKs sind keine signierten Store-Releases.
+
+## Daten, Synchronisation und Sicherungen
+
+| Vertrag | Stand |
+| --- | --- |
+| SQLite-Schema | 9 |
+| MariaDB-/Sync-Schema | 5 |
+| JSON-Backup | 5, ältere Versionen 1–4 lesbar |
+| HTTP-Sync-Protokoll | 1 |
+
+UUIDs sind geräteübergreifende Identitäten, numerische IDs lokale Aliase. Bereits bestätigte Historien, ursprüngliche Requests und Receipts dürfen nicht still ersetzt werden. Neue alte-Client-Schreibversuche werden durch die Schema-Prüfung abgewiesen; bereits akzeptierte Originalanfragen bleiben replaybar.
+
+- [Datensicherheit, Backup und Restore](docs/data-integrity-and-backups.md)
+- [HTTP-/Sync-API](docs/sync-api.md)
+
+## Prüfungen
+
+```sh
+pnpm test                       # lokale Domänen-/SQLite-Prüfungen
 pnpm typecheck
 pnpm typecheck:server
-pnpm test:server
-pnpm generate
-pnpm test:browser
+pnpm test:server                 # isolierte MariaDB/Nitro-Prüfungen, Docker nötig
+pnpm generate && pnpm test:browser
+pnpm test:responsive             # generierte Mobile-Assets + Chromium nötig
+pnpm test:deployment             # Docker-Containerprüfung
 ```
 
-`test:browser` benötigt Node >= 22 und Chromium (`CHROMIUM_BIN` überschreibt `/usr/bin/chromium`). Der Test nutzt ein frisches temporäres Browserprofil und prüft Export, Profilpersistenz, bestätigte Wiederherstellung und die gespeicherte Sicherheitssicherung.
+Für kleine Änderungen gezielte Testdateien verwenden, z. B. `pnpm test tests/domain/profile-statistics.test.ts`. Browser-/Serverprüfungen nutzen temporäre Testdaten, keine Produktionsdatenbank. `CHROMIUM_BIN` kann den Browserpfad überschreiben. Bei Backend-Prüfungen anschließend erneut Mobile-Assets erzeugen, wenn eine APK gebaut wird.
 
-`test:server` baut den Nitro-Backend-Modus und prüft ihn samt Schreibdienst gegen eine isolierte MariaDB 11.4 in Docker. Zufällige Test-Credentials und Loopback-Port, keine Produktionsdatenbank. Anschließend für Browser/Capacitor erneut `generate`/`cap:sync` ausführen.
+## Lizenz und Datenquellen
 
-Die Repository-Integrationstests verwenden eine echte SQLite-Engine über `sql.js` mit dem App-Schema. Sie prüfen unter anderem atomare Gerichte/Zutaten und Mahlzeiten/Portionen, Rollbacks, parallele Datenbankzugriffe und Nährwertberechnungen. Native Geräte- und Browser-Smoke-Tests werden dadurch nicht ersetzt.
+Der Projektcode steht unter [MIT](LICENSE). Abhängigkeiten und externe Daten haben eigene Lizenzbedingungen. Die versionierte BLS-4.0-Quelldatei liegt unter `data/`; der abgeleitete Suchkatalog unter `public/databases/`. Vor Weiterveröffentlichung dieser Daten deren Herkunft, Nutzungsbedingungen und erforderliche Attribution gesondert bestätigen — die MIT-Lizenz des Codes erteilt keine zusätzlichen Rechte daran.
 
-## Datenschicht und geplanter Webbetrieb
-
-- `shared/domain/`: persistenzunabhängige Datentypen, Datenservice-Vertrag, Nährwertberechnung, gemeinsame Validierung und Backup-Format.
-- `app/composables/useMunchlingData.ts`: zentraler Zugriff der Oberflächen auf den Datenservice.
-- `app/utils/data/local.ts`: lokaler Adapter mit injizierbarer SQLite-Verbindung.
-- `app/utils/database/executor.ts`: serialisierte Zugriffe und explizite Transaktionen. Innerhalb eines Transaktionscallbacks ausschließlich den übergebenen SQL-Executor verwenden, nicht die globale Verbindung.
-
-`pnpm build:server` nutzt den Online-HTTP-Adapter mit MariaDB, stabilen UI-IDs und ausdrücklich versionierten Formularschreibvorgängen; Browser-SQLite wird dabei nicht initialisiert. `pnpm dev` und der Mobile-Build bleiben lokal. SQLite-Schema v2 ergänzt stabile UUIDs, Löschmarker und eine atomare Änderungswarteschlange; v3 ergänzt dauerhafte Empfangsmetadaten; v4 ergänzt die gespeicherte Serveradresse und das unveränderliche Upload-Journal. Automatischer Sync bleibt ausgeschaltet; manueller Hin-und-zurück-Sync ist angeschlossen ([Bedienung](docs/client-sync-runner.md)). Details: [docs/local-sync-foundation.md](docs/local-sync-foundation.md).
-
-Die MariaDB-Grundlage ist vorhanden: private Pool-Anbindung, geschützte versionierte Migrationen, transaktionaler Schreibdienst mit Versions-/Löschprüfungen, idempotente Receipts, Commit-geordnetes Change-Log und Health-Endpunkte. `pnpm build:server` erzeugt dafür einen Nitro-Node-Server. Die Fach-HTTP-/Sync-API bietet Serverinfo, konsistente mehrseitige Snapshots, Push, batch-erhaltenden Pull und Löschvorschauen. Instanz/Epoch-/Versionsprüfung und exakte Origin-/Host-Freigaben schützen vor stillen Historienwechseln und Browser-Fremdzugriffen; keine Authentifizierung. Vertrag: [docs/sync-api.md](docs/sync-api.md). Der **Web-HTTP-Datenadapter ist angeschlossen** ([Online-Vertrag und Grenzen](docs/web-data-adapter.md)); der manuelle Native-Sync-Runner ist angeschlossen ([Ablauf und Sicherungen](docs/client-sync-runner.md)). Dockerfile und getesteter Runtime-Container sind für Dokploy vorbereitet; [Deployment-Anleitung](docs/dokploy.md). Konfiguration und Grenzen: [docs/server-foundation.md](docs/server-foundation.md).
-
-Unter **Einstellungen → Server verbinden und synchronisieren** können native Geräte ausdrücklich Verbindung/Bestandszahlen prüfen und einen Server-Snapshot getrennt zwischenspeichern oder fortsetzen. Der Download selbst verändert keine Fachdaten. Gesondert bestätigte Erstabgleich-/Konfliktentscheidungen prüfen den Serverstand erneut und speichern zuerst eine unabhängige Sicherheitssicherung; lokale Gewinner werden neu versionsgebunden vorgemerkt. Die Vorbereitung selbst lädt nichts hoch. Nach bestätigtem Erstabgleich sendet **Jetzt synchronisieren: senden und empfangen** die Handyänderungen und übernimmt neue Web-/Serverdaten; kein automatischer Sync. Geführte Zuordnung unregistrierter lokaler EAN-Imports und lokales Trennen mit neuem Erstabgleich sind vorhanden ([Details](docs/client-sync-food-alias.md)); automatische Trigger und allgemeines serverseitiges Zusammenlegen bleiben offen. Details: [docs/client-sync-decisions.md](docs/client-sync-decisions.md). Details: [docs/client-sync-receive.md](docs/client-sync-receive.md) und [docs/client-sync-transport.md](docs/client-sync-transport.md).
-
-Für Dokploy: Dockerfile im Projektroot bauen, MariaDB separat mit persistentem Volume/privatem Netzwerk betreiben und Runtime-Variablen setzen. Keine frei zugängliche Veröffentlichung ohne Zugangsbeschränkung; die App hat keine Authentifizierung. `pnpm test:deployment` prüft den gebauten Container mit wegwerfbarer MariaDB und Chromium. Das Aktualisieren des Dokploy-Hosts bleibt ein Betreiber-Schritt; der Container-Test ersetzt dessen Netzwerk-/Zugriffsschutz-Abnahme nicht. Auch die installierte APK aktualisieren, damit der neue Sync-Knopf verfügbar ist.
-
-`dev`, `build` und `generate` bereiten die WASM-Assets automatisch vor. Die BLS-Suche nutzt `public/sql-wasm.wasm`; Browser-SQLite verwendet separat `public/assets/sql-wasm.wasm`. `jeep-sqlite` 2.8.0 bündelt einen älteren sql.js-Runtime-Code und benötigt die dazu passende, über `sql.js-jeep` bereitgestellte WASM-Version. Bei Updates müssen Runtime und WASM zusammen überprüft werden.
-
-## Aktivitäten
-
-Gemeinsame Aktivitätsvorlagen enthalten Name, Dauer und Kalorien pro Einheit. Aktivitätenliste und Dashboard ohne Profilauswahl erlauben mehrere Profile mit eigenen Einheiten (auch Bruchteilen); das Profil-Dashboard ausschließlich das gewählte Profil. Tagesbuchungen speichern historische Vorlagenwerte und erhöhen nur das Kalorienlimit dieses Tages, ohne das dauerhafte Profilziel zu verändern. [Vertrag und Prüfungen](docs/activities.md).
-
-Aktuell: SQLite v7, MariaDB v4, Backup v4 und HTTP-Protokoll 1. Server und APK gemeinsam aktualisieren; der Client verlangt Serverschema v4. Automatischer Sync bleibt deaktiviert. Die ausdrücklich gesetzte Vertrauenscheckbox bleibt adress- und lokal-epochgebunden gespeichert, nicht als Teil von Fachbackups; neue Adressen und Wiederherstellungen erhalten keine stillschweigende Zustimmung.
-
-## Lokale Datensicherung
-
-Unter **Einstellungen → Lokale Datensicherung** lassen sich alle Fachdaten als JSON exportieren und nach Bestätigung wiederherstellen. Eine Wiederherstellung ersetzt den lokalen Bestand, statt ihn zusammenzuführen, und speichert vorher automatisch eine separate Sicherheitssicherung. Diese kann ebenfalls exportiert werden.
-
-Sicherungen sind unverschlüsselt. Eine externe Kopie schützt auch vor App-Deinstallation oder gelöschten Browserdaten. V4 bewahrt zusätzlich Aktivitätsvorlagen und historische Tagesbuchungen; V3 enthält Portionsgrößen für Lebensmittel und Gerichte. V2/V3 mit UUIDs/Löschmarkern bleiben lesbar, alte v1-Dateien werden mit neuen UUIDs importiert. Neue v4-Sicherungen benötigen die aktuelle App. Wiederherstellen trennt die Sync-Bindung und setzt einen neuen lokalen Abgleich auf. Importgrenzen: 25 MiB und insgesamt 100.000 Fachzeilen/Löschmarker. Geräteinstellungen und der BLS-Katalog sind nicht enthalten.
-
-Vor dem Upgrade eines gefüllten v1-Bestands wird separat `backups/before-schema-v2.json` gespeichert; ohne erfolgreiche Speicherung findet keine Migration statt. Diese Sicherung ist nach dem Upgrade ebenfalls in den Einstellungen exportierbar. Vor App-Updates zusätzlich extern sichern.
-
-Details zu Format, Validierung, Datenschutz und Schema-Migration: [docs/data-integrity-and-backups.md](docs/data-integrity-and-backups.md).
-
-Der ausführliche Umsetzungsplan und Teilstand stehen in [docs/web-sync-plan.md](docs/web-sync-plan.md).
+Produktabfragen verwenden [Open Food Facts](https://world.openfoodfacts.org/); das Kalorienmodell nennt seine Compendium-Quellen direkt in `shared/domain/calorie-model.ts`. Es ist kein medizinisches Produkt.

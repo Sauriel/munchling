@@ -2,7 +2,7 @@
 
 ## Lieferstand und Sicherheitsgrenze
 
-Der Docker-Build liefert einen Nitro-Node-Server mit der bearbeitbaren Online-Website. Fachdaten liegen in MariaDB; Browser-SQLite/Restore sind deaktiviert. Native Sync bleibt optional und ausgeschaltet; der Native-Runner folgt. Android-Prüfung erst mit deploybarem Server.
+Der Docker-Build liefert einen Nitro-Node-Server mit der bearbeitbaren Online-Website. Fachdaten liegen in MariaDB; Browser-SQLite/Restore sind deaktiviert. Native-Sync und Online-CRUD sind implementiert. Native-Sync bleibt optional; automatische Start-/Resume-Auslöser sind standardmäßig aus und benötigen getrennte ausdrückliche Gerätefreigaben. Aktuell MariaDB-/Sync-Schema5 und HTTP1.
 
 **Keine Anwendungsauthentifizierung. Nicht als frei zugängliche Internet-Anwendung veröffentlichen.** Website **und alle API-/Health-Pfade** durch VPN/privates Netz bzw. eine tatsächlich getestete vorgeschaltete Zugangsbeschränkung schützen. TLS allein beschränkt keinen Zugriff. Der Client verwendet derzeit `credentials: omit`; eine vorgeschaltete Cookie-/Basic-Auth-Lösung ist deshalb nicht ohne Anpassung/Abnahme zugesichert. VPN/Netzwerkbeschränkung ist der einfache Weg.
 
@@ -24,7 +24,7 @@ Der App-Benutzer benötigt Fachrechte (`SELECT`, `INSERT`, `UPDATE`, `DELETE`) p
 4. Runtime-Variablen setzen, **nicht als Build-Argumente**:
 
 ```dotenv
-NUXT_SYNC_PUBLIC_ORIGIN=https://munchling.example.internal
+NUXT_SYNC_PUBLIC_ORIGIN=https://sync.example.internal
 NUXT_SYNC_ALLOWED_ORIGINS=capacitor://localhost,https://localhost,http://localhost
 NUXT_MARIA_DB_HOST=INTERNER_DOKPLOY_DB_HOST
 NUXT_MARIA_DB_PORT=3306
@@ -36,7 +36,7 @@ NITRO_HOST=0.0.0.0
 NITRO_PORT=3000
 ```
 
-`NUXT_SYNC_PUBLIC_ORIGIN` ist die exakte externe Origin, ohne Pfad, Query oder Zugangsdaten. Für reine Webnutzung sind zusätzliche erlaubte Origins nicht erforderlich. Die angegebenen Capacitor-Origins nur freigeben, wenn die native App verwendet werden soll; keine Wildcards. Diese Android-App verwendet durch `androidScheme: "https"` tatsächlich **`https://localhost`**, iOS normalerweise `capacitor://localhost`. Nach einer Runtime-Änderung neu deployen. Native DNS-/CA-/CORS-Diagnose: [native-homelab-https.md](native-homelab-https.md).
+`NUXT_SYNC_PUBLIC_ORIGIN` ist die exakte externe Origin, ohne Pfad, Query oder Zugangsdaten. Für reine Webnutzung sind zusätzliche erlaubte Origins nicht erforderlich. Die angegebenen Capacitor-Origins nur freigeben, wenn die native App verwendet werden soll; keine Wildcards. Diese Android-App verwendet durch `androidScheme: "https"` tatsächlich **`https://localhost`**, iOS normalerweise `capacitor://localhost`. Nach einer Runtime-Änderung neu deployen. Native DNS-/CA-/CORS-Diagnose: [Entwicklung und Native-Build](development.md).
 
 Nuxt lädt im Produktionsstart **keine `.env` automatisch**. Variablen müssen dem Container tatsächlich als Runtime-Umgebung übergeben werden. `NUXT_PUBLIC_DATA_MODE` nicht auf `local` überschreiben; der Server-Build setzt `online`. MariaDB-Zugangsdaten bleiben ausschließlich serverseitig.
 
@@ -66,13 +66,13 @@ Nach Deployment:
 4. API darf nicht von nicht freigegebenen Origins/Hosts akzeptiert werden. Netzwerkbeschränkung nicht nur über CORS behaupten.
 5. Redeploy durchführen; IDs/Fachdaten müssen erhalten bleiben. Ein App-Redeploy ist **kein** DB-Reset.
 6. Ausstehende Browser-Schreibjournale bewusst klären; nicht löschen, wenn ein Receipt verloren sein könnte. Keine automatischen Wiederholungen.
-7. Erst jetzt Android-Netzwerk-/Laufzeittests anschließen. Native-Runner ist ein eigener anschließender Schritt, kein bereits aktiver Dienst.
+7. Passende native App aktualisieren und DNS/CA/CORS, manuelles Senden/Empfangen sowie gegebenenfalls ausdrücklich aktivierte Automatik prüfen. Kein automatisches Vertrauen oder Reset bestehender Daten.
 
 ## 5. Backup, Restore und Rollback
 
 MariaDB regelmäßig extern sichern (einschließlich Sync-Registry, Receipts, Change-Log und Serverzustand). Backup und App-Version/Migrationsstand gemeinsam dokumentieren; Backup-Dateien enthalten Haushaltsdaten und gehören nicht ins Repository/Image. Wiederherstellung zunächst auf einer isolierten Instanz prüfen.
 
-Bei MariaDB-Restore alle Writer stoppen, DB kontrolliert wiederherstellen und **Server-Epoch erneuern, bevor Clients zugreifen**. Verfahren und interne `rotateServerEpoch()`-Funktion: [server-foundation.md](server-foundation.md). Kein unauthentifizierter Restore-/Epoch-Reset-Endpunkt. Alte Browserjournale und native Bindungen dürfen nicht ungeprüft unter neuer Epoch neu gesendet werden.
+Bei MariaDB-Restore alle Writer stoppen, DB kontrolliert wiederherstellen und **Server-Epoch erneuern, bevor Clients zugreifen**. Verfahren und interne `rotateServerEpoch()`-Funktion: [Datensicherheit und Restore](data-integrity-and-backups.md). Kein unauthentifizierter Restore-/Epoch-Reset-Endpunkt. Alte Browserjournale und native Bindungen dürfen nicht ungeprüft unter neuer Epoch neu gesendet werden.
 
 Rollback bevorzugt auf ein vorher geprüftes App-Image **mit kompatiblem Schema**, nicht durch Zurückrollen/Löschen bereits bestätigter Daten. Bei künftig neuerem Schema kann eine ältere App absichtlich den Start verweigern. Migrationen nicht nachträglich editieren oder deren Checksummen manipulieren. Im Zweifel erst Backup/isolierter Recovery-Test.
 
@@ -84,4 +84,4 @@ pnpm test:deployment
 
 Erstellt das Docker-Image und nutzt ausschließlich den bestehenden Weg zu einer wegwerfbaren, nur auf Loopback erreichbaren MariaDB 11.4. Erfordert Linux-Docker, Node ≥22 und Chromium (`CHROMIUM_BIN` optional). Der Runtime-Container nutzt hier **nur für den isolierten Test** Host-Netzwerk/Loopback; Produktion verwendet das private Dokploy-Dienstnetz.
 
-Geprüft: non-root/read-only Runtime, echte Browser-Profilbearbeitung ohne SQLite, Docker-Healthcheck, SIGTERM/Exit 0, Neustart bei unverändertem DB-Bestand und stabilen UI-IDs. Das ersetzt nicht das noch ausstehende Deployment auf dem konkreten Dokploy-Host und dessen TLS-/Zugangs-/Proxy-Abnahme.
+Geprüft: non-root/read-only Runtime, echte Browser-Profilbearbeitung ohne SQLite, Docker-Healthcheck, SIGTERM/Exit 0, Neustart bei unverändertem DB-Bestand und stabilen UI-IDs. Das ersetzt nicht die Betriebsabnahme des eigenen Hosts und dessen TLS-/Zugangs-/Proxy-Schutz.

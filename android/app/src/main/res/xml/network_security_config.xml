@@ -6,14 +6,6 @@
             <certificates src="system" />
         </trust-anchors>
     </base-config>
-    <!-- Explicit household host only: allow a CA installed by the device owner.
-         Certificate signature, validity and hostname checks still apply.
-         No private key or CA certificate is bundled in the APK. -->
-    <domain-config cleartextTrafficPermitted="false">
-        <domain includeSubdomains="false">munchling.homelab.lan</domain>
-        <trust-anchors>
-            <certificates src="system" />
-            <certificates src="user" />
-        </trust-anchors>
-    </domain-config>
+    <!-- Optional exact-host owner-CA rule is generated locally by Gradle.
+         No certificate or private key is bundled in the APK. -->
 </network-security-config>

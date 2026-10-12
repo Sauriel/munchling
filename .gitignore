@@ -26,6 +26,27 @@ yarn-error.log*
 .env.*
 !.env.example
 
+# Local network, signing credentials and private backups
+/android/local-network.properties
+*.pem
+*.key
+*.p8
+*.p12
+*.pfx
+*.jks
+*.keystore
+*.mobileprovision
+google-services.json
+/backups/
+*.db
+*.sqlite
+*.sqlite3
+*.db-wal
+*.db-shm
+*.sqlite-wal
+*.sqlite-shm
+!public/databases/bls-foods.db
+
 # Capacitor / native builds
 android/.gradle
 android/app/build

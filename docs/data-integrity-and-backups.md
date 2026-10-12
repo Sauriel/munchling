@@ -1,103 +1,55 @@
-# Datenvalidierung und lokale Sicherungen
+# Datensicherheit, Synchronisation und Sicherungen
 
-## Gemeinsame Fachregeln
+## Daten und Identitäten
 
-Die Regeln liegen in `shared/domain/validation.ts`, ohne Nuxt-, Capacitor- oder SQL-Abhängigkeiten. Die lokalen Repositories wenden sie auch bei direkten Service-Aufrufen an; eine zukünftige Server-API soll dieselben Funktionen verwenden.
+Nativ/offline liegen Fachdaten in SQLite, Online-Fachdaten in MariaDB. Stand: SQLite9, MariaDB5, Backup5, HTTP1. Server/Client müssen denselben unterstützten Sync-Schemastand verwenden; die HTTP-Protokollversion allein reicht nicht.
 
-| Daten | Regeln |
-| --- | --- |
-| Profile | Name nicht leer; Kalorienziel ganzzahlig, endlich und nicht negativ; optionale Nährwertziele `null` oder endliche, nichtnegative Zahlen |
-| Lebensmittel | DE-/EN-Name nicht leer; alle Nährwerte endlich und nicht negativ; Marke/EAN optional; Flags echte Booleans |
-| EAN | Optionale leere Texte werden zu `null`; ansonsten eindeutig im gespeicherten Lebensmittelbestand. Prüfung und Schreiben in derselben Transaktion; DB-Unique-Constraint bleibt zusätzliche Absicherung |
-| Gerichte | DE-/EN-Name nicht leer; Beschreibung optional; Untergericht-Flag boolean; Zutaten dürfen leer sein |
-| Zutaten | Genau ein Lebensmittel oder Untergericht, existierende Referenz, positive endliche Grammmenge |
-| Rezeptgraph | Keine direkte oder indirekte Selbstreferenz; mehrfach verwendete Untergerichte sind erlaubt. Prüfung innerhalb der Schreibtransaktion, mit Rollback bei Konflikt |
-| Mahlzeiten | Genau ein existierendes Lebensmittel oder Gericht; mindestens eine positive Profilportion; keine doppelte Profilzuordnung |
-| Portionen | Gültige vorhandene Profil-ID; Grammmenge positiv und endlich; Gesamtgewicht bleibt nach Rundung auf zwei Nachkommastellen positiv und endlich |
-| IDs | Positive, sichere ganze Zahlen |
-| Zeitpunkte | Gültige Kalenderdaten mit Uhrzeit; SQLite-Zeitstempel, datetime-local sowie ISO mit optionalem Offset werden akzeptiert; unmögliche Kalenderdaten werden abgewiesen |
+UUIDs identifizieren Daten geräteübergreifend; numerische IDs sind lokale Aliase. Änderungen an Root/Kinder/Registry/Outbox sind atomar. Empfang erzeugt keine Echo-Outbox. Globale Ownership, Löschmarker und ursprüngliche Historienwerte dürfen nicht durch Merge/Restore still ersetzt werden.
 
-Teilupdates prüfen nur tatsächlich übergebene Felder. Explizites `null` ist bei nullable Feldern zulässig, aber nicht bei obligatorischen Nährwerten. Validierungsfehler haben einen stabilen Code und Feldnamen (`DomainValidationError`) und werden in den Formularen auf Deutsch/Englisch angezeigt.
+Gemeinsame Validierung in `shared/domain/validation.ts`: endliche gültige Zahlen, existierende Referenzen, eindeutige EANs/Profilportionen und azyklische Gerichte. Neue Profil-/manuelle Ziele sind positiv; ältere Nullplatzhalter bleiben lesbar. Portionsgrammwerte sind positiv. Datierte Kalorienereignisse sind unveränderliche Profilkinder mit ursprünglichem JSON, Sequenz, Gültigkeitstag und UTC-Erfassungszeit; neue Gewicht-/Zielstände verändern keine früheren Ziele. Das manuelle Ziel bleibt vom Automatikmodus unabhängig.
 
-Die Berechnung historischer Nährwerte bleibt dynamisch. Die Validierung führt keine historischen Nährwert-Snapshots ein und verändert keine bereits gespeicherten Daten.
+Aktivitätsbuchungen speichern ihre damaligen Vorlagenwerte. Mahlzeitportionen bleiben gespeichert, Nährwertberechnung verwendet dagegen weiterhin aktuelle Lebensmittel-/Gerichtwerte; das sind keine unveränderlichen Nährwert-Snapshots.
 
-## Backup-Format v2 und v1-Kompatibilität
+## Lokaler Fachbackup v5
 
-`shared/domain/backup.ts` definiert und validiert das JSON-Format:
+**Einstellungen → Lokale Datensicherung** exportiert validiertes JSON (`format: munchling-backup`, Version5, SQLite-Schema9). Enthalten sind Profile, Lebensmittel, Gerichte/Zutaten, Mahlzeiten/Profilportionen, Aktivitäten/Tagesbuchungen und Profil-Kalorienhistorie sowie UUID-Identitäten und Löschmarker. Vorhandene IDs, ursprüngliche Historien-JSON-Daten und exakte gespeicherte Portionsfaktoren bleiben erhalten.
 
-```json
-{
-  "format": "munchling-backup",
-  "version": 2,
-  "schemaVersion": 2,
-  "exportedAt": "2026-10-05T12:00:00.000Z",
-  "data": {
-    "profiles": [],
-    "foods": [],
-    "recipes": [],
-    "recipeIngredients": [],
-    "mealLogs": [],
-    "mealLogProfiles": []
-  },
-  "identities": [],
-  "tombstones": []
-}
-```
+Versionen1–4 bleiben importierbar. Alte v1-Daten bekommen neue UUIDs; bestehende UUIDs späterer Versionen bleiben erhalten. Legacy-Daten ohne Ziel-/Gewichtshistorie erhalten keine erfundenen historischen Fakten. Import ist keine Rückmigration der App.
 
-Die Arrays enthalten die gespeicherten Fachdaten mit camelCase-Feldnamen. IDs, sämtliche Profilziele, optionale Werte, Flags, Zeitstempel, Zutaten, Gewichte und die **exakten gespeicherten Portionsfaktoren** bleiben erhalten. Mahlzeiten enthalten gespeicherte Felder, nicht abgeleitete Quellnamen oder berechnete Nährwerte.
+Nicht enthalten: BLS-Katalog, Suchindex, Formularentwürfe, lokale Geräte-/Automatik-/UI-Einstellungen, Serverbindung, Geräte-ID, Cursor und Upload-/Receipt-Journale. Ein Fachbackup ist daher **kein vollständiges SQLite-/Sync-Recovery-Abbild**.
 
-`identities` ordnet jede aktive Zeile einer globalen UUID zu: `{ entity, localId, uuid }`, mit den sechs SQLite-Tabellennamen als `entity`. `tombstones` bewahrt Löschungen einschließlich früherer Zutaten/Portionen: `{ entity, uuid, aggregateEntity, aggregateUuid, deletedAt }`. UUIDs sind kanonisch kleingeschrieben, global eindeutig und dürfen nicht zugleich aktiv und gelöscht sein. Jeder Löschmarker muss auf ein bekanntes aktives oder gelöschtes Aggregat zeigen.
+Importgrenzen: 25MiB, insgesamt 100.000 Fachzeilen/Löschmarker. Format/Versionen, Pflichtarrays, UUIDs, Referenzen, EANs, Zahlen/Datum und Rezeptgraph werden vor Schreiben geprüft. JSON führt kein SQL aus. Fehlende Pflichtarrays sind nicht leer; eine ausdrücklich bestätigte leere Sicherung leert dagegen den lokalen Fachbestand.
 
-Alte Sicherungen mit **version/schemaVersion 1** werden weiterhin akzeptiert. Ihre numerischen IDs und Fachwerte bleiben unverändert; für jede Zeile wird eine neue UUID erzeugt. V2-Sicherungen erhalten vorhandene UUIDs und Löschmarker. Wiederherstellen einer v1-Datei ist keine Rückmigration der Datenbank: das aktuelle Schema bleibt v2.
+## Restore und Sicherheitskopien
 
-Nicht enthalten sind: Migrationstabellen, interne SQLite-Sequenzen, Geräte-/UI-Einstellungen, Geräte-ID, Serverbindung/Cursor, lokale und Serverversionen, Outbox-Operations-/Batch-IDs, Basisstände, Konflikte, BLS-Katalog, Suche und Formularentwürfe. Der Restore setzt ID-Sequenzen nicht zurück. Neue IDs liegen weiterhin oberhalb bisher verwendeter bzw. importierter IDs.
+1. Datei validieren und Vorschau zeigen.
+2. Ausdrücklich bestätigen: lokalen Bestand ersetzen, **nicht zusammenführen**.
+3. Vor jeder destruktiven Änderung einen konsistenten bisherigen Fachbestand separat als Sicherheitssicherung speichern; Speicherfehler verhindern Restore.
+4. Daten/Metadaten in einer referenzsicheren Transaktion ersetzen; SQL-Fehler rollen zurück.
+5. Lokale Epoch erneuern und Serverbindung/Einwilligung/Automatik nicht still übernehmen. Ein neuer Erstabgleich ist erforderlich; der lokale Restore ersetzt niemals den Server.
 
-Der Import akzeptiert maximal **25 MiB und 100.000 Fachzeilen und Löschmarker insgesamt**. Fehlende Tabellen oder Pflichtfelder, inkompatible Versionen, ungültige Werte, doppelte IDs/EANs/Profilzuordnungen, ungültige Referenzen und Rezeptzyklen werden abgewiesen. Es wird niemals SQL aus einer Datei ausgeführt.
+Ungewisse Uploads und verlorene Receipts müssen zuerst geklärt werden. Originalrequests nicht löschen, umschreiben oder unter neuer Bindung erneut verwenden. Im Zweifel vollständige private Datenbankdateien samt Journaldaten extern sichern und den unklaren Zustand erhalten.
 
-Leere Arrays sind ausdrücklich zulässig: eine bestätigte Wiederherstellung einer leeren Sicherung leert den lokalen Fachbestand. Fehlende Arrays werden dagegen nicht als leer interpretiert.
+Automatische Restore-Sicherheitsdatei: `backups/before-restore.json` im privaten App-Dateisystem; letzte Kopie ist in Einstellungen exportierbar. Vor dem ursprünglichen gefüllten v1→v2-Upgrade entsteht zusätzlich `backups/before-schema-v2.json`. Beide sind **lokal** und überstehen eine Deinstallation nicht zuverlässig.
 
-Durch das bisherige Löschen von Profilen können bestehende Mahlzeiten ohne oder mit weniger Profilzuordnungen existieren. Das Backup bewahrt diese gespeicherten Zustände und berechnet weder Gesamtgewichte noch Portionsfaktoren neu. Altdaten, die andere Fachregeln verletzen, können exportiert werden, müssen für einen Import aber erst korrigiert werden.
+Exporte sind unverschlüsselt und enthalten persönliche Ernährungs-/Gewichtsdaten. Externe Kopien geschützt aufbewahren. Vor App-Update/Migration eine frische unabhängige Kopie erstellen, nicht ausschließlich auf dieselbe App oder eine alte Sicherung verlassen. Wiederherstellung auf einem isolierten Bestand prüfen.
 
-## Sicherer Wiederherstellungsablauf
+## Sync, Konflikte und Löschungen
 
-1. JSON einlesen, Größen-/Versions-/Fachprüfungen durchführen; importierte Daten für den Restore kopieren.
-2. Vorschau der enthaltenen Profile, Lebensmittel, Gerichte und Mahlzeiten anzeigen.
-3. Explizite Bestätigung verlangen: **gesamten lokalen Bestand ersetzen, nicht zusammenführen**.
-4. Exklusiven SQLite-Zugriff und gemeinsame Transaktion öffnen.
-5. Den aktuellen Bestand konsistent als Sicherheitssicherung exportieren und separat speichern.
-6. Erst nach erfolgreicher Speicherung die Fachtabellen in referenzsicherer Reihenfolge leeren und importieren.
-7. Alte Outbox, Basisstände und Konflikte entfernen; Serverbindung/Cursor trennen, Sync ausschalten und die lokale Epoch erneuern. Geräte-ID bleibt gerätebezogen erhalten. Aktive Aggregate und importierte Aggregat-Löschmarker werden als ein neuer Snapshot-Batch vorgemerkt. Verbindungen dürfen später nur nach explizitem Erstabgleich wiederhergestellt werden.
-8. Bei SQL-Fehlern **Fachdaten und alle Sync-Metadaten** vollständig zurückrollen; bei Erfolg gemeinsam committen und den Browser-Store persistieren.
-9. UI-Daten aktualisieren und das aktive Profil neu initialisieren.
+Native Sync erfordert zunächst eine bewusst gewählte sichere Adresse/Vertrauensfreigabe und einen ausdrücklichen Erstabgleich. Download/Staging alleine ist keine lokale Übernahme und kein Upload. Daten erst nach vollständigem Snapshot, Identitäts-/Konfliktprüfung und Safety-Kopie übernehmen.
 
-Ein Fehler beim Speichern der Sicherheitssicherung verhindert die Wiederherstellung. Ein Persistenzfehler **nach** erfolgreichem SQL-Commit ist nicht rückrollbar; dafür steht ebenfalls die vorher gespeicherte Sicherheitssicherung bereit.
+Versionierte Outbox/Journale und unveränderliche Requestbytes erlauben Receipt-Replay nach unklarer Antwort. Kein automatischer Merge, Überschreiben oder Rebase. Entscheidungen prüfen den aktuellen Serverstand erneut und schützen akzeptierte Profilhistorie. Verworfenes Offline-Material kann als unabhängige Sicherung erhalten werden.
 
-`restoreBackup()` verlangt einen Safety-Writer-Callback. Dieser darf innerhalb des Callbacks nicht erneut die globale, bereits gesperrte Datenbank verwenden. Die App verwendet ausschließlich die separate Dateisystem-Speicherung.
+Automatik bei Start/Rückkehr ist getrennt pro Gerät, standardmäßig aus, an Adresse/Einwilligung/Bindung/Epochen gebunden und kein Teil von Fachbackup/Sync. Sie arbeitet nur auf Dashboard-Routen; Navigation zu Editoren bricht ab und wartet, ohne Formularentwürfe still zu löschen.
 
-## Speicherung und Datenschutz
+Web-Schreibvorgänge verwenden versionierte Journale/Receipts und Web Locks. Konflikte zeigen Basis, Entwurf und Serverstand; unbekannte Basis wird nicht erfunden. Neue geschützte Löschkaskaden prüfen auch indirekte historische Bezüge. Registrierter Lebensmittel-Merge ist ausdrücklich, nur bei gleichen Nährwerten, ohne historische Portions-/UUID-Ersetzung oder automatische Namens-/EAN-Zusammenführung.
 
-- Native Exporte: JSON-Datei im Cache und nativer Teilen-Dialog über Capacitor Filesystem/Share.
-- Browser-Exporte: JSON-Download; der Browser bestimmt den Zielort. Das Auslösen eines Downloads garantiert nicht, dass die Person die Datei dauerhaft außerhalb des Geräts aufbewahrt.
-- Automatische Sicherheitssicherung: `backups/before-restore.json` in `Directory.Data` (nativ app-privat, im Browser separate Filesystem-IndexedDB).
-- Die jeweils letzte Sicherheitssicherung kann in den Einstellungen wieder exportiert werden. Ein weiterer Restore ersetzt sie durch den unmittelbar vorherigen Bestand.
-- Vor Schema-v2-Upgrades: separate `backups/before-schema-v2.json` in `Directory.Data`. Nach erfolgreichem Upgrade kann diese Datei in den Einstellungen exportiert werden; sie überschreibt niemals die Restore-Sicherheitssicherung.
-- Dateien sind **nicht verschlüsselt**. Sie enthalten persönliche Ernährungsdaten und müssen geschützt aufbewahrt werden.
-- App-Deinstallation, Löschen der Browser-Sitedaten oder Geräteschäden können auch die lokale Sicherheitssicherung entfernen. Deshalb vor Migrationen zusätzlich eine externe Kopie exportieren.
-- Online-Serveradapter bekommen diese lokale Restore-Fähigkeit nicht automatisch; der gemeinsame Serverbestand darf nicht über einen lokalen Browser-Restore ersetzt werden.
+## MariaDB-Backup und Restore
 
-## SQLite-Migration v2
+Vollständige SQL-Backups müssen neben Fachdaten Registry, Receipts/Operations, Change-Log, State und Migrationsmarker enthalten. Ein API-Snapshot ist nur ein konsistenter Fach-/Identitätscheckpoint, **kein vollständiges SQL-/Receipt-Backup**. Keine Produktionsdaten ins Repository/Image übernehmen.
 
-Vor Installation eines Updates zusätzlich extern exportieren. Beim ersten Start mit einem gefüllten v1-Bestand wird die unabhängige v1-Sicherheitssicherung **vor** allen Schemaänderungen gespeichert. Scheitert das Speichern, bleibt die Datenbank unverändert. Neue leere Installationen benötigen keine Vorabdatei.
+Ein DB-Restore verändert die bestätigte Historie: Writer stoppen, externe Safety-Kopie erstellen, isoliert geprüften Backup wiederherstellen und **Server-Epoch vor erneutem Clientzugriff erneuern**. `server/database/epoch.ts` enthält die interne Rotation; kein unauthentifizierter Reset-Endpoint. Instanz/UUIDs/Revisionen nicht manuell neu zuordnen. Clients müssen bewusst neu abgleichen und unklare Journale bewahren.
 
-DDL, UUID-Backfill, Identitätsregister, Trigger, Initial-Outbox und Migrationsmarker werden gemeinsam transaktional übernommen. Ein Abbruch oder SQL-Fehler rollt diese Änderungen zurück; ein Wiederanlauf kann erneut migrieren. Bereits erfolgreich migrierte Bestände behalten ihre UUIDs. Bestehende numerische IDs, Beziehungen und Fachwerte werden nicht verändert.
+Normales Redeploy rotiert weder Instanz noch Epoch und setzt keine Daten zurück. Rollback nur mit kompatiblem Schema; veröffentlichte Migrations-SQL/Prüfsummen bleiben unverändert.
 
-Export/Restore verweigern weiterhin unbekannte neuere Schemaversionen. Die technische Sync-Grundlage ist dokumentiert in [local-sync-foundation.md](local-sync-foundation.md); Serverabgleich und Konfliktoberfläche sind noch nicht implementiert.
-
-## Verifikation
-
-- `pnpm test`: gemeinsame Validierung, echte SQLite-Repository-/Restore-Tests und gemockte native Dateisystem-/Share-Grenze.
-- `pnpm typecheck`.
-- `pnpm generate && pnpm test:browser`: echter Chromium-Smoke-Test für Browserstart, Export, Profilpersistenz, bestätigten Restore und persistente Sicherheitssicherung. Benötigt Node >= 22 und Chromium; bei Bedarf `CHROMIUM_BIN` setzen.
-- `pnpm cap:sync`: bindet die nativen Plugins für Android/iOS ein.
-- Android `assembleDebug` kompiliert die nativen Plugins; das ersetzt keinen Gerätetest des Dateiauswahldialogs und des Teilens.
-- iOS-Build und native Laufzeittests benötigen macOS/Xcode bzw. geeignete Geräte. Das Privacy Manifest für Dateizeitstempel ist als Xcode-Ressource eingebunden.
+Siehe [Betrieb](dokploy.md), [API-Vertrag](sync-api.md) und [Entwicklung](development.md).

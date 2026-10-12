@@ -1,5 +1,20 @@
 apply plugin: 'com.android.application'
 
+// Local owner-CA trust is opt-in and never stored in tracked resources.
+def localNetwork = new Properties()
+def localNetworkFile = rootProject.file('local-network.properties')
+if (localNetworkFile.exists()) localNetworkFile.withInputStream { localNetwork.load(it) }
+def userCaHost = System.getenv('MUNCHLING_ANDROID_USER_CA_HOST')
+if (userCaHost == null) userCaHost = localNetwork.getProperty('userCaHost', '')
+def generatedNetworkRes = layout.buildDirectory.dir('generated/munchling-network/res')
+def generateNetworkSecurity = tasks.register('generateMunchlingNetworkSecurity', Exec) {
+    inputs.property('userCaHost', userCaHost)
+    inputs.file(rootProject.file('../scripts/android-network-config.mjs'))
+    outputs.dir(generatedNetworkRes)
+    commandLine 'node', rootProject.file('../scripts/android-network-config.mjs').absolutePath,
+        generatedNetworkRes.get().file('xml/network_security_config_local.xml').asFile.absolutePath, userCaHost
+}
+
 android {
     namespace = "dev.munchling.app"
     compileSdk = rootProject.ext.compileSdkVersion
@@ -10,12 +25,14 @@ android {
         versionCode 1
         versionName "1.0"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+        manifestPlaceholders = [munchlingNetworkSecurity: 'network_security_config_local']
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
              // Default: https://android.googlesource.com/platform/frameworks/base/+/282e181b58cf72b6ca770dc7ca5f91f135444502/tools/aapt/AaptAssets.cpp#61
             ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
+    sourceSets.main.res.srcDir(generatedNetworkRes)
     buildTypes {
         release {
             minifyEnabled false
@@ -23,6 +40,8 @@ android {
         }
     }
 }
+
+tasks.named('preBuild').configure { dependsOn(generateNetworkSecurity) }
 
 repositories {
     flatDir{
