@@ -1,4 +1,5 @@
 import { databaseSql } from '../sql'
+import { sortProfiles } from '../../../../shared/domain/profile-order'
 import { assertId,fail,validateProfileInput } from '../../../../shared/domain/validation'
 import { planProfileCalorieEvents,localCalendarDate } from '../../../../shared/domain/profile-calorie-command'
 import { appendProfileCalorieEvent,readProfileCalorieContext } from './profile-calorie-history'
@@ -29,7 +30,7 @@ async function history(sql: SqlExecutor,id: number,input: UpdateProfileInput,ini
 export function createProfilesRepository(database: SqlDatabase) {
   const listProfiles = () => database.transaction(async sql => {
     const rows = await sql.query<ProfileRow>('SELECT * FROM profiles ORDER BY created_at ASC,id ASC;')
-    return Promise.all(rows.map(row => mapProfile(sql,row)))
+    return sortProfiles(await Promise.all(rows.map(row => mapProfile(sql,row))))
   })
   const getProfileById = (id: number) => database.transaction(sql => get(sql,id))
   async function createProfile(input: CreateProfileInput) {

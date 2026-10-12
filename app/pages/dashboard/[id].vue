@@ -18,7 +18,7 @@
         </div>
       </div>
 
-      <div class="grid gap-3 sm:grid-cols-2">
+      <div class="grid gap-3 sm:grid-cols-3">
       <NuxtLink to="/log" class="flex min-h-12 items-center justify-center gap-2 rounded-2xl bg-munchling-600 px-5 font-semibold text-white shadow-lg shadow-munchling-600/20 transition active:scale-[0.98]">
         <Icon name="ph:plus-circle-duotone" class="size-5" />
         {{ $t('mealLog.actions.create') }}
@@ -26,6 +26,10 @@
       <NuxtLink v-if="profile" :to="{ path: '/activity-log', query: { profile: String(profile.id) } }" class="flex min-h-12 items-center justify-center gap-2 rounded-2xl bg-munchling-600 px-5 font-semibold text-white shadow-lg shadow-munchling-600/20 transition active:scale-[0.98]">
         <Icon name="ph:plus-circle-duotone" class="size-5" />
         {{ $t('activities.add') }}
+      </NuxtLink>
+      <NuxtLink v-if="profile" :to="{ path: '/statistics', query: { profile: String(profile.id) } }" class="flex min-h-12 items-center justify-center gap-2 rounded-2xl border border-slate-300 px-5 font-semibold">
+        <Icon name="ph:chart-line-up-duotone" class="size-5" />
+        {{ $t('dashboard.statistics') }}
       </NuxtLink>
       </div>
     </header>

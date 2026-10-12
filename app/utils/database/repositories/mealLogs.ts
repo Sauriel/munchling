@@ -2,6 +2,7 @@ import type {
 	MealLog, MealLogProfile, MealLogProfileInput, CreateMealLogInput,
 	UpdateMealLogInput, MealLogFilter, NutritionValues,
 } from "../../../../shared/domain/types";
+import { compareProfiles } from '../../../../shared/domain/profile-order';
 import { emptyNutrition, foodNutrition } from "../../../../shared/domain/nutrition";
 import { createFoodsRepository } from "./foods";
 import { assertId, validateMealInput, validateMealReferences } from "../../../../shared/domain/validation";
@@ -18,7 +19,7 @@ type MealLogRow = {
 	total_weight_grams: number; created_at: string; updated_at: string | null;
 };
 type MealLogProfileRow = {
-	id: number; meal_log_id: number; profile_id: number; profile_name: string; portion_factor: number;
+	id: number; meal_log_id: number; profile_id: number; profile_name: string; profile_uuid?: string; portion_factor: number;
 };
 
 function totalWeight(profiles: MealLogProfileInput[]) {
@@ -45,11 +46,11 @@ export function createMealLogsRepository(database: SqlDatabase) {
 	}
 	async function listProfilesForMealLog(mealLogId: number, totalWeightGrams: number, sql: SqlExecutor): Promise<MealLogProfile[]> {
 		const rows = await sql.query<MealLogProfileRow>(
-			`SELECT mlp.*, profiles.name AS profile_name FROM meal_log_profiles mlp
+			`SELECT mlp.*, profiles.name AS profile_name, profiles.uuid AS profile_uuid FROM meal_log_profiles mlp
 			 JOIN profiles ON profiles.id = mlp.profile_id
 			 WHERE mlp.meal_log_id = ? ORDER BY profiles.name COLLATE NOCASE ASC;`, [mealLogId],
 		);
-		return rows.map((row) => ({
+		return rows.sort((a,b) => compareProfiles({ name: a.profile_name, uuid: a.profile_uuid, id: a.profile_id }, { name: b.profile_name, uuid: b.profile_uuid, id: b.profile_id })).map((row) => ({
 			id: row.id, mealLogId: row.meal_log_id, profileId: row.profile_id,
 			profileName: row.profile_name, portionFactor: row.portion_factor,
 			portionGrams: Math.round(totalWeightGrams * row.portion_factor * 100) / 100,

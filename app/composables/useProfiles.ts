@@ -4,16 +4,18 @@ import type {
 	UpdateProfileInput,
 } from "../../shared/domain/types";
 import { useMunchlingData } from "./useMunchlingData";
+import { sortProfiles } from '../../shared/domain/profile-order';
 
 export function useProfiles() {
 	const { listProfiles, createProfile: createProfileRecord, updateProfile: updateProfileRecord, deleteProfile: deleteProfileRecord } = useMunchlingData().profiles;
-	const profiles = useState<Profile[]>("profiles", () => []);
+	const records = useState<Profile[]>("profiles", () => []);
+	const profiles = computed(() => sortProfiles(records.value));
 	const isLoading = useState("profiles-loading", () => false);
 
 	const refreshProfiles = async () => {
 		isLoading.value = true;
 		try {
-			profiles.value = await listProfiles();
+			records.value = await listProfiles();
 		} finally {
 			isLoading.value = false;
 		}
