@@ -41,8 +41,14 @@ Anbindung: `useProfiles`, SQLite-Profilliste, Web-Profilliste und Profilportione
 
 ## Schlanke Prüfung
 
-Vier neue Domänentests bündeln Sortierung/Identität, Datenlücken, historische Ziele/Beobachtungen/Profilportionen/Zusatzbonus sowie Kalender-/Zeitzonenregeln. Mit vorhandenen Repository-/Webadaptertests 25 Prüfungen grün; CLI-Typecheck, Server-/Mobile-Build und Android-Capacitor-Sync/APK-Build bestanden; APK noch nicht installiert. LSP war unbestätigt und wird nicht als sauber gewertet.
+Vier neue Domänentests bündeln Sortierung/Identität, Datenlücken, historische Ziele/Beobachtungen/Profilportionen/Zusatzbonus sowie Kalender-/Zeitzonenregeln. Mit vorhandenen Repository-/Webadaptertests 25 Prüfungen grün; CLI-Typecheck, Server-/Mobile-Build und Android-Capacitor-Sync/APK-Build bestanden; APK inzwischen ohne Reset installiert. LSP war unbestätigt und wird nicht als sauber gewertet.
 
 Ein isolierter Chromium-Smoke prüfte alphabetische Profilauswahl, 30 Tageszeilen, 360/768/1280 px ohne Seitenüberlauf, ausgeblendete Drucknavigation/-eingaben und PDF-Erzeugung. Keine ungewollten Browserfehler oder fehlenden Assets. Ausschließlich temporäre Testdaten, kein Haushaltszugriff.
 
-Gemeinsamer Handy-/Website-Rollout und Nutzerabnahme stehen noch aus. Das autorisierte Android-Gerät war bei der abschließenden Geräteprüfung nicht verbunden; keine andere Gerätekennung verwenden.
+## Gemeinsamer Rollout (Nutzerabnahme offen)
+
+Featurecommit `e49697b` auf dem autorisierten Android-Gerät `b76fbc95` und Dokploy ausgeliefert. Vor Installation frisches unabhängiges privates Datenbankarchiv und bisheriges APK gesichert. `install -r` erfolgreich, installiertes APK hashgleich zum vorbereiteten Build; Datenbankdateien nach Installation byteidentisch. Alle generierten Mobile-Dateien stimmen mit dem APK überein; nur die beiden Standard-Cordova-Bridgedateien sind zusätzlich enthalten. App nicht vom Agenten gestartet, keine Haushaltsuploads ausgelöst.
+
+Website-Statistik-/Sortierassets und Readiness HTTP200 geprüft. Schema5/HTTP1 und Serverinstanz/Epoch unverändert. Vorher/Nachher-Snapshots: alle 134 Aggregate bytegleich, alle 280 ursprünglichen Registry-UUIDs erhalten, Cursor151 unverändert. Der private logische Servercheckpoint ist kein vollständiges SQL-/Receipt-Backup.
+
+Nutzer prüft jetzt beide Funktionen auf Handy und Website sowie Druck/PDF im Webbrowser. Beide übergeordneten Roadmap-Punkte bleiben bis zur ausdrücklichen Abnahme offen; iOS-Laufzeitabnahme separat.

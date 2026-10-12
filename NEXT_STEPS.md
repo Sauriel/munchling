@@ -97,10 +97,12 @@ Die Profilberechnung ist zur Umsetzung freigegeben; Statistik-Druckansicht und a
   - [x] Fehlende Messungen/Einträge erkennbar lassen und geschätzte Werte klar kennzeichnen; keine erfundenen Verlaufswerte oder medizinischen Diagnosen darstellen.
   - [x] Drucklayout für die Webseite einschließlich „Als PDF speichern“ über den Browser vorsehen: lesbare Diagramme, Einheiten, Legenden, Zeitraum und Profilname, sinnvolle Seitenumbrüche und keine Navigation oder Eingabeformulare auf dem Ausdruck.
   - [x] Lesende Seite `/statistics`, bis 366 Tage, gespeicherte Zielstände/Schätzbedarf, Zusatzbudget und erfasste Aufnahme mit Lücken und Messtagen; keine Persistenz-/Sync-/Schemaänderung. Vier neue gezielte Domänentests, bestehende Adapter-/Repositoryprüfungen (25 insgesamt), Typecheck und beide Builds bestanden. Chromium: alphabetische Auswahl, 30 Tageszeilen, drei Breiten ohne Überlauf, Druck ohne Navigation/Formular und PDF-Ausgabe, keine Browserfehler/fehlenden Assets. Details: [Statistik/Sortierung](docs/profile-statistics.md).
-  - [ ] Gemeinsamer Handy-/Website-Rollout erst nach Fertigstellung beider Funktionen und ausdrückliche Nutzer-Live-Abnahme; aktuell kein Android-Gerät verbunden.
+  - [x] Beide Funktionen gemeinsam als e49697b auf b76fbc95 und Dokploy ausgeliefert: frisches unabhängiges Vor-Update-Archiv, install-r ohne Reset, installiertes APK hashgleich mit Build und Datenbankdateien nach Installation bytegleich. App nicht vom Agenten gestartet. Website-Statistik-/Sortierassets und Readiness 200 verifiziert; Schema5/HTTP1, Instanz/Epoch, alle 134 Aggregate/280 Registry-UUIDs und Cursor151 erhalten. Keine Haushaltsuploads ausgelöst.
+  - [ ] Ausdrückliche Nutzer-Live-Abnahme von Statistik/Druck/PDF und Profil-/Auswahlsortierung.
 
 - [ ] Profile auf allen Geräten und der Webseite einheitlich alphabetisch sortieren.
   - [x] Dieselbe Namenssortierung in Profilverwaltung, Dashboard sowie allen Profil-Auswahl- und Buchungsansichten verwenden; bestehende geräteabhängige Reihenfolgen beseitigen.
   - [x] Einheitliche Regeln für Groß-/Kleinschreibung, Umlaute und eine stabile identitätsbezogene Reihenfolge bei gleichen Namen festlegen. Auswahl und Zuordnungen bleiben an IDs/UUIDs gebunden, nicht an Listenpositionen.
-  - [ ] Gemeinsamer Rollout mit Statistik/Druckansicht und ausdrückliche Nutzer-Live-Abnahme.
+  - [x] Gemeinsamer Rollout mit Statistik/Druckansicht auf Handy und Dokploy verifiziert (e49697b).
+  - [ ] Ausdrückliche Nutzer-Live-Abnahme einschließlich gleichbleibender ID-gebundener Auswahl/Mengen.
 
